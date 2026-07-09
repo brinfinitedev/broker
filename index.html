@@ -527,12 +527,19 @@
     display:none; position:fixed; inset:0; background:rgba(10,10,10,.45); z-index:80;
     align-items:center; justify-content:center; padding:20px; animation: fadeIn .2s var(--ease);
   }
-  .modal-overlay.open{ display:flex; }
-  .modal-box{
-    background:#fff; border-radius:20px; width:100%; max-width:460px; padding:26px;
-    max-height:88vh; overflow-y:auto; box-shadow: var(--shadow-lg);
-    animation: rise .3s var(--ease);
-  }
+ .modal-overlay.open { 
+  display: flex; }
+.modal-box {
+  background: #fff; 
+  border-radius: 20px; 
+  width: 100%; 
+  max-width: 460px; 
+  padding: 26px;
+  max-height: 88vh; 
+  overflow-y: auto; 
+  box-shadow: var(--shadow-lg);
+  animation: rise .3s var(--ease);
+}
   .modal-box h3{ font-size:17px; font-weight:800; margin-bottom:18px; }
   .modal-box .f-field{ margin-bottom:14px; }
   .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
