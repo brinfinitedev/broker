@@ -3402,6 +3402,19 @@
   refreshCorretoraSelects();
   renderUsuarios();
   Object.keys(GROUPS).forEach(refreshGroupUI);
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+const SUPABASE_URL = "https://lzoonwbdezfcdbescmna.supabase.co";
+
+const SUPABASE_KEY = "sb_publishable_vgUwbMKZ3fME5eshDWnUFQ_J9Q7zGbl";
+
+const { createClient } = supabase;
+
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+console.log("✅ Supabase conectado!");
+console.log(db);
 </script>
 </body>
 </html>
