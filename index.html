@@ -798,11 +798,24 @@
     .welcome-wrap{ flex-direction:column; align-items:flex-start; padding:6px 2px 20px; }
     .welcome-wrap h1{ font-size:22px; }
     .home-grid{ grid-template-columns:1fr; }
+    .page-head{ flex-direction:column; align-items:flex-start; gap:10px; }
     .page-head h1{ font-size:19px; }
+    .page-head > div:last-child{ display:flex; flex-wrap:wrap; gap:8px; width:100%; }
     .search-bar{ width:100%; }
     .list-toolbar{ flex-direction:column; align-items:stretch; }
     table{ display:block; overflow-x:auto; white-space:nowrap; }
     .team-row{ grid-template-columns: 1fr; }
+    .form-grid{ grid-template-columns: 1fr !important; }
+    .form-grid.cols-3{ grid-template-columns: 1fr !important; }
+    .logo-upload-row{ flex-direction:column; align-items:flex-start; }
+    .logo-preview{ width:120px; height:44px; }
+    .kpis-row{ grid-template-columns: repeat(2,1fr) !important; }
+    .filters-row{ flex-direction:column; }
+    .filters-row .select-pill{ width:100%; }
+    .seg-picker-grid{ grid-template-columns: repeat(2,1fr); }
+    .modal-box{ padding:18px; }
+    .modal-actions{ flex-direction:column; gap:8px; }
+    .modal-actions button{ width:100%; }
     .fab{
       position:fixed; right:18px; bottom:88px; z-index:45;
       width:54px; height:54px; border-radius:50%; background:var(--black); color:#fff;
@@ -1184,6 +1197,12 @@
                   <span id="seguradora-cor-preview" style="display:inline-block; padding:6px 14px; border-radius:999px; font-size:11.5px; font-weight:700; background:#132728; color:#fff;">Preview</span>
                 </div>
               </div>
+              <div class="f-field full" style="margin-bottom:8px;">
+                <label>Usuário responsável <span style="font-size:11px;font-weight:500;color:var(--gray-600);">(somente ele pode importar arquivos e disparar WhatsApp para esta seguradora)</span></label>
+                <select id="seguradora-responsavel-id" style="width:100%;border:1.4px solid var(--border);border-radius:11px;padding:12px 14px;outline:none;font-size:13.5px;font-family:inherit;">
+                  <option value="">— Nenhum responsável definido —</option>
+                </select>
+              </div>
               <div class="f-field"><label>E-mail</label><input type="email" id="seguradora-email" placeholder="contato@seguradora.com.br"></div>
               <div class="f-field"><label>Telefone</label><input type="text" id="seguradora-telefone" placeholder="(00) 0000-0000"></div>
               <div class="f-field"><label>Assistência 24 horas (link ou telefone)</label><input type="text" id="seguradora-assistencia-24h" placeholder="https://... ou 0800 000 0000"></div>
@@ -1319,6 +1338,15 @@
             <input type="hidden" id="brevo-nome-remetente">
           </div>
           <div class="form-section hidden" id="mkt-whats">
+            <h3>Seguradora</h3>
+            <p class="hint">Selecione a seguradora para esta campanha. Apenas usuários responsáveis pela seguradora podem disparar.</p>
+            <select id="whats-seguradora-sel" onchange="onWhatsSeguradoraChange()" style="width:100%;max-width:340px;border:1.4px solid var(--border);border-radius:11px;padding:12px 14px;outline:none;font-size:13.5px;font-family:inherit;margin-bottom:16px;">
+              <option value="">— Selecione uma seguradora —</option>
+            </select>
+            <div id="whats-perm-aviso" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;padding:10px 14px;border-radius:10px;font-size:12.5px;font-weight:600;margin-bottom:14px;">
+              Você não tem permissão para disparar WhatsApp por esta seguradora. Fale com o super administrador.
+            </div>
+
             <h3>Contatos selecionados</h3>
             <p class="hint">Escolha até <b>20 contatos</b> que vão receber esta mensagem.</p>
             <button class="btn-outline" onclick="abrirSeletorContatos()">Selecionar contatos</button>
@@ -2448,6 +2476,21 @@
   const BOTTOM_MAIN_COUNT = 4;
 
   let currentRole = 'admin';
+
+  // Retorna true se o usuário atual é super administrador
+  function isSuperAdmin(){
+    return ['super_admin','superadmin'].includes((currentRole||'').toLowerCase());
+  }
+
+  // Retorna true se o usuário pode agir sobre determinada seguradora
+  // (importar arquivos ou disparar WhatsApp para ela).
+  // Regra: super admin pode tudo; qualquer outro usuário só pode
+  // agir nas seguradoras onde foi definido como responsável.
+  function canActOnSeguradora(segId){
+    if(isSuperAdmin()) return true;
+    const s = SEGURADORAS[segId];
+    return s && s.responsavelId && s.responsavelId === currentUserId;
+  }
   let currentView = 'home';
 
   // abas que o Super Administrador desativou para este usuário
@@ -3150,6 +3193,7 @@
     btn.classList.add('active');
     document.getElementById('mkt-email').classList.toggle('hidden', id!=='mkt-email');
     document.getElementById('mkt-whats').classList.toggle('hidden', id!=='mkt-whats');
+    if(id === 'mkt-whats') populateWhatsSeguradoraSelect();
   }
 
   // Guarda a configuração do Brevo só em memória por enquanto (nada é enviado de verdade ainda).
@@ -3492,7 +3536,7 @@
       return `
         <div class="material-seguradora-block">
           <div class="material-seguradora-head">
-            <div class="logo" style="background:${cor};">${s.logo ? `<img src="${s.logo}">` : initials(s.nome)}</div>
+            <div class="logo" style="background:${s.logo ? '#fff' : cor};">${s.logo ? `<img src="${s.logo}">` : initials(s.nome)}</div>
             <h3>${s.nome}</h3>
             <span class="count">${materiaisDaSeguradora.length} material(is)</span>
           </div>
@@ -3971,10 +4015,36 @@
     closeModal('modal-selecionar-contatos');
   }
 
+  function onWhatsSeguradoraChange(){
+    const sel = document.getElementById('whats-seguradora-sel');
+    const aviso = document.getElementById('whats-perm-aviso');
+    const dispBtn = document.querySelector('#mkt-whats .btn-dark');
+    if(!sel || !aviso) return;
+    const segId = sel.value;
+    const temPerm = !segId || canActOnSeguradora(segId);
+    aviso.style.display = temPerm ? 'none' : 'block';
+    if(dispBtn) dispBtn.style.opacity = temPerm ? '1' : '0.4';
+  }
+
+  function populateWhatsSeguradoraSelect(){
+    const sel = document.getElementById('whats-seguradora-sel');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">— Selecione uma seguradora —</option>' +
+      Object.entries(SEGURADORAS).map(([id, s]) => `<option value="${id}">${s.nome}</option>`).join('');
+    onWhatsSeguradoraChange();
+  }
+
   async function dispatchWhatsapp(){
     const msg = document.getElementById('whats-msg').value.trim();
     if(!msg){ alert('Escreva a mensagem antes de disparar.'); return; }
     if(WHATS_SELECIONADOS.length === 0){ alert('Selecione ao menos um contato.'); return; }
+    // Verificar permissão por seguradora
+    const sel = document.getElementById('whats-seguradora-sel');
+    const segId = sel ? sel.value : '';
+    if(segId && !canActOnSeguradora(segId)){
+      alert('Você não tem permissão para disparar WhatsApp por esta seguradora.');
+      return;
+    }
 
     WHATS_SELECIONADOS.forEach((c, i) => {
       if(c.whatsapp) setTimeout(() => openWhats(c.whatsapp, msg), i * 300); // pequeno intervalo entre aberturas de aba
@@ -4090,8 +4160,8 @@
   };
 
   const SEGURADORAS = {
-    'tokio-marine': { nome:'TOKIO MARINE', comercial:'Ricardo Prado', comercialNascimento:'1985-07-09', email:'', telefone:'11976543210', logo:null, cor:'#E30613' },
-    'pier': { nome:'PIER', comercial:'', comercialNascimento:null, email:'', telefone:'', logo:null, cor:'#00A9E0' },
+    'tokio-marine': { nome:'TOKIO MARINE', comercial:'Ricardo Prado', comercialNascimento:'1985-07-09', email:'', telefone:'11976543210', logo:null, cor:'#E30613', responsavelId:null },
+    'pier': { nome:'PIER', comercial:'', comercialNascimento:null, email:'', telefone:'', logo:null, cor:'#00A9E0', responsavelId:null },
   };
 
   function refreshGroupUI(gid){
@@ -5172,7 +5242,12 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     const agora = Date.now();
     const CINCO_DIAS = 5 * 24 * 60 * 60 * 1000;
 
-    grid.innerHTML = Object.entries(SEGURADORAS).map(([id, s]) => {
+    const seguradosPermitidos = Object.entries(SEGURADORAS).filter(([id]) => canActOnSeguradora(id));
+    if(!seguradosPermitidos.length){
+      grid.innerHTML = '<p class="hint" style="margin:0;color:#dc2626;">Você não tem permissão para importar arquivos de nenhuma seguradora. Fale com o super administrador.</p>';
+      return;
+    }
+    grid.innerHTML = seguradosPermitidos.map(([id, s]) => {
       const ultimo = ultimoImport[s.nome];
       let borderStyle = 'border:1.8px solid #ef4444;'; // vermelho: nunca importado ou > 5 dias
       let tituloStatus = 'Nunca importado';
@@ -5186,7 +5261,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
         }
       }
       return `<button type="button" class="seg-card ${s.nome === selecionada ? 'active' : ''}" style="${borderStyle}" onclick="selecionarSeguradoraImportar('${id}')" title="${tituloStatus}">
-        <div class="seg-card-logo">${s.logo ? `<img src="${s.logo}" alt="${s.nome}">` : initials(s.nome)}</div>
+        <div class="seg-card-logo" style="${s.logo ? 'background:#fff;' : ''}">${s.logo ? `<img src="${s.logo}" alt="${s.nome}" style="width:100%;height:100%;object-fit:contain;padding:3px;">` : initials(s.nome)}</div>
         <div class="seg-card-name">${s.nome}</div>
       </button>`;
     }).join('');
@@ -6271,6 +6346,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
         assistencia_24h: row.assistencia_24h || '',
         link_corretor: row.link_corretor || '',
         link_assessoria: row.link_assessoria || '',
+        responsavelId: row.responsavel_id || null,
       };
     });
     refreshSeguradoraSelects();
@@ -6305,7 +6381,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     const linhas = Object.entries(SEGURADORAS);
     tbody.innerHTML = linhas.length ? linhas.map(([id, s]) => `
       <tr>
-        <td onclick="openSeguradoraForm('${id}')"><div class="row-avatar"><div class="av" style="${s.logo ? 'border-radius:8px;' : ''}${s.cor ? `background:${s.cor}; color:#fff;` : ''}">${s.logo ? `<img src="${s.logo}" style="width:100%;height:100%;border-radius:8px;object-fit:cover;">` : initials(s.nome)}</div><div class="cell-strong">${s.nome}</div></div></td>
+        <td onclick="openSeguradoraForm('${id}')"><div class="row-avatar">${s.logo ? '<div style="width:80px;height:32px;border-radius:8px;background:#fff;border:1px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><img src="'+s.logo+'" style="width:100%;height:100%;object-fit:contain;padding:2px;"></div>' : '<div class="av" style="'+(s.cor ? 'background:'+s.cor+'; color:#fff;' : '')+'">' + initials(s.nome) + '</div>'}<div class="cell-strong">${s.nome}</div></div></td>
         <td onclick="openSeguradoraForm('${id}')">${s.comercial || 'A preencher'}</td>
         <td onclick="openSeguradoraForm('${id}')"><span style="display:inline-block; width:16px; height:16px; border-radius:5px; background:${s.cor || '#132728'}; vertical-align:-3px; margin-right:8px; border:1px solid var(--border);"></span>${s.cor || '—'}</td>
         <td><button class="access-btn" onclick="deleteSeguradora('${id}')">Excluir</button></td>
@@ -6354,6 +6430,13 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     PENDING_SEGURADORA_LOGO = s ? (s.logo || null) : null;
     renderLogoPreview();
     atualizarPreviewCor();
+    // Populate responsavel select with all users
+    const sel = document.getElementById('seguradora-responsavel-id');
+    if(sel){
+      const users = USERS_CACHE && USERS_CACHE.length ? USERS_CACHE : [];
+      sel.innerHTML = '<option value="">— Nenhum responsável definido —</option>' +
+        users.map(u => `<option value="${u.id}" ${(s && s.responsavelId === u.id) ? 'selected' : ''}>${u.nome}</option>`).join('');
+    }
     showView('seguradora-form');
   }
 
@@ -6371,16 +6454,17 @@ Os dados de produção deste período serão restaurados para o upload anterior.
       link_corretor: document.getElementById('seguradora-link-corretor').value.trim(),
       link_assessoria: document.getElementById('seguradora-link-assessoria').value.trim(),
       logo: PENDING_SEGURADORA_LOGO,
+      responsavel_id: document.getElementById('seguradora-responsavel-id').value || null,
     };
 
     if(editingSeguradoraId){
       const { error } = await supabase.from('seguradoras').update(payload).eq('id', editingSeguradoraId);
       if(error){ alert('Erro ao salvar: ' + error.message); return; }
-      SEGURADORAS[editingSeguradoraId] = payload;
+      SEGURADORAS[editingSeguradoraId] = { ...payload, responsavelId: payload.responsavel_id };
     } else {
       const { data, error } = await supabase.from('seguradoras').insert(payload).select().single();
       if(error){ alert('Erro ao cadastrar seguradora: ' + error.message); return; }
-      SEGURADORAS[data.id] = payload;
+      SEGURADORAS[data.id] = { ...payload, responsavelId: payload.responsavel_id };
     }
 
     registrarLog(editingSeguradoraId ? 'Editou seguradora' : 'Criou seguradora', nome);
