@@ -663,13 +663,19 @@
   .tag-add-row input:focus{ outline:none; border-color:var(--black); }
   .tag-empty-hint{ font-size:12.5px; color:var(--gray-600); margin:0 0 12px; }
 
-  .comp-picker{ display:flex; flex-direction:column; gap:0; }
+  .comp-picker{ display:flex; flex-direction:row; gap:8px; align-items:center; }
   .comp-picker > select{
-    flex:1; padding:11px 12px; border-radius:10px; border:1.4px solid var(--border);
-    font-size:13.5px; font-family:inherit; font-weight:600; background:#fff;
+    flex:1; padding:11px 14px; border-radius:12px; border:1.6px solid var(--border);
+    font-size:13.5px; font-family:inherit; font-weight:700; background:#fff;
+    appearance:none; -webkit-appearance:none; cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236e6e6e' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center;
+    padding-right:32px;
+    transition:border-color .2s, box-shadow .2s;
   }
-  .comp-picker > select + select{ margin-top:8px; }
-  .comp-picker > input[type=month]{ opacity:.75; }
+  .comp-picker > select:focus{ outline:none; border-color:var(--black); box-shadow:0 0 0 3px rgba(0,0,0,.07); }
+  .comp-picker > select:hover{ border-color:var(--gray-400); }
+  .comp-picker > input[type=month]{ display:none; }
 
   .seg-picker-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(112px,1fr)); gap:10px; margin-bottom:18px; }
   .seg-card{
@@ -797,7 +803,9 @@
   .nav-items{position:relative;}
   .nav-active-bar{
     position:absolute;left:0;width:3px;border-radius:0 3px 3px 0;
-    background:#fff;transition:top .22s cubic-bezier(.22,1,.36,1),height .22s;
+    background:#fff;
+    transition:top .3s cubic-bezier(.22,1,.36,1),height .3s cubic-bezier(.22,1,.36,1),opacity .2s;
+    box-shadow: 1px 0 8px rgba(255,255,255,.4);
     pointer-events:none;
   }
   /* prevent text selection on double-click sidebar */
@@ -879,7 +887,21 @@
 
     <button class="btn-primary" onclick="doLogin()">Entrar</button>
     <div id="sb-status" style="margin-top:12px;font-size:11px;color:#999;text-align:center;"></div>
-    <div class="login-foot">Esqueceu a senha? <a href="#">Recuperar acesso</a></div>
+    <div class="login-foot" style="text-align:center; margin-top:20px;">
+      Esqueceu a senha? <a href="#" onclick="toggleRecuperarSenha(event)" style="font-weight:600;color:var(--black);border-bottom:1px solid var(--black);">Recuperar acesso</a>
+    </div>
+
+    <!-- Painel recuperação de senha -->
+    <div id="painel-recuperar-senha" style="display:none; margin-top:16px; background:#f8f8f8; border:1.4px solid var(--border); border-radius:14px; padding:18px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--gray-600);flex-shrink:0;"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 118 0v3"/></svg>
+        <span style="font-size:13px; font-weight:700;">Recuperação de acesso</span>
+      </div>
+      <p style="font-size:12.5px; color:var(--gray-600); margin-bottom:14px; line-height:1.5;">Entre em contato com um <b>Super Administrador</b> para redefinir sua senha:</p>
+      <div id="recuperar-admins-lista" style="display:flex; flex-direction:column; gap:10px;">
+        <div style="font-size:12px; color:var(--gray-400);">Carregando...</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2184,11 +2206,17 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">${ICONS[item.id]||ICONS.home}</svg>
         <span>${item.label}</span>
       </button>`).join('');
-    setTimeout(()=>{
+    requestAnimationFrame(()=>{
       const ab = navListEl.querySelector('.nav-item.active');
       const bar = document.getElementById('nav-active-bar');
-      if(ab && bar){ bar.style.top=ab.offsetTop+'px'; bar.style.height=ab.offsetHeight+'px'; }
-    },0);
+      if(ab && bar){
+        const listRect = navListEl.getBoundingClientRect();
+        const abRect = ab.getBoundingClientRect();
+        bar.style.top = (abRect.top - listRect.top + navListEl.scrollTop) + 'px';
+        bar.style.height = ab.offsetHeight + 'px';
+        bar.style.opacity = '1';
+      }
+    });
   }
 
   function renderBottomNav(){
@@ -2633,13 +2661,19 @@
     document.getElementById('fab').classList.toggle('show-mobile', id==='corretoras' || id==='crm');
     // mark active nav item first
     document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.view===id));
-    // move sidebar active bar — use offsetTop for accurate positioning in all views
-    const activeBtn = document.querySelector(`.nav-item[data-view="${id}"]`);
-    const bar = document.getElementById('nav-active-bar');
-    if(activeBtn && bar){
-      bar.style.top = activeBtn.offsetTop + 'px';
-      bar.style.height = activeBtn.offsetHeight + 'px';
-    }
+    // move sidebar active bar — rAF garante posição correta após reflow
+    requestAnimationFrame(()=>{
+      const activeBtn = document.querySelector(`.nav-item[data-view="${id}"]`);
+      const bar = document.getElementById('nav-active-bar');
+      if(activeBtn && bar){
+        const navList = document.getElementById('nav-list');
+        const listRect = navList ? navList.getBoundingClientRect() : {top:0};
+        const btnRect = activeBtn.getBoundingClientRect();
+        bar.style.top = (btnRect.top - listRect.top + (navList ? navList.scrollTop : 0)) + 'px';
+        bar.style.height = activeBtn.offsetHeight + 'px';
+        bar.style.opacity = '1';
+      }
+    });
     if(id === 'seguradoras'){
       renderSeguradoras();
     }
@@ -4218,6 +4252,8 @@
     }
 
     renderRelatorios();
+    // Ligar picker de competência no relatório
+    setTimeout(()=>{ ligarCompetenciaPicker('relatorio-competencia'); }, 0);
     if(modelo !== 'personalizado' && modelo !== 'mensal'){
       renderRelatorioBody();
     }
@@ -5163,6 +5199,50 @@
   /* ==========================================================
      RELATÓRIOS — gera relatório de qualquer tabela do sistema
   ========================================================== */
+  // ===== RECUPERAR SENHA =====
+  async function toggleRecuperarSenha(e){
+    if(e) e.preventDefault();
+    const painel = document.getElementById('painel-recuperar-senha');
+    const aberto = painel.style.display !== 'none';
+    painel.style.display = aberto ? 'none' : 'block';
+    if(!aberto){
+      carregarSuperAdmins();
+    }
+  }
+
+  async function carregarSuperAdmins(){
+    const lista = document.getElementById('recuperar-admins-lista');
+    if(!lista) return;
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('nome, telefone')
+        .eq('role', 'admin');
+      const admins = data || [];
+      if(!admins.length){
+        lista.innerHTML = '<div style="font-size:12.5px;color:var(--gray-600);">Nenhum administrador cadastrado.</div>';
+        return;
+      }
+      lista.innerHTML = admins.map(a => {
+        const tel = (a.telefone||'').replace(/\D/g,'');
+        const waLink = tel ? `https://wa.me/55${tel}` : null;
+        return `<div style="display:flex;align-items:center;gap:10px;background:#fff;border:1.4px solid var(--border);border-radius:11px;padding:10px 12px;">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--black);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">${(a.nome||'?').split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase()}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.nome||'Administrador'}</div>
+            ${a.telefone ? `<div style="font-size:11.5px;color:var(--gray-600);">${a.telefone}</div>` : ''}
+          </div>
+          ${waLink ? `<a href="${waLink}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#25D366;flex-shrink:0;transition:transform .15s;" title="Abrir WhatsApp" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''">
+            <svg viewBox="0 0 24 24" fill="white" style="width:18px;height:18px;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.484 2 12.017c0 1.987.527 3.945 1.534 5.671l-1.586 5.79 5.935-1.559A10.003 10.003 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18c-1.582 0-3.085-.427-4.384-1.17l-.314-.186-3.523.926.942-3.44-.201-.337A7.964 7.964 0 014 12c0-4.418 3.582-8 8-8 4.419 0 8 3.582 8 8 0 4.419-3.581 8-8 8z"/></svg>
+          </a>` : ''}
+        </div>`;
+      }).join('');
+    } catch(err){
+      lista.innerHTML = '<div style="font-size:12.5px;color:var(--gray-600);">Não foi possível carregar os administradores.</div>';
+    }
+  }
+  // ===== FIM RECUPERAR SENHA =====
+
   async function doLogin(){
     const email = document.getElementById('login-email').value.trim().toLowerCase();
     const senha = document.getElementById('login-password').value;
