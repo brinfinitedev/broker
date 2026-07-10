@@ -872,6 +872,7 @@
     <div id="login-error" class="login-error hidden">E-mail ou senha incorretos.</div>
 
     <button class="btn-primary" onclick="doLogin()">Entrar</button>
+    <div id="sb-status" style="margin-top:12px;font-size:11px;color:#999;text-align:center;"></div>
     <div class="login-foot">Esqueceu a senha? <a href="#">Recuperar acesso</a></div>
   </div>
 </div>
@@ -1953,16 +1954,28 @@
      Substitua SUPABASE_URL e SUPABASE_ANON_KEY pelos valores
      do seu projeto em https://supabase.com/dashboard
   ========================================================== */
+  // Inicializa o cliente Supabase (SDK carregado via CDN UMD → expõe window.supabase)
   const SUPABASE_URL = 'https://lzoonwbdezfcdbescmna.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_vgUwbMKZ3fME5eshDWnUFQ_J9Q7zGbl';
 
-  // O bundle UMD expõe { createClient } em window.supabase
-  const _sbFactory = window.supabase || {};
-  const _createClient = _sbFactory.createClient || (typeof createClient !== 'undefined' ? createClient : null);
-  if(!_createClient){ console.error('Supabase SDK não carregou!'); }
-  const supabase = _createClient
-    ? _createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } })
-    : null;
+  let supabase;
+  try {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+    console.log('✅ Supabase client criado com sucesso');
+    // show status on screen
+    document.addEventListener('DOMContentLoaded', () => {
+      const el = document.getElementById('sb-status');
+      if(el) el.textContent = '✅ Conectado ao Supabase';
+    });
+  } catch(e) {
+    console.error('❌ Erro ao criar Supabase client:', e);
+    document.addEventListener('DOMContentLoaded', () => {
+      const el = document.getElementById('sb-status');
+      if(el) el.textContent = '❌ Erro SDK: ' + e.message;
+    });
+  }
 
   /* ---------------- NAV CONFIG ---------------- */
   const ICONS = {
@@ -2411,6 +2424,7 @@
   document.querySelectorAll('[onclick*="openModal(\'modal-acessos-rapidos\')"]').forEach(b=>b.setAttribute('onclick',"_openQAModal()"));
 
   /* ========================= */
+  const VIEW_LABELS = {
     home:'Início', corretoras:'Corretoras', 'corretora-form':'Cadastro da corretora',
     seguradoras:'Seguradoras', 'seguradora-form':'Cadastro da seguradora', crm:'Tarefas',
     marketing:'Disparos de marketing', material:'Material seguradoras',
@@ -4835,8 +4849,8 @@
     }
 
     // verifica se SDK carregou
-    if(!window.supabase || typeof supabase.auth === 'undefined'){
-      errorBox.textContent = 'Erro: SDK do Supabase não carregou. Verifique sua conexão.';
+    if(!supabase || !supabase.auth){
+      errorBox.textContent = 'Erro: SDK do Supabase não carregou. Verifique sua conexão com a internet.';
       errorBox.classList.remove('hidden');
       return;
     }
@@ -5124,4 +5138,4 @@
   Object.keys(GROUPS).forEach(refreshGroupUI);
 </script>
 </body>
-</html>
+</html> 
