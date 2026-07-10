@@ -798,24 +798,11 @@
     .welcome-wrap{ flex-direction:column; align-items:flex-start; padding:6px 2px 20px; }
     .welcome-wrap h1{ font-size:22px; }
     .home-grid{ grid-template-columns:1fr; }
-    .page-head{ flex-direction:column; align-items:flex-start; gap:10px; }
     .page-head h1{ font-size:19px; }
-    .page-head > div:last-child{ display:flex; flex-wrap:wrap; gap:8px; width:100%; }
     .search-bar{ width:100%; }
     .list-toolbar{ flex-direction:column; align-items:stretch; }
     table{ display:block; overflow-x:auto; white-space:nowrap; }
     .team-row{ grid-template-columns: 1fr; }
-    .form-grid{ grid-template-columns: 1fr !important; }
-    .form-grid.cols-3{ grid-template-columns: 1fr !important; }
-    .logo-upload-row{ flex-direction:column; align-items:flex-start; }
-    .logo-preview{ width:120px; height:44px; }
-    .kpis-row{ grid-template-columns: repeat(2,1fr) !important; }
-    .filters-row{ flex-direction:column; }
-    .filters-row .select-pill{ width:100%; }
-    .seg-picker-grid{ grid-template-columns: repeat(2,1fr); }
-    .modal-box{ padding:18px; }
-    .modal-actions{ flex-direction:column; gap:8px; }
-    .modal-actions button{ width:100%; }
     .fab{
       position:fixed; right:18px; bottom:88px; z-index:45;
       width:54px; height:54px; border-radius:50%; background:var(--black); color:#fff;
@@ -1197,11 +1184,14 @@
                   <span id="seguradora-cor-preview" style="display:inline-block; padding:6px 14px; border-radius:999px; font-size:11.5px; font-weight:700; background:#132728; color:#fff;">Preview</span>
                 </div>
               </div>
-              <div class="f-field full" style="margin-bottom:8px;">
-                <label>Usuário responsável <span style="font-size:11px;font-weight:500;color:var(--gray-600);">(somente ele pode importar arquivos e disparar WhatsApp para esta seguradora)</span></label>
-                <select id="seguradora-responsavel-id" style="width:100%;border:1.4px solid var(--border);border-radius:11px;padding:12px 14px;outline:none;font-size:13.5px;font-family:inherit;">
-                  <option value="">— Nenhum responsável definido —</option>
-                </select>
+              <div class="f-field full">
+                <label>Usuários responsáveis <span style="font-size:11px;font-weight:500;color:var(--gray-600);">(podem importar arquivos e disparar WhatsApp desta seguradora)</span></label>
+                <div id="seguradora-responsaveis-wrap" style="border:1.4px solid var(--border);border-radius:11px;padding:10px 12px;min-height:48px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;cursor:pointer;transition:border-color .2s;" onclick="toggleResponsaveisPicker()">
+                  <span id="seguradora-responsaveis-placeholder" style="font-size:13px;color:var(--gray-400);">Clique para selecionar usuários responsáveis...</span>
+                </div>
+                <div id="seguradora-responsaveis-picker" style="display:none;border:1.4px solid var(--border);border-radius:12px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;max-height:200px;overflow-y:auto;margin-top:4px;z-index:200;position:relative;">
+                  <div id="seguradora-responsaveis-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+                </div>
               </div>
               <div class="f-field"><label>E-mail</label><input type="email" id="seguradora-email" placeholder="contato@seguradora.com.br"></div>
               <div class="f-field"><label>Telefone</label><input type="text" id="seguradora-telefone" placeholder="(00) 0000-0000"></div>
@@ -1212,8 +1202,47 @@
           <div class="form-section">
             <h3>Links de acesso</h3>
             <div class="form-grid">
-              <div class="f-field"><label>Login Corretor (URL)</label><input type="url" id="seguradora-link-corretor" placeholder="https://..."></div>
-              <div class="f-field"><label>Login Assessoria (URL)</label><input type="url" id="seguradora-link-assessoria" placeholder="https://..."></div>
+              <div class="f-field">
+                <label>Login Corretor (URL)</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <input type="url" id="seguradora-link-corretor" placeholder="https://..." style="flex:1;">
+                  <button type="button" onclick="copiarCampo('seguradora-link-corretor')" title="Copiar link" style="flex-shrink:0;width:38px;height:38px;border-radius:9px;border:1.4px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--black)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="f-field">
+                <label>Login Assessoria (URL)</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <input type="url" id="seguradora-link-assessoria" placeholder="https://..." style="flex:1;">
+                  <button type="button" onclick="copiarCampo('seguradora-link-assessoria')" title="Copiar link" style="flex-shrink:0;width:38px;height:38px;border-radius:9px;border:1.4px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--black)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="f-field">
+                <label>Login da assessoria (usuário/e-mail)</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <input type="text" id="seguradora-login-assessoria" placeholder="usuário ou e-mail de acesso" style="flex:1;">
+                  <button type="button" onclick="copiarCampo('seguradora-login-assessoria')" title="Copiar login" style="flex-shrink:0;width:38px;height:38px;border-radius:9px;border:1.4px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--black)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="f-field">
+                <label>Senha da assessoria</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <div style="position:relative;flex:1;">
+                    <input type="password" id="seguradora-senha-assessoria" placeholder="••••••••" style="width:100%;padding-right:42px;">
+                    <button type="button" onclick="toggleSenhaVisivel('seguradora-senha-assessoria',this)" title="Mostrar/ocultar senha" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--gray-400);display:flex;align-items:center;">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                  </div>
+                  <button type="button" onclick="copiarCampo('seguradora-senha-assessoria')" title="Copiar senha" style="flex-shrink:0;width:38px;height:38px;border-radius:9px;border:1.4px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--black)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1339,12 +1368,12 @@
           </div>
           <div class="form-section hidden" id="mkt-whats">
             <h3>Seguradora</h3>
-            <p class="hint">Selecione a seguradora para esta campanha. Apenas usuários responsáveis pela seguradora podem disparar.</p>
-            <select id="whats-seguradora-sel" onchange="onWhatsSeguradoraChange()" style="width:100%;max-width:340px;border:1.4px solid var(--border);border-radius:11px;padding:12px 14px;outline:none;font-size:13.5px;font-family:inherit;margin-bottom:16px;">
+            <p class="hint">Selecione a seguradora desta campanha. Apenas usuários responsáveis podem disparar.</p>
+            <select id="whats-seguradora-sel" onchange="onWhatsSeguradoraChange()" style="max-width:340px;border:1.4px solid var(--border);border-radius:11px;padding:12px 14px;outline:none;font-size:13.5px;font-family:inherit;margin-bottom:8px;">
               <option value="">— Selecione uma seguradora —</option>
             </select>
             <div id="whats-perm-aviso" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;padding:10px 14px;border-radius:10px;font-size:12.5px;font-weight:600;margin-bottom:14px;">
-              Você não tem permissão para disparar WhatsApp por esta seguradora. Fale com o super administrador.
+              Você não tem permissão para disparar WhatsApp por esta seguradora.
             </div>
 
             <h3>Contatos selecionados</h3>
@@ -2477,19 +2506,14 @@
 
   let currentRole = 'admin';
 
-  // Retorna true se o usuário atual é super administrador
   function isSuperAdmin(){
     return ['super_admin','superadmin'].includes((currentRole||'').toLowerCase());
   }
-
-  // Retorna true se o usuário pode agir sobre determinada seguradora
-  // (importar arquivos ou disparar WhatsApp para ela).
-  // Regra: super admin pode tudo; qualquer outro usuário só pode
-  // agir nas seguradoras onde foi definido como responsável.
+  // Retorna true se o usuário pode importar ou disparar para a seguradora
   function canActOnSeguradora(segId){
     if(isSuperAdmin()) return true;
     const s = SEGURADORAS[segId];
-    return s && s.responsavelId && s.responsavelId === currentUserId;
+    return s && Array.isArray(s.responsaveisIds) && s.responsaveisIds.includes(currentUserId);
   }
   let currentView = 'home';
 
@@ -3196,6 +3220,24 @@
     if(id === 'mkt-whats') populateWhatsSeguradoraSelect();
   }
 
+  function populateWhatsSeguradoraSelect(){
+    const sel = document.getElementById('whats-seguradora-sel');
+    if(!sel) return;
+    const atual = sel.value;
+    sel.innerHTML = '<option value="">— Selecione uma seguradora —</option>' +
+      Object.entries(SEGURADORAS).map(([id, s]) => `<option value="${id}" ${atual===id?'selected':''}>${s.nome}</option>`).join('');
+    onWhatsSeguradoraChange();
+  }
+
+  function onWhatsSeguradoraChange(){
+    const sel = document.getElementById('whats-seguradora-sel');
+    const aviso = document.getElementById('whats-perm-aviso');
+    if(!sel || !aviso) return;
+    const segId = sel.value;
+    const temPerm = !segId || canActOnSeguradora(segId);
+    aviso.style.display = temPerm ? 'none' : 'block';
+  }
+
   // Guarda a configuração do Brevo só em memória por enquanto (nada é enviado de verdade ainda).
   // Quando integrarmos, a chave de API precisa ficar no backend/Edge Function, nunca aqui no HTML.
   let BREVO_CONFIG = { apiKey:'', remetente:'', nomeRemetente:'' };
@@ -3303,7 +3345,12 @@
     return new Date().toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
   }
 
-  function openCardModal(coluna){
+  async function openCardModal(coluna){
+    // Garante que os usuários estejam carregados para o seletor de membros
+    if(!ALL_USERS_CACHE.length){
+      const { data: perfis } = await supabase.from('profiles').select('*');
+      ALL_USERS_CACHE = perfis || [];
+    }
     editingCardId = null;
     pendingAttachments = [];
     pendingHistorico = [{when: nowLabel(), text:'Tarefa criada.'}];
@@ -3322,7 +3369,11 @@
     openModal('modal-card');
   }
 
-  function openEditCard(cardId){
+  async function openEditCard(cardId){
+    if(!ALL_USERS_CACHE.length){
+      const { data: perfis } = await supabase.from('profiles').select('*');
+      ALL_USERS_CACHE = perfis || [];
+    }
     const c = CARDS_CACHE.find(x=>x.id===cardId);
     if(!c) return;
     editingCardId = cardId;
@@ -3536,7 +3587,7 @@
       return `
         <div class="material-seguradora-block">
           <div class="material-seguradora-head">
-            <div class="logo" style="background:${s.logo ? '#fff' : cor};">${s.logo ? `<img src="${s.logo}">` : initials(s.nome)}</div>
+            <div class="logo" style="background:${cor};">${s.logo ? `<img src="${s.logo}">` : initials(s.nome)}</div>
             <h3>${s.nome}</h3>
             <span class="count">${materiaisDaSeguradora.length} material(is)</span>
           </div>
@@ -4015,34 +4066,15 @@
     closeModal('modal-selecionar-contatos');
   }
 
-  function onWhatsSeguradoraChange(){
-    const sel = document.getElementById('whats-seguradora-sel');
-    const aviso = document.getElementById('whats-perm-aviso');
-    const dispBtn = document.querySelector('#mkt-whats .btn-dark');
-    if(!sel || !aviso) return;
-    const segId = sel.value;
-    const temPerm = !segId || canActOnSeguradora(segId);
-    aviso.style.display = temPerm ? 'none' : 'block';
-    if(dispBtn) dispBtn.style.opacity = temPerm ? '1' : '0.4';
-  }
-
-  function populateWhatsSeguradoraSelect(){
-    const sel = document.getElementById('whats-seguradora-sel');
-    if(!sel) return;
-    sel.innerHTML = '<option value="">— Selecione uma seguradora —</option>' +
-      Object.entries(SEGURADORAS).map(([id, s]) => `<option value="${id}">${s.nome}</option>`).join('');
-    onWhatsSeguradoraChange();
-  }
-
   async function dispatchWhatsapp(){
     const msg = document.getElementById('whats-msg').value.trim();
     if(!msg){ alert('Escreva a mensagem antes de disparar.'); return; }
     if(WHATS_SELECIONADOS.length === 0){ alert('Selecione ao menos um contato.'); return; }
     // Verificar permissão por seguradora
-    const sel = document.getElementById('whats-seguradora-sel');
-    const segId = sel ? sel.value : '';
+    const selSeg = document.getElementById('whats-seguradora-sel');
+    const segId = selSeg ? selSeg.value : '';
     if(segId && !canActOnSeguradora(segId)){
-      alert('Você não tem permissão para disparar WhatsApp por esta seguradora.');
+      alert('Você não tem permissão para disparar WhatsApp por esta seguradora. Fale com o super administrador.');
       return;
     }
 
@@ -4160,8 +4192,8 @@
   };
 
   const SEGURADORAS = {
-    'tokio-marine': { nome:'TOKIO MARINE', comercial:'Ricardo Prado', comercialNascimento:'1985-07-09', email:'', telefone:'11976543210', logo:null, cor:'#E30613', responsavelId:null },
-    'pier': { nome:'PIER', comercial:'', comercialNascimento:null, email:'', telefone:'', logo:null, cor:'#00A9E0', responsavelId:null },
+    'tokio-marine': { nome:'TOKIO MARINE', comercial:'Ricardo Prado', comercialNascimento:'1985-07-09', email:'', telefone:'11976543210', logo:null, cor:'#E30613', responsaveisIds:[] },
+    'pier': { nome:'PIER', comercial:'', comercialNascimento:null, email:'', telefone:'', logo:null, cor:'#00A9E0', responsaveisIds:[] },
   };
 
   function refreshGroupUI(gid){
@@ -5242,12 +5274,12 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     const agora = Date.now();
     const CINCO_DIAS = 5 * 24 * 60 * 60 * 1000;
 
-    const seguradosPermitidos = Object.entries(SEGURADORAS).filter(([id]) => canActOnSeguradora(id));
-    if(!seguradosPermitidos.length){
-      grid.innerHTML = '<p class="hint" style="margin:0;color:#dc2626;">Você não tem permissão para importar arquivos de nenhuma seguradora. Fale com o super administrador.</p>';
+    const segurasPermitidas = Object.entries(SEGURADORAS).filter(([id]) => canActOnSeguradora(id));
+    if(!segurasPermitidas.length){
+      grid.innerHTML = '<p class="hint" style="color:#dc2626;font-weight:600;">Você não tem permissão para importar arquivos de nenhuma seguradora. Fale com o super administrador.</p>';
       return;
     }
-    grid.innerHTML = seguradosPermitidos.map(([id, s]) => {
+    grid.innerHTML = segurasPermitidas.map(([id, s]) => {
       const ultimo = ultimoImport[s.nome];
       let borderStyle = 'border:1.8px solid #ef4444;'; // vermelho: nunca importado ou > 5 dias
       let tituloStatus = 'Nunca importado';
@@ -5261,7 +5293,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
         }
       }
       return `<button type="button" class="seg-card ${s.nome === selecionada ? 'active' : ''}" style="${borderStyle}" onclick="selecionarSeguradoraImportar('${id}')" title="${tituloStatus}">
-        <div class="seg-card-logo" style="${s.logo ? 'background:#fff;' : ''}">${s.logo ? `<img src="${s.logo}" alt="${s.nome}" style="width:100%;height:100%;object-fit:contain;padding:3px;">` : initials(s.nome)}</div>
+        <div class="seg-card-logo">${s.logo ? `<img src="${s.logo}" alt="${s.nome}">` : initials(s.nome)}</div>
         <div class="seg-card-name">${s.nome}</div>
       </button>`;
     }).join('');
@@ -5350,13 +5382,38 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     if(typeof XLSX === 'undefined'){ resultBox.innerHTML = `<p class="hint">Não foi possível carregar o leitor de planilhas.</p>`; return; }
 
     resultBox.innerHTML = `<p class="hint">Lendo arquivo...</p>`;
+    const isCsv = file.name.toLowerCase().endsWith('.csv');
     const reader = new FileReader();
     reader.onload = async (e) => {
       let rows;
       try {
-        const wb = XLSX.read(e.target.result, { type:'array' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
+        if(isCsv){
+          // Parse CSV manually
+          const text = e.target.result;
+          const lines = text.split(/\r?\n/).filter(l => l.trim());
+          if(lines.length < 2){ resultBox.innerHTML = `<p class="hint">CSV vazio ou sem dados.</p>`; return; }
+          const parseCsvLine = line => {
+            const result = [];
+            let cur = '', inQ = false;
+            for(let i=0;i<line.length;i++){
+              const ch = line[i];
+              if(ch==='"'){ inQ=!inQ; } else if(ch===','&&!inQ){ result.push(cur.trim()); cur=''; } else { cur+=ch; }
+            }
+            result.push(cur.trim());
+            return result;
+          };
+          const headers = parseCsvLine(lines[0]);
+          rows = lines.slice(1).filter(l=>l.trim()).map(line => {
+            const vals = parseCsvLine(line);
+            const obj = {};
+            headers.forEach((h,i) => { obj[h] = vals[i] || ''; });
+            return obj;
+          });
+        } else {
+          const wb = XLSX.read(e.target.result, { type:'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
+        }
       } catch(err){
         resultBox.innerHTML = `<p class="hint">Não foi possível ler o arquivo (${err.message}).</p>`;
         return;
@@ -5438,7 +5495,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
           </div>
         </div>`;
     };
-    reader.readAsArrayBuffer(file);
+    if(isCsv){ reader.readAsText(file, "UTF-8"); } else { reader.readAsArrayBuffer(file); }
   }
 
   function processarPlanilha(){
@@ -6346,7 +6403,9 @@ Os dados de produção deste período serão restaurados para o upload anterior.
         assistencia_24h: row.assistencia_24h || '',
         link_corretor: row.link_corretor || '',
         link_assessoria: row.link_assessoria || '',
-        responsavelId: row.responsavel_id || null,
+        login_assessoria: row.login_assessoria || '',
+        senha_assessoria: row.senha_assessoria || '',
+        responsaveisIds: Array.isArray(row.responsaveis_ids) ? row.responsaveis_ids : [],
       };
     });
     refreshSeguradoraSelects();
@@ -6381,7 +6440,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     const linhas = Object.entries(SEGURADORAS);
     tbody.innerHTML = linhas.length ? linhas.map(([id, s]) => `
       <tr>
-        <td onclick="openSeguradoraForm('${id}')"><div class="row-avatar">${s.logo ? '<div style="width:80px;height:32px;border-radius:8px;background:#fff;border:1px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><img src="'+s.logo+'" style="width:100%;height:100%;object-fit:contain;padding:2px;"></div>' : '<div class="av" style="'+(s.cor ? 'background:'+s.cor+'; color:#fff;' : '')+'">' + initials(s.nome) + '</div>'}<div class="cell-strong">${s.nome}</div></div></td>
+        <td onclick="openSeguradoraForm('${id}')"><div class="row-avatar">${s.logo ? `<div style="width:80px;height:32px;border-radius:8px;background:#fff;border:1px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><img src="${s.logo}" style="width:100%;height:100%;object-fit:contain;padding:2px;"></div>` : `<div class="av" style="${s.cor ? 'background:'+s.cor+'; color:#fff;' : ''}">${initials(s.nome)}</div>`}<div class="cell-strong">${s.nome}</div></div></td>
         <td onclick="openSeguradoraForm('${id}')">${s.comercial || 'A preencher'}</td>
         <td onclick="openSeguradoraForm('${id}')"><span style="display:inline-block; width:16px; height:16px; border-radius:5px; background:${s.cor || '#132728'}; vertical-align:-3px; margin-right:8px; border:1px solid var(--border);"></span>${s.cor || '—'}</td>
         <td><button class="access-btn" onclick="deleteSeguradora('${id}')">Excluir</button></td>
@@ -6414,6 +6473,84 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     if(preview) preview.style.background = cor;
   }
 
+  // --- UTILITÁRIOS SEGURADORA ---
+  function copiarCampo(id){
+    const el = document.getElementById(id);
+    if(!el || !el.value.trim()) return;
+    navigator.clipboard.writeText(el.value.trim()).then(()=>{
+      const btn = el.closest('div').querySelector('button[onclick*="copiarCampo"]');
+      if(btn){
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" style="width:15px;height:15px;"><path d="M20 6L9 17l-5-5"/></svg>';
+        setTimeout(()=>{ btn.innerHTML = orig; }, 1500);
+      }
+    }).catch(()=> alert('Copie manualmente o campo.'));
+  }
+
+  function toggleSenhaVisivel(inputId, btn){
+    const inp = document.getElementById(inputId);
+    if(!inp) return;
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    btn.style.color = inp.type === 'text' ? 'var(--black)' : 'var(--gray-400)';
+  }
+
+  let _responsaveisSelecionados = [];
+
+  function renderResponsaveisPicker(selecionados){
+    _responsaveisSelecionados = selecionados ? [...selecionados] : [];
+    const list = document.getElementById('seguradora-responsaveis-list');
+    if(!list) return;
+    const users = USERS_CACHE && USERS_CACHE.length ? USERS_CACHE : [];
+    list.innerHTML = users.length ? users.map(u => `
+      <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+        <input type="checkbox" value="${u.id}" ${_responsaveisSelecionados.includes(u.id)?'checked':''} onchange="atualizarResponsaveisDisplay()" style="accent-color:var(--black);width:15px;height:15px;cursor:pointer;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--black);color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">${initials(u.nome)}</span>
+        <span style="font-size:13px;font-weight:600;">${u.nome}</span>
+      </label>
+    `).join('') : '<p style="font-size:12.5px;color:var(--gray-600);margin:8px 0;">Nenhum usuário cadastrado ainda.</p>';
+    atualizarResponsaveisDisplay();
+  }
+
+  function toggleResponsaveisPicker(){
+    const picker = document.getElementById('seguradora-responsaveis-picker');
+    const wrap = document.getElementById('seguradora-responsaveis-wrap');
+    if(!picker || !wrap) return;
+    const isOpen = picker.style.display !== 'none';
+    picker.style.display = isOpen ? 'none' : 'block';
+    wrap.style.borderColor = isOpen ? 'var(--border)' : 'var(--black)';
+    if(!isOpen){
+      setTimeout(()=>{
+        const handler = (e) => {
+          if(!picker.contains(e.target) && !wrap.contains(e.target)){
+            picker.style.display = 'none';
+            wrap.style.borderColor = 'var(--border)';
+            document.removeEventListener('click', handler);
+          }
+        };
+        document.addEventListener('click', handler);
+      }, 100);
+    }
+  }
+
+  function atualizarResponsaveisDisplay(){
+    const checked = Array.from(document.querySelectorAll('#seguradora-responsaveis-list input:checked'));
+    const wrap = document.getElementById('seguradora-responsaveis-wrap');
+    const placeholder = document.getElementById('seguradora-responsaveis-placeholder');
+    if(!wrap) return;
+    wrap.querySelectorAll('.resp-chip').forEach(el=>el.remove());
+    if(checked.length === 0){ if(placeholder) placeholder.style.display = ''; return; }
+    if(placeholder) placeholder.style.display = 'none';
+    checked.forEach(inp => {
+      const user = (USERS_CACHE||[]).find(u => u.id === inp.value);
+      if(!user) return;
+      const chip = document.createElement('span');
+      chip.className = 'resp-chip';
+      chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:var(--black);color:#fff;padding:3px 10px 3px 5px;border-radius:999px;font-size:11.5px;font-weight:700;';
+      chip.innerHTML = `<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.2);font-size:9px;">${initials(user.nome)}</span>${user.nome.split(' ')[0]}`;
+      wrap.insertBefore(chip, placeholder);
+    });
+  }
+
   function openSeguradoraForm(id){
     editingSeguradoraId = id || null;
     const s = id ? SEGURADORAS[id] : null;
@@ -6426,23 +6563,20 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     document.getElementById('seguradora-assistencia-24h').value = s ? (s.assistencia_24h||'') : '';
     document.getElementById('seguradora-link-corretor').value = s ? (s.link_corretor||'') : '';
     document.getElementById('seguradora-link-assessoria').value = s ? (s.link_assessoria||'') : '';
+    document.getElementById('seguradora-login-assessoria').value = s ? (s.login_assessoria||'') : '';
+    document.getElementById('seguradora-senha-assessoria').value = s ? (s.senha_assessoria||'') : '';
     document.getElementById('seguradora-logo-input').value = '';
     PENDING_SEGURADORA_LOGO = s ? (s.logo || null) : null;
     renderLogoPreview();
     atualizarPreviewCor();
-    // Populate responsavel select with all users
-    const sel = document.getElementById('seguradora-responsavel-id');
-    if(sel){
-      const users = USERS_CACHE && USERS_CACHE.length ? USERS_CACHE : [];
-      sel.innerHTML = '<option value="">— Nenhum responsável definido —</option>' +
-        users.map(u => `<option value="${u.id}" ${(s && s.responsavelId === u.id) ? 'selected' : ''}>${u.nome}</option>`).join('');
-    }
+    renderResponsaveisPicker(s ? (s.responsaveisIds || []) : []);
     showView('seguradora-form');
   }
 
   async function saveSeguradoraForm(){
     const nome = document.getElementById('seguradora-nome').value.trim();
     if(!nome){ alert('Informe o nome da seguradora.'); return; }
+    const responsaveisIds = Array.from(document.querySelectorAll('#seguradora-responsaveis-list input:checked')).map(el=>el.value);
     const payload = {
       nome,
       comercial: document.getElementById('seguradora-comercial').value.trim(),
@@ -6453,18 +6587,20 @@ Os dados de produção deste período serão restaurados para o upload anterior.
       assistencia_24h: document.getElementById('seguradora-assistencia-24h').value.trim(),
       link_corretor: document.getElementById('seguradora-link-corretor').value.trim(),
       link_assessoria: document.getElementById('seguradora-link-assessoria').value.trim(),
+      login_assessoria: document.getElementById('seguradora-login-assessoria').value.trim(),
+      senha_assessoria: document.getElementById('seguradora-senha-assessoria').value.trim(),
       logo: PENDING_SEGURADORA_LOGO,
-      responsavel_id: document.getElementById('seguradora-responsavel-id').value || null,
+      responsaveis_ids: responsaveisIds,
     };
 
     if(editingSeguradoraId){
       const { error } = await supabase.from('seguradoras').update(payload).eq('id', editingSeguradoraId);
       if(error){ alert('Erro ao salvar: ' + error.message); return; }
-      SEGURADORAS[editingSeguradoraId] = { ...payload, responsavelId: payload.responsavel_id };
+      SEGURADORAS[editingSeguradoraId] = { ...payload, responsaveisIds };
     } else {
       const { data, error } = await supabase.from('seguradoras').insert(payload).select().single();
       if(error){ alert('Erro ao cadastrar seguradora: ' + error.message); return; }
-      SEGURADORAS[data.id] = { ...payload, responsavelId: payload.responsavel_id };
+      SEGURADORAS[data.id] = { ...payload, responsaveisIds };
     }
 
     registrarLog(editingSeguradoraId ? 'Editou seguradora' : 'Criou seguradora', nome);
@@ -6546,6 +6682,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
           refreshCorretoraSelects();
           renderUsuarios();
           Object.keys(GROUPS).forEach(refreshGroupUI);
+          showView('home');
           hideSplash(200);
           iniciarTimeoutSessao();
           return;
