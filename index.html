@@ -1956,10 +1956,13 @@
   const SUPABASE_URL = 'https://lzoonwbdezfcdbescmna.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_vgUwbMKZ3fME5eshDWnUFQ_J9Q7zGbl';
 
-  // O SDK carregado pelo CDN expõe window.supabase
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true },
-  });
+  // O bundle UMD expõe { createClient } em window.supabase
+  const _sbFactory = window.supabase || {};
+  const _createClient = _sbFactory.createClient || (typeof createClient !== 'undefined' ? createClient : null);
+  if(!_createClient){ console.error('Supabase SDK não carregou!'); }
+  const supabase = _createClient
+    ? _createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } })
+    : null;
 
   /* ---------------- NAV CONFIG ---------------- */
   const ICONS = {
@@ -4831,17 +4834,42 @@
       return;
     }
 
-    btn.disabled = true; btn.textContent = 'Entrando...';
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
-    btn.disabled = false; btn.textContent = 'Entrar';
-
-    if(error){
-      errorBox.textContent = 'E-mail ou senha incorretos.';
+    // verifica se SDK carregou
+    if(!window.supabase || typeof supabase.auth === 'undefined'){
+      errorBox.textContent = 'Erro: SDK do Supabase não carregou. Verifique sua conexão.';
       errorBox.classList.remove('hidden');
       return;
     }
 
-    // busca o perfil (role, corretora vinculada, status) do usuário autenticado
+    btn.disabled = true; btn.textContent = 'Entrando...';
+    errorBox.classList.add('hidden');
+
+    let data, error;
+    try {
+      const res = await supabase.auth.signInWithPassword({ email, password: senha });
+      data = res.data; error = res.error;
+    } catch(e) {
+      btn.disabled = false; btn.textContent = 'Entrar';
+      errorBox.textContent = 'Erro de conexão: ' + e.message;
+      errorBox.classList.remove('hidden');
+      return;
+    }
+
+    btn.disabled = false; btn.textContent = 'Entrar';
+
+    if(error){
+      if(error.message.includes('Invalid login') || error.message.includes('invalid_credentials')){
+        errorBox.textContent = 'E-mail ou senha incorretos.';
+      } else if(error.message.includes('Email not confirmed')){
+        errorBox.textContent = 'Confirme seu e-mail antes de entrar (verifique a caixa de entrada).';
+      } else {
+        errorBox.textContent = 'Erro ao entrar: ' + error.message;
+      }
+      errorBox.classList.remove('hidden');
+      return;
+    }
+
+    // busca o perfil
     const { data: profile, error: profErr } = await supabase
       .from('profiles')
       .select('id, nome, email, role, corretora_id, status, foto_url, abas_bloqueadas')
@@ -4849,7 +4877,7 @@
       .single();
 
     if(profErr || !profile){
-      errorBox.textContent = 'Não foi possível carregar seu perfil. Fale com o administrador.';
+      errorBox.textContent = 'Perfil não encontrado no banco. Rode o SQL de setup e cadastre o perfil. (' + (profErr?.message||'sem dados') + ')';
       errorBox.classList.remove('hidden');
       await supabase.auth.signOut();
       return;
