@@ -841,6 +841,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+  // Salva o SDK em nome seguro antes que nosso código declare 'supabase' como cliente
+  window._supabaseSDK = window.supabase;
+  // Limpa window.supabase para não conflitar com nossa variável de cliente
+  delete window.supabase;
+</script>
 </head>
 <body>
 
@@ -1958,22 +1964,18 @@
   const SUPABASE_URL = 'https://lzoonwbdezfcdbescmna.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_vgUwbMKZ3fME5eshDWnUFQ_J9Q7zGbl';
 
-  let supabase;
+  // Inicializa o cliente Supabase usando o SDK salvo em _supabaseSDK
+  var supabase;
   try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    supabase = window._supabaseSDK.createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { persistSession: true, autoRefreshToken: true }
     });
     console.log('✅ Supabase client criado com sucesso');
-    // show status on screen
-    document.addEventListener('DOMContentLoaded', () => {
-      const el = document.getElementById('sb-status');
-      if(el) el.textContent = '✅ Conectado ao Supabase';
-    });
   } catch(e) {
     console.error('❌ Erro ao criar Supabase client:', e);
     document.addEventListener('DOMContentLoaded', () => {
       const el = document.getElementById('sb-status');
-      if(el) el.textContent = '❌ Erro SDK: ' + e.message;
+      if(el){ el.textContent = '❌ Erro SDK: ' + e.message; el.style.color='red'; }
     });
   }
 
@@ -3061,7 +3063,7 @@
     if(selFilial && selFilial.options.length <= 1){
       const filiais = new Set();
       Object.values(GROUPS).forEach(g => { if(g.filial) filiais.add(g.filial); });
-      (DB.filiais||[]).forEach(f => filiais.add(f.nome));
+      _filiaisCache.forEach(f => filiais.add(f.nome));
       selFilial.innerHTML = `<option value="">Todas</option>` + [...filiais].sort().map(f=>`<option value="${f}">${f}</option>`).join('');
     }
 
@@ -4421,27 +4423,29 @@
   // Cache local só para renderizar a tabela sem refazer a consulta a cada clique.
   let USERS_CACHE = [];
 
-  /* ---- FILIAIS ---- */
-  if(!DB.filiais) DB.filiais = [];
+  /* ---- FILIAIS — armazena localmente (tabela filiais no Supabase) ---- */
+  let _filiaisCache = [];
 
-  function renderFiliais(){
+  async function renderFiliais(){
     const tbody = document.getElementById('filiais-tbody');
     if(!tbody) return;
-    const lista = DB.filiais;
-    tbody.innerHTML = lista.length ? lista.map((f,i) => `
+    const { data } = await supabase.from('filiais').select('*').order('nome');
+    _filiaisCache = data || [];
+    const lista = _filiaisCache;
+    tbody.innerHTML = lista.length ? lista.map(f => `
       <tr>
         <td><b>${f.nome}</b></td>
-        <td>${f.cidade}${f.estado?' – '+f.estado:''}</td>
+        <td>${f.cidade||''}${f.estado?' – '+f.estado:''}</td>
         <td>${f.responsavel||'—'}</td>
         <td>${f.telefone||'—'}</td>
-        <td><button class="btn-sm" onclick="excluirFilial(${i})">Excluir</button></td>
+        <td><button class="btn-sm" onclick="excluirFilial('${f.id}')">Excluir</button></td>
       </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--gray-600);">Nenhuma filial cadastrada ainda.</td></tr>`;
   }
 
-  function saveFilial(){
+  async function saveFilial(){
     const nome = document.getElementById('filial-nome').value.trim();
     if(!nome){ document.getElementById('filial-error').textContent='Informe o nome da filial.'; document.getElementById('filial-error').classList.remove('hidden'); return; }
-    DB.filiais.push({
+    const payload = {
       nome,
       cidade: document.getElementById('filial-cidade').value.trim(),
       estado: document.getElementById('filial-estado').value.trim(),
@@ -4449,7 +4453,9 @@
       telefone: document.getElementById('filial-telefone').value.trim(),
       email: document.getElementById('filial-email').value.trim(),
       endereco: document.getElementById('filial-endereco').value.trim(),
-    });
+    };
+    const { error } = await supabase.from('filiais').insert(payload);
+    if(error){ document.getElementById('filial-error').textContent='Erro: '+error.message; document.getElementById('filial-error').classList.remove('hidden'); return; }
     ['filial-nome','filial-cidade','filial-estado','filial-responsavel','filial-telefone','filial-email','filial-endereco'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('filial-error').classList.add('hidden');
     closeModal('modal-filial');
@@ -4457,9 +4463,9 @@
     registrarLog('Cadastrou filial', nome);
   }
 
-  function excluirFilial(idx){
+  async function excluirFilial(id){
     if(!confirm('Excluir esta filial?')) return;
-    DB.filiais.splice(idx,1);
+    await supabase.from('filiais').delete().eq('id', id);
     renderFiliais();
   }
 
@@ -4886,7 +4892,7 @@
     // busca o perfil
     const { data: profile, error: profErr } = await supabase
       .from('profiles')
-      .select('id, nome, email, role, corretora_id, status, foto_url, abas_bloqueadas')
+      .select('id, nome, email, role, status, foto_url, abas_bloqueadas')
       .eq('id', data.user.id)
       .single();
 
@@ -5138,4 +5144,4 @@
   Object.keys(GROUPS).forEach(refreshGroupUI);
 </script>
 </body>
-</html> 
+</html>
