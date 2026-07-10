@@ -6323,10 +6323,10 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     if(error){ console.error('Erro ao carregar seguradoras:', error); return; }
     Object.keys(SEGURADORAS).forEach(k => delete SEGURADORAS[k]);
     data.forEach(row => {
-      // Suporte a credenciais em JSONB (coluna `credenciais`) ou colunas individuais legadas
+      // Lê credenciais de JSONB ou colunas individuais (retrocompatível)
       const cred = row.credenciais || {};
       SEGURADORAS[row.id] = {
-        nome: row.nome,
+        nome: row.nome || '',
         comercial: row.comercial || '',
         comercialNascimento: row.comercialNascimento || null,
         email: row.email || '',
@@ -6610,7 +6610,6 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     if(!nome){ alert('Informe o nome da seguradora.'); return; }
     const responsaveisIds = Array.from(document.querySelectorAll('#seguradora-responsaveis-list input:checked')).map(el=>el.value);
 
-    // Credenciais agrupadas em JSONB para evitar colunas extras na tabela
     const credenciais = {
       link_corretor: document.getElementById('seguradora-link-corretor').value.trim(),
       link_assessoria: document.getElementById('seguradora-link-assessoria').value.trim(),
@@ -6618,8 +6617,8 @@ Os dados de produção deste período serão restaurados para o upload anterior.
       senha_assessoria: document.getElementById('seguradora-senha-assessoria').value.trim(),
     };
 
-    // Payload base — apenas colunas que certamente existem no banco
-    const payloadBase = {
+    // Todos os campos que gostaríamos de salvar — serão removidos se a coluna não existir
+    const fullPayload = {
       nome,
       comercial: document.getElementById('seguradora-comercial').value.trim(),
       comercialNascimento: document.getElementById('seguradora-comercial-nascimento').value || null,
@@ -6629,9 +6628,9 @@ Os dados de produção deste período serão restaurados para o upload anterior.
       assistencia_24h: document.getElementById('seguradora-assistencia-24h').value.trim(),
       logo: PENDING_SEGURADORA_LOGO,
       responsaveis_ids: responsaveisIds,
+      credenciais,
     };
 
-    // Tenta salvar com credenciais JSONB; se a coluna não existir no banco, salva sem ela
     async function trySave(payload){
       if(editingSeguradoraId){
         return await supabase.from('seguradoras').update(payload).eq('id', editingSeguradoraId);
@@ -6640,17 +6639,25 @@ Os dados de produção deste período serão restaurados para o upload anterior.
       }
     }
 
-    let result = await trySave({ ...payloadBase, credenciais });
-    if(result.error && result.error.message && result.error.message.includes('credenciais')){
-      // Coluna credenciais não existe — salva sem ela
-      result = await trySave(payloadBase);
+    // Tenta salvar retirando campos inexistentes até funcionar
+    const optionalFields = ['credenciais','responsaveis_ids','logo','assistencia_24h','comercialNascimento'];
+    let payload = { ...fullPayload };
+    let result = await trySave(payload);
+
+    while(result.error && result.error.message && result.error.message.includes('column of')) {
+      // Extrai o nome da coluna faltante da mensagem de erro
+      const match = result.error.message.match(/'([^']+)' column of/);
+      const missingCol = match ? match[1] : null;
+      if(!missingCol || !payload.hasOwnProperty(missingCol)) break; // evita loop infinito
+      delete payload[missingCol];
+      result = await trySave(payload);
     }
 
     if(result.error){ alert('Erro ao salvar: ' + result.error.message); return; }
 
     const savedId = editingSeguradoraId || result.data?.id;
     if(savedId){
-      SEGURADORAS[savedId] = { ...payloadBase, ...credenciais, responsaveisIds };
+      SEGURADORAS[savedId] = { ...fullPayload, ...credenciais, responsaveisIds };
     }
 
     registrarLog(editingSeguradoraId ? 'Editou seguradora' : 'Criou seguradora', nome);
