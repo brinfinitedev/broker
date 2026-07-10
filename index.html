@@ -501,7 +501,7 @@
     display:flex; align-items:center; justify-content:center;
     color:var(--gray-600); font-size:11px; font-weight:800; flex-shrink:0; overflow:hidden;
   }
-  .material-seguradora-head .logo img{ width:100%; height:100%; object-fit:contain; padding:3px; }
+  .material-seguradora-head .logo img{ width:100%; height:100%; object-fit:contain; padding:2px; }
   .material-seguradora-head h3{ font-size:15px; font-weight:800; margin:0; }
   .material-seguradora-head .count{ font-size:11.5px; color:var(--gray-600); }
 
@@ -718,10 +718,11 @@
 
   .logo-upload-row{ display:flex; align-items:center; gap:16px; }
   .logo-preview{
-    width:64px; height:64px; border-radius:14px; background:var(--surface-2); overflow:hidden; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; color:var(--gray-600); border:1.4px solid var(--border);
+    width:160px; height:54px; border-radius:10px; background:#fff; overflow:hidden; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:var(--gray-600);
+    border:1.4px solid var(--border);
   }
-  .logo-preview img{ width:100%; height:100%; object-fit:cover; }
+  .logo-preview img{ width:100%; height:100%; object-fit:contain; padding:5px; }
 
   .status-dot{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:7px; vertical-align:middle; }
   .status-dot.ok{ background:#22c55e; }
@@ -823,17 +824,7 @@
   .qa-name{font-size:12px;font-weight:700;line-height:1.3;}
   /* sidebar active indicator moves with JS */
   .nav-items{position:relative;}
-  .nav-active-bar{
-    position:absolute; left:0; top:0; width:3px; height:44px;
-    border-radius:0 3px 3px 0;
-    background:#fff; z-index:2;
-    pointer-events:none;
-    transition: top .3s cubic-bezier(.34,1.56,.64,1), height .3s cubic-bezier(.34,1.56,.64,1);
-    box-shadow: 2px 0 8px rgba(255,255,255,.4);
-    will-change: top, height;
-    opacity: 0;
-  }
-  .nav-active-bar.visible{ opacity:1; }
+  /* nav-active-bar removed */
   /* prevent text selection on double-click sidebar */
   .sidebar{user-select:none;-webkit-user-select:none;}
   .logs-tab-btn{
@@ -928,7 +919,6 @@
       Esqueceu a senha? <a href="#" onclick="toggleRecuperarSenha(event)" style="font-weight:600;color:var(--black);border-bottom:1px solid var(--black);">Recuperar acesso</a>
     </div>
 
-    </div>
   </div>
 </div>
 
@@ -1849,6 +1839,7 @@
         <option value="admin">Super Administrador</option>
       </select>
     </div>
+    <p id="user-permissoes-hint" class="hint hidden" style="margin-top:-8px;">Gestores podem ter o acesso a abas específicas bloqueado pelo Super Administrador.</p>
 
     <div id="user-error" class="login-error hidden" style="margin-top:6px;"></div>
     <div class="modal-actions">
@@ -2468,32 +2459,15 @@
     return nav;
   }
 
-  function moveNavBar(viewId, animate){
-    const bar = document.getElementById('nav-active-bar');
-    const btn = document.querySelector(`.nav-item[data-view="${viewId}"]`);
-    if(!bar || !btn) return;
-    if(!animate){
-      bar.style.transition = 'none';
-    }
-    bar.style.top = btn.offsetTop + 'px';
-    bar.style.height = btn.offsetHeight + 'px';
-    bar.classList.add('visible');
-    if(!animate){
-      bar.getBoundingClientRect();
-      bar.style.transition = '';
-    }
-  }
-
   function renderSidebar(){
     const nav = navFor(currentRole);
     const navListEl = document.getElementById('nav-list');
-    navListEl.innerHTML = `<div id="nav-active-bar" class="nav-active-bar"></div>` + nav.map(item => `
+    navListEl.innerHTML = nav.map(item => `
       <button class="nav-btn nav-item ${item.id===currentView?'active':''}" data-view="${item.id}" onclick="showView('${item.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">${ICONS[item.id]||ICONS.home}</svg>
         <span>${item.label}</span>
       </button>`).join('');
-    // Position bar without animation on initial render
-    requestAnimationFrame(()=>{ moveNavBar(currentView, false); });
+
   }
 
   function renderBottomNav(){
@@ -2979,13 +2953,13 @@
     currentView = id;
     document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
     document.getElementById('view-'+id).classList.remove('hidden');
-    document.getElementById('crumb-current').textContent = VIEW_LABELS[id] || id;
+    const crumbEl = document.getElementById('crumb-current');
+    if(crumbEl) crumbEl.textContent = VIEW_LABELS[id] || id;
     document.getElementById('fab').classList.toggle('show-mobile', id==='corretoras' || id==='crm');
     // mark active nav item first
     document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.view===id));
     // move sidebar active bar — rAF garante posição correta após reflow
-    // Animate bar to new active item with spring
-    requestAnimationFrame(()=>{ moveNavBar(id, true); });
+
     if(id === 'seguradoras'){
       renderSeguradoras();
     }
