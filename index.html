@@ -4331,7 +4331,7 @@
           || (g.cnpj||'').toLowerCase().includes(query)
           || (g.cidade||'').toLowerCase().includes(query)
           || (g.apelidos||[]).some(a => a.toLowerCase().includes(query));
-    });
+    }).sort((a, b) => (GROUPS[a].name||'').localeCompare(GROUPS[b].name||'', 'pt-BR'));
     if(gids.length === 0){
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gray-600);">${query ? 'Nenhuma corretora encontrada para "'+query+'".' : 'Nenhuma corretora cadastrada ainda.'}</td></tr>`;
       return;
@@ -4646,6 +4646,7 @@
       colunaCorretor: 'Corretor',
       colunaValor: 'Mês/Ano Atual',
       pularPrimeiraLinhaDados: true,
+      descartarColunaA: true, // coluna A desta planilha não é usada e deve ser ignorada
     },
     'tokio marine produto': {
       // Planilha "Prêmio Líquido — Análise Mensal"
@@ -5697,9 +5698,17 @@ Os dados de produção deste período serão restaurados para o upload anterior.
 
       const template = encontrarTemplate(seguradora);
       let idxCorretor = -1, idxValor = -1;
+
+      // Se o template pede para descartar a coluna A, remove índice 0 do cabeçalho e de todas as linhas
+      let headerRowFinal = headerRow;
+      if(template?.descartarColunaA){
+        headerRowFinal = headerRow.slice(1);
+        dataRows = dataRows.map(({ celulas, numeroLinha }) => ({ celulas: celulas.slice(1), numeroLinha }));
+      }
+
       if(template){
-        idxCorretor = indiceColuna(headerRow, template.colunaCorretor);
-        idxValor = indiceColuna(headerRow, template.colunaValor);
+        idxCorretor = indiceColuna(headerRowFinal, template.colunaCorretor);
+        idxValor = indiceColuna(headerRowFinal, template.colunaValor);
         if(idxCorretor === -1 || idxValor === -1){
           resultBox.innerHTML = `<p class="hint">Não encontrei as colunas "${template.colunaCorretor}" e/ou "${template.colunaValor}" nesta planilha. Confira se é o mesmo layout de sempre para ${seguradora}.</p>`;
           return;
@@ -5723,6 +5732,9 @@ Os dados de produção deste período serão restaurados para o upload anterior.
           });
         }
       }
+
+      // Usa headerRowFinal para extração de valor sem template
+      const headerParaExtracao = headerRowFinal;
 
       // 1ª passada: tenta identificar TODAS as linhas antes de gravar qualquer coisa
       const naoIdentificadas = [];
@@ -5754,7 +5766,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
 
       // 2ª passada: já com 100% identificado, agora sim grava
       for(const { gid, celulas } of identificadas){
-        const valor = template ? Number(celulas[idxValor]) : extrairValorDaLinha(headerRow, celulas);
+        const valor = template ? Number(celulas[idxValor]) : extrairValorDaLinha(headerParaExtracao, celulas);
         if(valor === null || isNaN(valor)) continue;
         await upsertProducao({ corretora_id: gid, seguradora, competencia, valor });
       }
@@ -5765,7 +5777,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
       const snapCorretora = identificadas.map(({ gid, celulas }) => ({
         corretora_id: gid,
         produto: null,
-        valor: template ? Number(celulas[idxValor]) : extrairValorDaLinha(headerRow, celulas),
+        valor: template ? Number(celulas[idxValor]) : extrairValorDaLinha(headerParaExtracao, celulas),
       }));
       await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: identificadas.length, snapshot_dados: snapCorretora });
       registrarLog('Importou planilha de produção', `${seguradora} · ${labelCompetencia(competencia)} · ${identificadas.length} linha(s)`);
