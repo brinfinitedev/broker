@@ -1072,84 +1072,46 @@
 <div class="modal-overlay" id="modal-recuperar-senha" onclick="if(event.target===this) recFechar()">
   <div class="modal-box" style="max-width:420px;">
 
-    <!-- Header fixo -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
       <div style="display:flex;align-items:center;gap:9px;">
         <div style="width:34px;height:34px;border-radius:10px;background:var(--black);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="width:17px;height:17px;"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 118 0v3"/></svg>
         </div>
         <div>
-          <h3 id="rec-modal-titulo" style="margin:0;font-size:15px;">Recuperar senha</h3>
-          <p id="rec-modal-subtitulo" style="margin:0;font-size:12px;color:var(--gray-600);">Passo 1 de 3</p>
+          <h3 style="margin:0;font-size:15px;">Recuperar senha</h3>
+          <p id="rec-modal-subtitulo" style="margin:0;font-size:12px;color:var(--gray-600);">Enviaremos um link para seu e-mail</p>
         </div>
       </div>
       <button onclick="recFechar()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-500);line-height:1;">✕</button>
     </div>
 
-    <!-- Passo 1: e-mail -->
+    <!-- Estado: formulário de e-mail -->
     <div id="rec-step-1">
-      <p style="font-size:13px;color:var(--gray-600);margin-bottom:14px;">Informe seu e-mail de acesso para continuar.</p>
+      <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px;line-height:1.6;">
+        Informe seu e-mail de acesso. Você receberá um link para criar uma nova senha.
+      </p>
       <div class="f-field" style="margin:0 0 4px;">
         <label>E-mail</label>
-        <input id="rec-email" type="email" placeholder="seu@email.com">
+        <input id="rec-email" type="email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter') recEnviarEmail()">
       </div>
-      <div id="rec-step1-error" style="display:none;color:#dc2626;font-size:12px;font-weight:600;margin-bottom:12px;"></div>
-      <div class="modal-actions" style="margin-top:16px;">
+      <div id="rec-step1-error" style="display:none;color:#dc2626;font-size:12px;font-weight:600;margin-top:8px;"></div>
+      <div class="modal-actions" style="margin-top:18px;">
         <button class="btn-outline" onclick="recFechar()">Cancelar</button>
-        <button class="btn-dark" onclick="recStep1()">Continuar →</button>
+        <button class="btn-dark" id="rec-btn-enviar" onclick="recEnviarEmail()">Enviar link →</button>
       </div>
     </div>
 
-    <!-- Passo 2: perguntas -->
-    <div id="rec-step-2" style="display:none;">
-      <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px;">Responda corretamente as perguntas abaixo para redefinir sua senha.</p>
-      <div id="rec-perguntas-lista" style="display:flex;flex-direction:column;gap:14px;"></div>
-      <div id="rec-step2-error" style="display:none;color:#dc2626;font-size:12px;font-weight:600;margin-top:10px;"></div>
-      <div class="modal-actions" style="margin-top:18px;">
-        <button class="btn-outline" onclick="recVoltar()">← Voltar</button>
-        <button class="btn-dark" onclick="recStep2()">Verificar →</button>
-      </div>
-    </div>
-
-    <!-- Passo 3: nova senha -->
-    <div id="rec-step-3" style="display:none;">
-      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;margin-bottom:16px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        <span style="font-size:12.5px;font-weight:700;color:#166534;">Identidade confirmada! Defina sua nova senha.</span>
-      </div>
-      <div class="f-field" style="margin-bottom:10px;">
-        <label>Nova senha</label>
-        <input id="rec-nova-senha" type="password" placeholder="Mínimo 6 caracteres">
-      </div>
-      <div class="f-field" style="margin:0;">
-        <label>Confirmar nova senha</label>
-        <input id="rec-conf-senha" type="password" placeholder="Repita a senha">
-      </div>
-      <div id="rec-step3-error" style="display:none;color:#dc2626;font-size:12px;font-weight:600;margin-top:8px;"></div>
-      <div class="modal-actions" style="margin-top:18px;">
-        <button class="btn-outline" onclick="recVoltar()">← Voltar</button>
-        <button class="btn-dark" style="background:#16a34a;" onclick="recStep3()">Salvar senha ✓</button>
-      </div>
-    </div>
-
-    <!-- Passo 4: sucesso -->
+    <!-- Estado: e-mail enviado com sucesso -->
     <div id="rec-step-4" style="display:none;text-align:center;padding:10px 0 4px;">
-      <div style="width:54px;height:54px;border-radius:50%;background:#f0fdf4;border:2px solid #bbf7d0;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" style="width:26px;height:26px;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <div style="width:58px;height:58px;border-radius:50%;background:#f0fdf4;border:2px solid #bbf7d0;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" style="width:28px;height:28px;"><path d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z"/><path d="M3 7l9 6 9-6"/></svg>
       </div>
-      <h3 style="margin:0 0 6px;color:#166534;">Senha redefinida!</h3>
-      <p style="font-size:13px;color:var(--gray-600);margin-bottom:20px;">Agora faça login com sua nova senha.</p>
-      <button class="btn-dark" style="width:100%;" onclick="recFechar()">Fazer login</button>
-    </div>
-
-    <!-- Sem perguntas cadastradas -->
-    <div id="rec-sem-perguntas" style="display:none;text-align:center;padding:10px 0 4px;">
-      <div style="width:54px;height:54px;border-radius:50%;background:#fff7ed;border:2px solid #fed7aa;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" style="width:26px;height:26px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-      </div>
-      <h3 style="margin:0 0 8px;color:#9a3412;">Recuperação indisponível</h3>
-      <p style="font-size:13px;color:var(--gray-600);line-height:1.6;margin-bottom:20px;">Entre em contato com seu Super Administrador para realizar a recuperação de senha.</p>
-      <button class="btn-outline" onclick="recFechar()">Fechar</button>
+      <h3 style="margin:0 0 8px;color:#166534;">E-mail enviado!</h3>
+      <p style="font-size:13px;color:var(--gray-600);line-height:1.6;margin-bottom:6px;">
+        Verifique sua caixa de entrada em <strong id="rec-email-enviado"></strong>
+      </p>
+      <p style="font-size:12px;color:var(--gray-400);margin-bottom:20px;">Não recebeu? Verifique a caixa de spam.</p>
+      <button class="btn-dark" style="width:100%;" onclick="recFechar()">Fechar</button>
     </div>
 
   </div>
@@ -2092,72 +2054,6 @@
     <div class="f-field" style="margin-top:8px;">
       <label>Nova senha <span style="font-weight:400;color:var(--gray-600);">(deixe em branco para não alterar)</span></label>
       <input id="perfil-senha" type="password" placeholder="••••••••">
-    </div>
-
-    <!-- Perguntas de segurança -->
-    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);">
-      <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--gray-600);"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 118 0v3"/></svg>
-        <span style="font-size:13px;font-weight:700;">Perguntas de segurança</span>
-      </div>
-      <p class="hint" style="margin-bottom:12px;">Cadastre 3 perguntas para recuperar seu acesso sem precisar do administrador.</p>
-
-      <div style="display:flex;flex-direction:column;gap:10px;" id="perfil-sq-lista">
-        <!-- Pergunta 1 -->
-        <div style="background:var(--surface-2);border-radius:11px;padding:12px;">
-          <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:6px;">Pergunta 1</label>
-          <select id="perfil-sq-q1" style="width:100%;border:1.4px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;background:#fff;margin-bottom:8px;">
-            <option value="">Escolha uma pergunta…</option>
-            <option value="Qual o nome da sua primeira escola?">Qual o nome da sua primeira escola?</option>
-<option value="Qual o nome do seu animal de estimação favorito?">Qual o nome do seu animal de estimação favorito?</option>
-<option value="Qual o nome da cidade onde você nasceu?">Qual o nome da cidade onde você nasceu?</option>
-<option value="Qual o nome do meio da sua mãe?">Qual o nome do meio da sua mãe?</option>
-<option value="Qual era o modelo do seu primeiro carro?">Qual era o modelo do seu primeiro carro?</option>
-<option value="Qual o nome do seu melhor amigo de infância?">Qual o nome do seu melhor amigo de infância?</option>
-<option value="Qual o nome da rua onde você cresceu?">Qual o nome da rua onde você cresceu?</option>
-<option value="Qual o nome do seu professor favorito?">Qual o nome do seu professor favorito?</option>
-<option value="Qual era o apelido da sua avó materna?">Qual era o apelido da sua avó materna?</option>
-<option value="Qual foi o nome do seu primeiro chefe?">Qual foi o nome do seu primeiro chefe?</option>
-          </select>
-          <input id="perfil-sq-a1" type="text" placeholder="Sua resposta…" style="width:100%;border:1.4px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
-        </div>
-        <!-- Pergunta 2 -->
-        <div style="background:var(--surface-2);border-radius:11px;padding:12px;">
-          <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:6px;">Pergunta 2</label>
-          <select id="perfil-sq-q2" style="width:100%;border:1.4px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;background:#fff;margin-bottom:8px;">
-            <option value="">Escolha uma pergunta…</option>
-            <option value="Qual o nome da sua primeira escola?">Qual o nome da sua primeira escola?</option>
-<option value="Qual o nome do seu animal de estimação favorito?">Qual o nome do seu animal de estimação favorito?</option>
-<option value="Qual o nome da cidade onde você nasceu?">Qual o nome da cidade onde você nasceu?</option>
-<option value="Qual o nome do meio da sua mãe?">Qual o nome do meio da sua mãe?</option>
-<option value="Qual era o modelo do seu primeiro carro?">Qual era o modelo do seu primeiro carro?</option>
-<option value="Qual o nome do seu melhor amigo de infância?">Qual o nome do seu melhor amigo de infância?</option>
-<option value="Qual o nome da rua onde você cresceu?">Qual o nome da rua onde você cresceu?</option>
-<option value="Qual o nome do seu professor favorito?">Qual o nome do seu professor favorito?</option>
-<option value="Qual era o apelido da sua avó materna?">Qual era o apelido da sua avó materna?</option>
-<option value="Qual foi o nome do seu primeiro chefe?">Qual foi o nome do seu primeiro chefe?</option>
-          </select>
-          <input id="perfil-sq-a2" type="text" placeholder="Sua resposta…" style="width:100%;border:1.4px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
-        </div>
-        <!-- Pergunta 3 -->
-        <div style="background:var(--surface-2);border-radius:11px;padding:12px;">
-          <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:6px;">Pergunta 3</label>
-          <select id="perfil-sq-q3" style="width:100%;border:1.4px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;background:#fff;margin-bottom:8px;">
-            <option value="">Escolha uma pergunta…</option>
-            <option value="Qual o nome da sua primeira escola?">Qual o nome da sua primeira escola?</option>
-<option value="Qual o nome do seu animal de estimação favorito?">Qual o nome do seu animal de estimação favorito?</option>
-<option value="Qual o nome da cidade onde você nasceu?">Qual o nome da cidade onde você nasceu?</option>
-<option value="Qual o nome do meio da sua mãe?">Qual o nome do meio da sua mãe?</option>
-<option value="Qual era o modelo do seu primeiro carro?">Qual era o modelo do seu primeiro carro?</option>
-<option value="Qual o nome do seu melhor amigo de infância?">Qual o nome do seu melhor amigo de infância?</option>
-<option value="Qual o nome da rua onde você cresceu?">Qual o nome da rua onde você cresceu?</option>
-<option value="Qual o nome do seu professor favorito?">Qual o nome do seu professor favorito?</option>
-<option value="Qual era o apelido da sua avó materna?">Qual era o apelido da sua avó materna?</option>
-<option value="Qual foi o nome do seu primeiro chefe?">Qual foi o nome do seu primeiro chefe?</option>
-          </select>
-          <input id="perfil-sq-a3" type="text" placeholder="Sua resposta…" style="width:100%;border:1.4px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
-        </div>
-      </div>
     </div>
 
     <div id="perfil-success" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:12.5px;font-weight:600;padding:10px 14px;border-radius:10px;margin-top:12px;text-align:center;">✓ Perfil salvo com sucesso!</div>
@@ -3108,17 +3004,6 @@
       document.getElementById('perfil-email').value = p.email || '';
       document.getElementById('perfil-telefone').value = p.telefone || '';
       document.getElementById('perfil-nascimento').value = p.nascimento || '';
-
-      // Carregar perguntas de segurança se existirem
-      const sqs = p.security_questions;
-      const perguntas = Array.isArray(sqs) ? sqs : (sqs ? (() => { try{ return JSON.parse(sqs); } catch(e){ return []; } })() : []);
-      [1,2,3].forEach(i => {
-        const sq = perguntas[i-1] || {};
-        const qEl = document.getElementById(`perfil-sq-q${i}`);
-        const aEl = document.getElementById(`perfil-sq-a${i}`);
-        if(qEl) qEl.value = sq.pergunta || '';
-        if(aEl) aEl.value = sq.resposta || '';
-      });
     }
     document.getElementById('perfil-senha').value = '';
     document.getElementById('perfil-error').classList.add('hidden');
@@ -3134,28 +3019,7 @@
     const errEl = document.getElementById('perfil-error');
     if(!nome){ errEl.textContent='Nome obrigatório.'; errEl.classList.remove('hidden'); return; }
 
-    // Coletar perguntas de segurança
-    const sq = [];
-    let sqValidas = true;
-    [1,2,3].forEach(i => {
-      const q = document.getElementById(`perfil-sq-q${i}`)?.value || '';
-      const a = (document.getElementById(`perfil-sq-a${i}`)?.value || '').trim();
-      if(q && a){
-        sq.push({ pergunta: q, resposta: a.toLowerCase() }); // salvar resposta em minúsculo para comparação
-      } else if(q && !a){
-        sqValidas = false; // pergunta sem resposta
-      }
-    });
-    if(!sqValidas){
-      errEl.textContent = 'Preencha a resposta para todas as perguntas de segurança selecionadas.';
-      errEl.classList.remove('hidden');
-      return;
-    }
-
-    // update profiles table
     const updatePayload = { nome, email, telefone, nascimento };
-    if(sq.length === 3) updatePayload.security_questions = JSON.stringify(sq);
-    else if(sq.length === 0) updatePayload.security_questions = null; // limpar se removidas
     const { error: profErr } = await supabase.from('profiles').update(updatePayload).eq('id', currentUserId);
     if(profErr){ errEl.textContent='Erro ao salvar: '+profErr.message; errEl.classList.remove('hidden'); return; }
 
@@ -3171,7 +3035,6 @@
     document.getElementById('user-name').textContent = nome;
     document.getElementById('user-av').textContent = initials(nome);
     updateHomeGreeting();
-    // mostrar mensagem de sucesso por 1.5s antes de fechar
     const successEl = document.getElementById('perfil-success');
     if(successEl){ successEl.style.display='block'; }
     registrarLog('Editou perfil', nome);
@@ -6263,174 +6126,57 @@ Os dados de produção deste período serão restaurados para o upload anterior.
      RELATÓRIOS — gera relatório de qualquer tabela do sistema
   ========================================================== */
   // ===== RECUPERAR SENHA COM PERGUNTAS DE SEGURANÇA =====
-  let _recUserId = null; // guarda o id do user durante o fluxo
-
-  function _recShowStep(step){
-    ['rec-step-1','rec-step-2','rec-step-3','rec-step-4','rec-sem-perguntas'].forEach(id=>{
-      const el = document.getElementById(id);
-      if(el) el.style.display = 'none';
-    });
-    const target = document.getElementById(step);
-    if(target) target.style.display = 'block';
-  }
-
+  // ===== RECUPERAR SENHA VIA E-MAIL =====
   function toggleRecuperarSenha(e){
     if(e) e.preventDefault();
-    _recUserId = null;
-    window._recPerguntas = null;
-    // reset all steps
     const emailEl = document.getElementById('rec-email');
     if(emailEl) emailEl.value = '';
-    ['rec-step1-error','rec-step2-error','rec-step3-error'].forEach(id=>{
-      const el = document.getElementById(id);
-      if(el){ el.style.display='none'; el.textContent=''; }
-    });
-    ['rec-nova-senha','rec-conf-senha'].forEach(id=>{
-      const el = document.getElementById(id);
-      if(el) el.value='';
-    });
-    _recShowStep('rec-step-1');
-    // Update header subtitle
-    _recUpdateHeader(1);
+    const errEl = document.getElementById('rec-step1-error');
+    if(errEl){ errEl.style.display='none'; errEl.textContent=''; }
+    document.getElementById('rec-step-1').style.display = 'block';
+    document.getElementById('rec-step-4').style.display = 'none';
+    const btn = document.getElementById('rec-btn-enviar');
+    if(btn){ btn.disabled = false; btn.textContent = 'Enviar link →'; }
     openModal('modal-recuperar-senha');
-  }
-
-  function _recUpdateHeader(step){
-    const titulo = document.getElementById('rec-modal-titulo');
-    const sub = document.getElementById('rec-modal-subtitulo');
-    const titles = {1:'Recuperar senha', 2:'Perguntas de segurança', 3:'Nova senha', 4:'Concluído'};
-    const subs = {1:'Passo 1 de 3', 2:'Passo 2 de 3', 3:'Passo 3 de 3', 4:'Tudo certo!'};
-    if(titulo) titulo.textContent = titles[step] || 'Recuperar senha';
-    if(sub) sub.textContent = subs[step] || '';
-  }
-
-  function recVoltar(){
-    _recShowStep('rec-step-1');
-    _recUpdateHeader(1);
-    _recUserId = null;
-    window._recPerguntas = null;
   }
 
   function recFechar(){
     closeModal('modal-recuperar-senha');
-    _recUserId = null;
-    window._recPerguntas = null;
   }
 
-  async function recStep1(){
+  async function recEnviarEmail(){
     const email = (document.getElementById('rec-email')?.value||'').trim().toLowerCase();
     const errEl = document.getElementById('rec-step1-error');
     errEl.style.display='none'; errEl.textContent='';
 
     if(!email){ errEl.textContent='Informe seu e-mail.'; errEl.style.display='block'; return; }
-
-    // Buscar o usuário pelo email
-    const { data: perfis } = await supabase
-      .from('profiles')
-      .select('id, nome, security_questions')
-      .eq('email', email.toLowerCase())
-      .limit(1);
-
-    const perfil = (perfis||[])[0];
-    if(!perfil){
-      errEl.textContent='E-mail não encontrado no sistema.';
-      errEl.style.display='block';
-      return;
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      errEl.textContent='E-mail inválido.'; errEl.style.display='block'; return;
     }
 
-    const sqs = perfil.security_questions;
-    const perguntas = Array.isArray(sqs) ? sqs : (sqs ? JSON.parse(sqs) : null);
+    const btn = document.getElementById('rec-btn-enviar');
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
 
-    if(!perguntas || perguntas.length < 3 || !perguntas[0]?.pergunta){
-      // Usuário não tem perguntas cadastradas
-      _recUserId = null;
-      _recShowStep('rec-sem-perguntas');
-      return;
-    }
+    // URL de redirecionamento — após clicar no link, o Supabase redireciona aqui
+    // e o sistema detecta o token para permitir trocar a senha
+    const redirectTo = window.location.origin + window.location.pathname;
 
-    _recUserId = perfil.id;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
-    // Montar as perguntas no passo 2
-    const lista = document.getElementById('rec-perguntas-lista');
-    lista.innerHTML = perguntas.map((sq, i) => `
-      <div>
-        <label style="font-size:12px;font-weight:700;color:var(--gray-700);display:block;margin-bottom:5px;">${sq.pergunta}</label>
-        <input id="rec-ans-${i}" type="text" placeholder="Sua resposta…" style="width:100%;border:1.4px solid var(--border);border-radius:9px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
-      </div>`).join('');
-
-    // Salvar perguntas no estado para verificação
-    window._recPerguntas = perguntas;
-
-    const e2 = document.getElementById('rec-step2-error');
-    if(e2){ e2.style.display='none'; e2.textContent=''; }
-    _recUpdateHeader(2);
-    _recShowStep('rec-step-2');
-  }
-
-  async function recStep2(){
-    const errEl = document.getElementById('rec-step2-error');
-    errEl.style.display='none'; errEl.textContent='';
-    const perguntas = window._recPerguntas || [];
-
-    let todasCorretas = true;
-    perguntas.forEach((sq, i) => {
-      const resposta = (document.getElementById(`rec-ans-${i}`)?.value||'').trim().toLowerCase();
-      const correta = (sq.resposta||'').trim().toLowerCase();
-      if(resposta !== correta) todasCorretas = false;
-    });
-
-    if(!todasCorretas){
-      errEl.textContent = 'Uma ou mais respostas estão incorretas. Tente novamente.';
-      errEl.style.display = 'block';
-      // Limpar campos
-      perguntas.forEach((_, i) => {
-        const el = document.getElementById(`rec-ans-${i}`);
-        if(el) el.value = '';
-      });
-      return;
-    }
-
-    const e3 = document.getElementById('rec-step3-error');
-    if(e3){ e3.style.display='none'; e3.textContent=''; }
-    const s = document.getElementById('rec-nova-senha');
-    const c = document.getElementById('rec-conf-senha');
-    if(s) s.value='';
-    if(c) c.value='';
-    _recUpdateHeader(3);
-    _recShowStep('rec-step-3');
-  }
-
-  async function recStep3(){
-    const errEl = document.getElementById('rec-step3-error');
-    errEl.style.display='none'; errEl.textContent='';
-    const nova = document.getElementById('rec-nova-senha')?.value||'';
-    const conf = document.getElementById('rec-conf-senha')?.value||'';
-
-    if(nova.length < 6){ errEl.textContent='A senha deve ter pelo menos 6 caracteres.'; errEl.style.display='block'; return; }
-    if(nova !== conf){ errEl.textContent='As senhas não coincidem.'; errEl.style.display='block'; return; }
-
-    if(!_recUserId){ errEl.textContent='Sessão expirada. Comece novamente.'; errEl.style.display='block'; return; }
-
-    // Chamar Edge Function ou RPC para trocar senha do usuário
-    // Como o SDK client não pode trocar senha de outro usuário,
-    // usamos uma RPC no Supabase que deve estar configurada como SECURITY DEFINER
-    const { error } = await supabase.rpc('reset_password_by_security_questions', {
-      p_user_id: _recUserId,
-      p_new_password: nova
-    });
+    btn.disabled = false;
+    btn.textContent = 'Enviar link →';
 
     if(error){
-      // Fallback: tentar via admin API (só funciona se for o próprio usuário logado)
-      // Neste caso, o usuário não está logado, então precisamos do RPC
-      errEl.textContent = 'Não foi possível redefinir a senha. Contate o administrador.';
+      errEl.textContent = 'Erro ao enviar: ' + error.message;
       errEl.style.display = 'block';
       return;
     }
 
-    _recUserId = null;
-    window._recPerguntas = null;
-    _recUpdateHeader(4);
-    _recShowStep('rec-step-4');
+    // Mostra tela de sucesso (sempre — para não revelar se o e-mail existe)
+    document.getElementById('rec-email-enviado').textContent = email;
+    document.getElementById('rec-step-1').style.display = 'none';
+    document.getElementById('rec-step-4').style.display = 'block';
   }
   // ===== FIM RECUPERAR SENHA =====
 
