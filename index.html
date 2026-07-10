@@ -159,8 +159,8 @@
   }
   .side-top{ display:flex; align-items:center; justify-content:center; margin-bottom:26px; padding:0 4px;}
   .side-brand{ display:flex; align-items:center; justify-content:center; overflow:hidden; width:100%; }
-  .side-brand img.side-logo-static{ max-width:100%; height:26px; width:auto; object-fit:contain; transition: opacity .2s; }
-  .side-brand video.side-logo-video{ display:none; width:44px; height:44px; object-fit:contain; }
+  .side-brand img.side-logo-static{ max-width:100%; height:26px; width:auto; object-fit:contain; transition: opacity .2s; display:block; }
+  .side-brand video.side-logo-video{ display:none; width:40px; height:40px; object-fit:contain; }
   .shell.collapsed .side-brand img.side-logo-static{ display:none; }
   .shell.collapsed .side-brand video.side-logo-video{ display:block; }
   .shell.collapsed .side-brand{ position:relative; }
@@ -181,7 +181,7 @@
   .shell.collapsed .collapse-btn svg{ transform: rotate(180deg); }
   .shell.collapsed .side-top{ justify-content:center; }
 
-  .nav-list{ display:flex; flex-direction:column; gap:2px; flex:1; }
+  .nav-list{ display:flex; flex-direction:column; gap:2px; flex:1; position:relative; }
   .nav-btn{
     display:flex; align-items:center; gap:13px;
     padding:11px 12px; border-radius:11px;
@@ -819,9 +819,9 @@
   .nav-items{position:relative;}
   .nav-active-bar{
     position:absolute;left:0;width:3px;border-radius:0 3px 3px 0;
-    background:#fff;
-    transition:top .3s cubic-bezier(.22,1,.36,1),height .3s cubic-bezier(.22,1,.36,1),opacity .2s;
-    box-shadow: 1px 0 8px rgba(255,255,255,.4);
+    background:#fff; z-index:2;
+    transition:top .28s cubic-bezier(.22,1,.36,1),height .28s cubic-bezier(.22,1,.36,1);
+    box-shadow: 1px 0 6px rgba(255,255,255,.35);
     pointer-events:none;
   }
   /* prevent text selection on double-click sidebar */
@@ -1221,26 +1221,19 @@
               </button>
             </div>
           </div>
-          <div class="form-section" id="mkt-email">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-              <h3 style="margin-bottom:0;">Integração de e-mail (Brevo)</h3>
-              <span class="chip">Em breve</span>
+          <div class="form-section" id="mkt-email" style="text-align:center; padding:48px 24px;">
+            <div style="width:56px;height:56px;border-radius:16px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="width:26px;height:26px;color:var(--gray-400);"><path d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1z"/><path d="M3 7l9 6 9-6"/></svg>
             </div>
-            <p class="hint">Estrutura pronta para conectar com o Brevo assim que tivermos a chave de API. Por enquanto os disparos por e-mail ficam salvos como rascunho.</p>
-            <div class="form-grid">
-              <div class="f-field full"><label>Chave de API (Brevo)</label><input id="brevo-api-key" type="password" placeholder="xkeysib-..."></div>
-              <div class="f-field"><label>E-mail remetente</label><input id="brevo-remetente" type="email" placeholder="contato@brinfinite.com.br"></div>
-              <div class="f-field"><label>Nome do remetente</label><input id="brevo-nome-remetente" placeholder="BR Infinite"></div>
+            <div style="display:inline-flex;align-items:center;gap:8px;background:var(--black);color:#fff;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.5px;margin-bottom:14px;">
+              EM BREVE
             </div>
-            <div class="form-actions"><button class="btn-outline" onclick="saveBrevoConfig()">Salvar configuração</button></div>
-            <hr style="border:none; border-top:1px solid var(--border); margin:24px 0;">
-            <h3>Novo disparo por e-mail</h3>
-            <div class="form-grid">
-              <div class="f-field full"><label>Assunto</label><input placeholder="Ex: Nova tabela de vigências"></div>
-              <div class="f-field full"><label>Destinatários</label><input placeholder="Todas as corretoras"></div>
-              <div class="f-field full"><label>Mensagem</label><textarea rows="6" placeholder="Escreva a mensagem..."></textarea></div>
-            </div>
-            <div class="form-actions"><button class="btn-outline">Salvar rascunho</button><button class="btn-dark" onclick="alert('Integração com o Brevo ainda será ativada. Por enquanto o disparo fica salvo como rascunho.')">Enviar</button></div>
+            <p style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--gray-900);">Disparos por e-mail</p>
+            <p style="font-size:13px;color:var(--gray-600);max-width:340px;margin:0 auto;line-height:1.6;">Esta funcionalidade estará disponível em breve. Você poderá enviar campanhas de e-mail diretamente para as corretoras parceiras.</p>
+            <!-- campos ocultos para não quebrar funções JS que referenciam esses ids -->
+            <input type="hidden" id="brevo-api-key">
+            <input type="hidden" id="brevo-remetente">
+            <input type="hidden" id="brevo-nome-remetente">
           </div>
           <div class="form-section hidden" id="mkt-whats">
             <h3>Contatos selecionados</h3>
@@ -2135,6 +2128,20 @@
     <input type="hidden" id="importar-seguradora">
 
     <div id="importar-arquivo-section" class="hidden">
+      <!-- Tipo de importação (se seguradora tiver template por produto) -->
+      <div class="f-field" id="importar-tipo-field" style="display:none;">
+        <label>Tipo de planilha</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:1.4px solid var(--border);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;transition:border-color .2s;" id="tipo-corretora-label">
+            <input type="radio" name="importar-tipo" id="tipo-corretora" value="corretora" style="accent-color:var(--black);" onchange="onImportTipoChange()">
+            Por corretora
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:1.4px solid var(--border);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;transition:border-color .2s;" id="tipo-produto-label">
+            <input type="radio" name="importar-tipo" id="tipo-produto" value="produto" style="accent-color:var(--black);" onchange="onImportTipoChange()">
+            Por produto
+          </label>
+        </div>
+      </div>
       <div class="f-field"><label>Competência</label>
         <input type="month" id="importar-competencia">
       </div>
@@ -2237,15 +2244,15 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">${ICONS[item.id]||ICONS.home}</svg>
         <span>${item.label}</span>
       </button>`).join('');
-    requestAnimationFrame(()=>{
+    // Move bar to active item — double rAF ensures layout is complete
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
       const ab = navListEl.querySelector('.nav-item.active');
       const bar = document.getElementById('nav-active-bar');
       if(ab && bar){
         bar.style.top = ab.offsetTop + 'px';
         bar.style.height = ab.offsetHeight + 'px';
-        bar.style.opacity = '1';
       }
-    });
+    }));
   }
 
   function renderBottomNav(){
@@ -2691,15 +2698,14 @@
     // mark active nav item first
     document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.view===id));
     // move sidebar active bar — rAF garante posição correta após reflow
-    requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
       const activeBtn = document.querySelector(`.nav-item[data-view="${id}"]`);
       const bar = document.getElementById('nav-active-bar');
       if(activeBtn && bar){
         bar.style.top = activeBtn.offsetTop + 'px';
         bar.style.height = activeBtn.offsetHeight + 'px';
-        bar.style.opacity = '1';
       }
-    });
+    }));
     if(id === 'seguradoras'){
       renderSeguradoras();
     }
@@ -4097,18 +4103,40 @@
   // produção do mês, e se alguma linha fixa precisa ser sempre ignorada (ex: linha de "Total").
   const PLANILHA_TEMPLATES = {
     'tokio marine': {
+      tipo: 'corretora',
       colunaCorretor: 'Corretor',
       colunaValor: 'Mês/Ano Atual',
       pularPrimeiraLinhaDados: true,
     },
+    'tokio marine produto': {
+      // Planilha "Prêmio Líquido — Análise Mensal"
+      // Col B = Carteira (produto), Col G = Mês/Ano Atual
+      tipo: 'produto',
+      colunaProduto: 'Carteira',
+      colunaValor: 'Mês/Ano Atual',
+      // Linhas com "total" em Carteira ou Carteira vazia são descartadas
+      // Mesmo produto pode aparecer múltiplas vezes (por executivo) → soma
+      ignorarTotal: true,
+      agruparPorProduto: true,
+    },
     'pier': {
-      // Col B = Corretora (index 1), Col F = GWP (index 5)
+      tipo: 'corretora',
       colunaCorretor: 'Corretora',
       colunaValor: 'GWP',
-      ignorarZeros: true,   // linhas com GWP == 0 são ignoradas sem erro
-      ignorarHeader: false, // linha 1 já é o cabeçalho (XLSX.sheet_to_json já pula)
+      ignorarZeros: true,
     },
   };
+
+  // Templates que suportam importação "por produto"
+  const TEMPLATES_COM_PRODUTO = ['tokio marine'];
+
+  function onImportTipoChange(){
+    const tipo = document.querySelector('input[name="importar-tipo"]:checked')?.value;
+    const lblCor = document.getElementById('tipo-corretora-label');
+    const lblProd = document.getElementById('tipo-produto-label');
+    if(lblCor) lblCor.style.borderColor = tipo==='corretora' ? 'var(--black)' : 'var(--border)';
+    if(lblProd) lblProd.style.borderColor = tipo==='produto' ? 'var(--black)' : 'var(--border)';
+  }
 
   function encontrarTemplate(seguradora){
     const alvo = seguradora.trim().toLowerCase();
@@ -4184,6 +4212,120 @@
       return supabase.from('producao_mensal').update({ valor, produto: produto||null, atualizado_em }).eq('id', atual.id);
     }
     return supabase.from('producao_mensal').insert({ corretora_id, seguradora, produto: produto||null, competencia, valor, atualizado_em });
+  }
+
+  async function upsertProducaoPorProduto({ seguradora, produto, competencia, valor }){
+    // Busca linha existente sem corretora (is null) com mesmo seguradora+produto+competencia
+    const { data: existentes } = await supabase.from('producao_mensal').select('*')
+      .is('corretora_id', null)
+      .eq('seguradora', seguradora)
+      .eq('produto', produto)
+      .eq('competencia', competencia);
+    const atual = (existentes || [])[0];
+    const atualizado_em = new Date().toISOString();
+    if(atual){
+      return supabase.from('producao_mensal').update({ valor, atualizado_em }).eq('id', atual.id);
+    }
+    return supabase.from('producao_mensal').insert({ corretora_id: null, seguradora, produto, competencia, valor, atualizado_em });
+  }
+
+  async function processarPlanilhaPorProduto(seguradora, competencia, file, resultBox){
+    resultBox.innerHTML = `<p class="hint">Lendo arquivo...</p>`;
+    mostrarSplashOp('Importando arquivo...');
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      let linhas;
+      try {
+        const wb = XLSX.read(e.target.result, { type:'array' });
+        const primeiraAba = wb.Sheets[wb.SheetNames[0]];
+        linhas = XLSX.utils.sheet_to_json(primeiraAba, { header:1, defval:'' });
+      } catch(err){
+        esconderSplashOp();
+        resultBox.innerHTML = `<p class="hint">Não foi possível ler este arquivo (${err.message}).</p>`;
+        return;
+      }
+
+      linhas = linhas.filter(l => l.some(c => String(c).trim() !== ''));
+      if(linhas.length < 2){
+        esconderSplashOp();
+        resultBox.innerHTML = `<p class="hint">A planilha parece vazia ou só tem o cabeçalho.</p>`;
+        return;
+      }
+
+      const headerRow = linhas[0];
+
+      // Localizar template "por produto" para essa seguradora
+      const alvo = seguradora.trim().toLowerCase();
+      const chaveTemplate = Object.keys(PLANILHA_TEMPLATES).find(k =>
+        PLANILHA_TEMPLATES[k].tipo === 'produto' && (alvo.includes(k.replace(' produto','').trim()) || k.replace(' produto','').trim().includes(alvo))
+      );
+      const template = chaveTemplate ? PLANILHA_TEMPLATES[chaveTemplate] : null;
+
+      // Índices: col B = index 1 (Carteira), col G = index 6 (Mês/Ano Atual)
+      let idxProduto, idxValor;
+      if(template){
+        idxProduto = headerRow.findIndex(h => String(h).trim().toLowerCase() === template.colunaProduto.trim().toLowerCase());
+        idxValor = headerRow.findIndex(h => String(h).trim().toLowerCase() === template.colunaValor.trim().toLowerCase());
+      } else {
+        // Fallback: B=1, G=6 (zero-indexed)
+        idxProduto = 1;
+        idxValor = 6;
+      }
+
+      if(idxProduto === -1 || idxValor === -1){
+        esconderSplashOp();
+        resultBox.innerHTML = `<p class="hint">Não encontrei as colunas de produto/valor nesta planilha. Certifique-se de que é a planilha correta para ${seguradora}.</p>`;
+        return;
+      }
+
+      // Filtrar linhas válidas: produto não vazio, não "total", valor numérico != 0
+      const dataRows = linhas.slice(1).filter(celulas => {
+        const prod = String(celulas[idxProduto] ?? '').trim();
+        if(!prod || prod.toLowerCase() === 'nan') return false;
+        if(prod.toLowerCase().includes('total')) return false;
+        const val = parseFloat(String(celulas[idxValor] ?? '').replace(',','.'));
+        return !isNaN(val) && val !== 0;
+      });
+
+      if(!dataRows.length){
+        esconderSplashOp();
+        resultBox.innerHTML = `<p class="hint">Nenhuma linha válida encontrada. Verifique se é a planilha correta.</p>`;
+        return;
+      }
+
+      // Agrupar por produto (somar valores)
+      const porProduto = {};
+      dataRows.forEach(celulas => {
+        const prod = String(celulas[idxProduto]).trim();
+        const val = parseFloat(String(celulas[idxValor] ?? '').replace(',','.')) || 0;
+        porProduto[prod] = (porProduto[prod] || 0) + val;
+      });
+
+      // "Last upload wins" — apagar registros anteriores sem corretora para essa seguradora+competencia
+      await supabase.from('producao_mensal')
+        .delete()
+        .is('corretora_id', null)
+        .eq('seguradora', seguradora)
+        .eq('competencia', competencia);
+
+      // Inserir novos registros por produto
+      let count = 0;
+      for(const [produto, valor] of Object.entries(porProduto)){
+        await upsertProducaoPorProduto({ seguradora, produto, competencia, valor });
+        count++;
+      }
+
+      esconderSplashOp();
+      resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${count} produto(s) importado(s) com sucesso para ${seguradora}, competência ${labelCompetencia(competencia)}.</p>
+        <ul style="margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--gray-600);">
+          ${Object.entries(porProduto).map(([p,v]) => `<li><b>${p}</b>: R$ ${v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</li>`).join('')}
+        </ul>`;
+      await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: count });
+      registrarLog('Importou planilha por produto', `${seguradora} · ${labelCompetencia(competencia)} · ${count} produto(s)`);
+      renderProducao();
+    };
+    reader.readAsArrayBuffer(file);
   }
 
   function openProducaoModal(){
@@ -4555,9 +4697,19 @@
   }
 
   function selecionarSeguradoraImportar(id){
-    document.getElementById('importar-seguradora').value = SEGURADORAS[id].nome;
+    const nomeSeguradora = SEGURADORAS[id].nome;
+    document.getElementById('importar-seguradora').value = nomeSeguradora;
     document.getElementById('importar-arquivo-section').classList.remove('hidden');
     renderSeguradoraPicker();
+
+    // Mostrar campo de tipo se a seguradora tem template por produto
+    const tipoField = document.getElementById('importar-tipo-field');
+    const temProduto = TEMPLATES_COM_PRODUTO.some(k => nomeSeguradora.trim().toLowerCase().includes(k));
+    if(tipoField) tipoField.style.display = temProduto ? 'block' : 'none';
+    if(temProduto){
+      const tipoCor = document.getElementById('tipo-corretora');
+      if(tipoCor){ tipoCor.checked = true; onImportTipoChange(); }
+    }
   }
 
   // Procura, em qualquer célula da linha, um texto que bata com o apelido ou a razão
@@ -4715,10 +4867,18 @@
     const competencia = document.getElementById('importar-competencia').value || competenciaAtual();
     const file = document.getElementById('producao-arquivo-input').files[0];
     const resultBox = document.getElementById('importar-resultado');
+    // tipo de importação: 'corretora' (padrão) ou 'produto'
+    const tipoImport = document.querySelector('input[name="importar-tipo"]:checked')?.value || 'corretora';
 
     if(!seguradora){ resultBox.innerHTML = `<p class="hint" style="color:var(--black); font-weight:700;">Informe de qual seguradora é o arquivo.</p>`; return; }
     if(!file){ resultBox.innerHTML = `<p class="hint" style="color:var(--black); font-weight:700;">Selecione o arquivo antes de processar.</p>`; return; }
     if(typeof XLSX === 'undefined'){ resultBox.innerHTML = `<p class="hint">Não foi possível carregar o leitor de planilhas. Verifique sua conexão e tente novamente.</p>`; return; }
+
+    // Redirecionar para processamento por produto
+    if(tipoImport === 'produto'){
+      processarPlanilhaPorProduto(seguradora, competencia, file, resultBox);
+      return;
+    }
 
     resultBox.innerHTML = `<p class="hint">Lendo arquivo...</p>`;
     mostrarSplashOp('Importando arquivo...');
@@ -5377,15 +5537,9 @@
     await loadCorretorasFromSupabase();
     await loadSeguradorasFromSupabase();
 
-    // Show entry animation
-    const _splashEl = document.getElementById('splash-screen');
-    const _splashMsg = document.getElementById('splash-msg');
-    if(_splashEl){ _splashEl.classList.remove('hide'); }
-    if(_splashMsg) _splashMsg.textContent = 'Entrando...';
     document.getElementById('view-login').style.display = 'none';
     document.getElementById('app').classList.add('active');
     document.getElementById('bottom-nav').classList.add('show');
-    setTimeout(()=>{ if(_splashEl) _splashEl.classList.add('hide'); }, 1000);
     iniciarTimeoutSessao();
 
     document.getElementById('user-name').textContent = profile.nome;
