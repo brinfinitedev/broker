@@ -1326,8 +1326,8 @@
               </div>
               <select id="corretoras-filter-status" onchange="renderCorretorasList()" style="border:1.4px solid var(--border);border-radius:999px;padding:9px 14px;font-size:12.5px;font-weight:700;outline:none;background:#fff;cursor:pointer;">
                 <option value="">Todas</option>
-                <option value="ativa">✅ Ativas</option>
-                <option value="inativa">⛔ Inativas</option>
+                <option value="ativa">Ativas</option>
+                <option value="inativa">Inativas</option>
               </select>
               <button class="btn-outline" onclick="filtrarCorretoras('')">Limpar</button>
             </div>
@@ -2261,8 +2261,8 @@
         <div class="f-field"><label>Filial</label><input type="text" id="corretora-filial" placeholder="Ex: Matriz, São Paulo, Curitiba..."></div>
         <div class="f-field"><label>Status</label>
           <select id="corretora-status">
-            <option value="ativa">✅ Ativa</option>
-            <option value="inativa">⛔ Inativa</option>
+            <option value="ativa">Ativa</option>
+            <option value="inativa">Inativa</option>
           </select>
         </div>
         <div class="f-field"><label>CNPJ</label><input type="text" id="corretora-cnpj" placeholder="00.000.000/0001-00"></div>
@@ -4348,10 +4348,10 @@
     if(countersEl){
       countersEl.innerHTML = `
         <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:4px 11px;border-radius:999px;">
-          ✅ ${totalAtivas} ativa${totalAtivas !== 1 ? 's' : ''}
+          ${totalAtivas} ativa${totalAtivas !== 1 ? 's' : ''}
         </span>
         <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;padding:4px 11px;border-radius:999px;">
-          ⛔ ${totalInativas} inativa${totalInativas !== 1 ? 's' : ''}
+          ${totalInativas} inativa${totalInativas !== 1 ? 's' : ''}
         </span>`;
     }
 
@@ -5822,15 +5822,44 @@ Os dados de produção deste período serão restaurados para o upload anterior.
 
       if(naoIdentificadas.length){
         esconderSplashOp();
+        const temIdentificadas = identificadas.length > 0;
         resultBox.innerHTML = `
           <div class="login-error" style="margin-top:10px;">
-            <b>${naoIdentificadas.length} linha(s) não identificada(s).</b> Verifique o arquivo e tente novamente —
-            o arquivo só sobe 100% se todas as linhas forem reconhecidas e alocadas à corretora correta.
+            <b>${naoIdentificadas.length} corretora(s) não encontrada(s) no sistema.</b>
+            <p style="margin:6px 0 4px;font-weight:400;">Os nomes abaixo estão na planilha mas não batem com nenhuma corretora cadastrada. Para resolver: abra o cadastro de cada corretora e adicione o nome exato como <b>apelido</b>.</p>
             <ul style="margin:8px 0 0; padding-left:18px;">
-              ${naoIdentificadas.slice(0,15).map(n => `<li>Linha ${n.linha}: "<b>${n.pista}</b>" não bate com nenhum apelido ou razão social cadastrado.</li>`).join('')}
-              ${naoIdentificadas.length > 15 ? `<li>...e mais ${naoIdentificadas.length - 15} linha(s).</li>` : ''}
+              ${naoIdentificadas.slice(0,15).map(n => `<li style="margin-bottom:3px;"><b>${n.pista}</b></li>`).join('')}
+              ${naoIdentificadas.length > 15 ? `<li>...e mais ${naoIdentificadas.length - 15} corretora(s).</li>` : ''}
             </ul>
-          </div>`;
+          </div>
+          ${temIdentificadas ? `
+          <div style="margin-top:10px;padding:10px 14px;background:var(--surface-2);border-radius:10px;font-size:12.5px;">
+            <b>${identificadas.length} corretora(s) foram identificadas</b> e podem ser importadas agora.
+            As ${naoIdentificadas.length} acima ficarão de fora até você cadastrar os apelidos.
+            <div style="margin-top:10px;">
+              <button class="btn-dark" id="btn-importar-parcial" style="font-size:12.5px;padding:9px 16px;">
+                Importar só as ${identificadas.length} identificadas
+              </button>
+            </div>
+          </div>` : ''}`;
+
+        if(temIdentificadas){
+          document.getElementById('btn-importar-parcial').onclick = async () => {
+            document.getElementById('btn-importar-parcial').disabled = true;
+            document.getElementById('btn-importar-parcial').textContent = 'Importando...';
+            mostrarSplashOp('Importando...');
+            for(const { gid, celulas } of identificadas){
+              const valor = template ? Number(celulas[idxValor]) : extrairValorDaLinha(headerParaExtracao, celulas);
+              if(valor === null || isNaN(valor)) continue;
+              await upsertProducao({ corretora_id: gid, seguradora, competencia, valor });
+            }
+            esconderSplashOp();
+            resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${identificadas.length} linha(s) importada(s). As ${naoIdentificadas.length} não identificadas foram ignoradas — cadastre os apelidos e reimporte.</p>`;
+            await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: identificadas.length, snapshot_dados: identificadas.map(({ gid, celulas }) => ({ corretora_id: gid, produto: null, valor: template ? Number(celulas[idxValor]) : extrairValorDaLinha(headerParaExtracao, celulas) })) });
+            registrarLog('Importou planilha (parcial)', `${seguradora} · ${labelCompetencia(competencia)} · ${identificadas.length}/${identificadas.length + naoIdentificadas.length} linha(s)`);
+            renderProducao();
+          };
+        }
         return;
       }
 
