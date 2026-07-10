@@ -785,172 +785,263 @@
      RESPONSIVE
   ========================================================== */
   /* ─── 980 px: tablets ─── */
+  /* ════════════════════════════════════════════
+     TABLET  ≤ 980 px
+  ════════════════════════════════════════════ */
   @media (max-width: 980px){
-    .home-grid{ grid-template-columns: 1fr; }
-    .kanban{ grid-template-columns: 1fr; }
-    .form-grid{ grid-template-columns: 1fr; }
-    .files-grid{ grid-template-columns: repeat(2,1fr); }
-    .kpis-row{ grid-template-columns: repeat(2,1fr) !important; gap:12px; }
-    #producao-rankings{ grid-template-columns: 1fr !important; }
-    .rank-grid{ grid-template-columns: 1fr !important; }
+    .home-grid,
+    .kanban,
+    .form-grid,
+    .form-grid.cols-3{ grid-template-columns:1fr; }
+    .files-grid{ grid-template-columns:repeat(2,1fr); }
+    .kpis-row{ grid-template-columns:repeat(2,1fr) !important; gap:12px; }
+    .producao-rankings-grid,
+    #producao-rankings{ grid-template-columns:1fr !important; }
+    .rank-grid{ grid-template-columns:1fr !important; }
   }
 
-  /* ─── 760 px: mobile ─── */
+  /* ════════════════════════════════════════════
+     MOBILE / iPHONE  ≤ 760 px
+     Base: iPhone 14 = 390 px logical width
+  ════════════════════════════════════════════ */
   @media (max-width: 760px){
-    /* Layout shell */
-    .sidebar{ display:none; }
-    .shell, .shell.collapsed{ grid-template-columns: 1fr; }
+
+    /* ── Shell & layout ── */
+    .sidebar{ display:none !important; }
+    .shell, .shell.collapsed{ grid-template-columns:1fr !important; }
     .role-demo{ display:none; }
-    .content{ padding:16px 14px 100px; max-width:100%; }
+    /* safe-area-inset-bottom for iPhone home bar */
+    .content{
+      padding: 14px 14px calc(90px + env(safe-area-inset-bottom));
+      max-width:100%; overflow-x:hidden;
+    }
 
-    /* Topbar */
-    .topbar{ padding:12px 14px; gap:8px; }
-    .topbar .crumb{ font-size:11.5px; }
+    /* ── Topbar ── */
+    .topbar{
+      padding:12px 14px 12px;
+      gap:8px;
+    }
+    .topbar .crumb{ font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
+    .top-actions{ gap:6px; }
+    .icon-btn{ width:34px; height:34px; }
 
-    /* Bottom nav */
+    /* ── Bottom nav ── */
     .bottom-nav.show{ display:flex; }
+    .bn-item{ gap:3px; padding:4px 6px; }
+    .bn-item svg{ width:19px; height:19px; }
 
-    /* ── PAGE HEAD: stack title + buttons ── */
+    /* ── PAGE HEAD ── */
     .page-head{
-      flex-direction:column; align-items:flex-start;
-      gap:10px; margin-bottom:16px;
+      flex-direction:column; align-items:stretch;
+      gap:10px; margin-bottom:14px;
     }
-    .page-head h1{ font-size:18px; }
-    .page-head p{ font-size:12px; }
-    /* Every direct-child button/div in page-head goes full-width */
+    .page-head > div:first-child h1{ font-size:17px; letter-spacing:-.2px; }
+    .page-head > div:first-child p{ font-size:11.5px; }
+    /* Button container inside page-head → full width, wrap */
+    .page-head > div:not(:first-child),
     .page-head > button,
-    .page-head > a,
-    .page-head > div:last-child:not(:first-child){
-      width:100%; display:flex; flex-wrap:wrap; gap:8px;
+    .page-head > a{
+      display:flex; flex-wrap:wrap; gap:7px; width:100%;
     }
+    .page-head > div:not(:first-child) > button,
+    .page-head > div:not(:first-child) > a,
     .page-head > button,
-    .page-head > a{ justify-content:center; }
-    .page-head > div:last-child:not(:first-child) > button,
-    .page-head > div:last-child:not(:first-child) > a{
-      flex:1; min-width:0; justify-content:center; text-align:center; white-space:nowrap;
+    .page-head > a{
+      flex:1; min-width:0; justify-content:center; text-align:center; font-size:12.5px; padding:10px 10px;
     }
+    .producao-btns{ width:100%; flex-wrap:wrap; }
+    .producao-btns > button{ flex:1; min-width:calc(50% - 4px); font-size:12px; padding:9px 8px; }
 
     /* ── HOME ── */
-    .welcome-wrap{ flex-direction:column; align-items:flex-start; padding:2px 0 16px; gap:8px; }
-    .welcome-wrap h1{ font-size:20px; }
-    .welcome-wrap .today-pill{ font-size:11px; padding:5px 12px; }
-    .home-grid{ grid-template-columns:1fr; gap:12px; }
+    .welcome-wrap{ flex-direction:column; align-items:flex-start; padding:0 0 14px; gap:6px; }
+    .welcome-wrap h1{ font-size:19px; }
+    .welcome-wrap .today-pill{ font-size:11px; padding:5px 11px; }
+    .home-grid{ grid-template-columns:1fr; gap:10px; }
+    .card{ padding:16px; }
+    /* Quick access grid: 3 per row on iPhone */
+    #quick-access-grid{ grid-template-columns:repeat(3,1fr) !important; gap:8px !important; }
+    .qa-card{ padding:12px 6px; }
+    .qa-name{ font-size:10.5px; }
 
-    /* ── FORMS & GRIDS ── */
-    .form-grid, .form-grid.cols-3{ grid-template-columns:1fr !important; }
-    .team-row{ grid-template-columns: 1fr; gap:8px; }
-    .form-section{ padding:16px; }
+    /* ── FORMS ── */
+    .form-grid, .form-grid.cols-3{ grid-template-columns:1fr !important; gap:10px; }
+    .f-field input, .f-field select, .f-field textarea{ padding:11px 12px; font-size:14px; }
+    .form-section{ padding:14px; margin-bottom:14px; }
+    .form-section h3{ font-size:14px; }
+    /* Team row: stacks vertically */
+    .team-row{ grid-template-columns:1fr 1fr; gap:7px; }
+    .team-row input:nth-child(3),
+    .team-row input:nth-child(4),
+    .team-row input:nth-child(5){ grid-column: span 1; }
+    .team-row .icon-x{ grid-column: span 2; justify-self:end; }
+    /* Form actions: always full width on mobile */
+    .form-actions{ flex-direction:column; gap:8px; }
+    .form-actions button{ width:100%; justify-content:center; }
 
-    /* ── SEARCH / FILTERS BAR ── */
-    .search-bar{ width:100%; }
-    .list-toolbar{ flex-direction:column; align-items:stretch; gap:8px; padding:12px 14px; }
-    .filters-row{ flex-direction:column; align-items:stretch; gap:8px; }
-    .filters-row .select-pill{ width:100%; border-radius:10px; }
-    .filters-row .select-pill select{ width:100%; }
-    .filters-row > button{ align-self:flex-end; }
+    /* ── SEARCH / TOOLBAR / FILTERS ── */
+    .search-bar{ width:100%; border-radius:12px; }
+    .list-toolbar{
+      flex-direction:column; align-items:stretch;
+      gap:8px; padding:10px 12px;
+    }
+    .list-toolbar > .search-bar{ flex:none; }
+    .list-toolbar > button{ align-self:stretch; justify-content:center; }
+    .filters-row{ flex-direction:column; align-items:stretch; gap:7px; }
+    .filters-row .select-pill{
+      width:100%; border-radius:12px; padding:10px 14px;
+    }
+    .filters-row .select-pill select{ width:100%; min-width:0; }
+    .filters-row > button{ align-self:stretch; justify-content:center; }
 
-    /* ── TABLES: scroll horizontally, never overflow ── */
-    .list-panel{ overflow:hidden; }
-    table{ display:block; overflow-x:auto; -webkit-overflow-scrolling:touch; width:100%; }
-    table th, table td{ white-space:nowrap; }
+    /* ── TABLES ── */
+    .list-panel{ overflow:hidden; border-radius:12px; }
+    .list-panel table{
+      display:block; overflow-x:auto; -webkit-overflow-scrolling:touch;
+      width:100%; min-width:480px;
+    }
+    table th{ padding:10px 14px; font-size:10.5px; }
+    table td{ padding:12px 14px; font-size:13px; }
     .list-table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    /* access buttons in user table: smaller */
+    .access-btn{ font-size:11.5px; padding:5px 9px; }
 
-    /* ── MODALS: full-width bottom sheet ── */
-    .modal-overlay{ padding:0; align-items:flex-end; }
-    .modal-box{ max-width:100% !important; border-radius:22px 22px 0 0; max-height:92vh; width:100%; }
-    .modal-box-lg{ max-width:100% !important; }
-    .modal-actions{ flex-wrap:wrap; gap:8px; }
-    .modal-actions button, .modal-actions .btn{ flex:1; min-width:0; justify-content:center; text-align:center; }
+    /* ── MODALS — full-width bottom sheet (iOS feel) ── */
+    .modal-overlay{ padding:0 !important; align-items:flex-end !important; }
+    .modal-box{
+      max-width:100% !important; width:100% !important;
+      border-radius:22px 22px 0 0 !important;
+      max-height:94vh !important;
+      padding:20px 16px calc(20px + env(safe-area-inset-bottom));
+      overflow-y:auto;
+    }
+    .modal-box-lg{ max-width:100% !important; width:100% !important; }
     .modal-box h3{ font-size:15px; }
+    .modal-actions{ flex-wrap:wrap; gap:8px; margin-top:14px; }
+    .modal-actions button,
+    .modal-actions .btn{ flex:1; min-width:0; justify-content:center; text-align:center; }
+    /* Tab strip inside modals */
+    .tab-strip{ overflow-x:auto; -webkit-overflow-scrolling:touch; flex-wrap:nowrap; }
+    .tab-strip button{ flex-shrink:0; }
 
-    /* ── KANBAN / CRM ── */
+    /* ── KANBAN / TAREFAS ── */
     .kanban{ grid-template-columns:1fr; gap:10px; }
+    .kcol{ padding:12px; }
+    /* Member picker: contained, not absolute */
+    #card-membros-picker{
+      position:relative !important; width:100% !important;
+      max-height:180px; overflow-y:auto;
+    }
 
     /* ── KPIs ── */
-    .kpis-row{ grid-template-columns: repeat(2,1fr) !important; gap:10px; margin-bottom:14px; }
-    .kpi-mini .v{ font-size:18px; }
-    .kpi-mini .l{ font-size:11px; }
+    .kpis-row{ grid-template-columns:repeat(2,1fr) !important; gap:8px; margin-bottom:12px; }
+    .kpi-mini{ padding:12px; }
+    .kpi-mini .v{ font-size:17px; }
+    .kpi-mini .l{ font-size:10.5px; margin-bottom:4px; }
 
-    /* ── PRODUÇÃO: rankings stack, export buttons wrap ── */
-    #producao-rankings{ grid-template-columns:1fr !important; gap:12px; }
-    #producao-rankings .card{ padding:14px; }
-    .page-head > div > .btn-outline,
-    .page-head > div > .btn-dark{ font-size:12px; padding:9px 12px; }
+    /* ── PRODUÇÃO rankings ── */
+    .producao-rankings-grid,
+    #producao-rankings{ grid-template-columns:1fr !important; gap:10px; }
+    .bars{ height:100px; gap:6px; padding:10px 2px 0; }
+    .bar span{ font-size:9.5px; }
+    .bar em{ font-size:9.5px; margin-top:4px; }
+
+    /* ── CONTATOS: filter pills stack ── */
+    #view-contatos .filters-row{ flex-direction:column; }
+    #view-contatos .select-pill{ width:100%; }
+
+    /* ── MARKETING ── */
+    #view-marketing .seg{ flex-wrap:wrap; }
+    #view-marketing .form-actions{ flex-direction:column; }
+    #view-marketing .form-actions button{ width:100%; justify-content:center; }
 
     /* ── RELATÓRIOS ── */
-    /* Model cards grid: 1 col */
-    #relatorio-painel-modelos > div:first-of-type > div:first-of-type{ /* override inline grid */
-      grid-template-columns: 1fr !important;
+    /* cards de modelos: 1 col */
+    .relatorio-modelos-grid{ grid-template-columns:1fr !important; gap:10px; }
+    /* header bar: empilha */
+    .relatorio-header-bar{
+      flex-direction:column !important; gap:10px;
+      align-items:flex-start !important; padding:12px 14px !important;
+      border-radius:12px !important;
     }
-    /* Filter grid in consulta: stack to 1 col */
-    #relatorio-consulta-area .card > div[style*="grid-template-columns:repeat(3"]{ grid-template-columns:1fr !important; }
-    /* Report header: stack buttons below title */
-    #relatorio-consulta-area > div:first-child{
-      flex-direction:column; gap:12px; align-items:flex-start; padding:14px;
+    .relatorio-export-btns{ width:100%; display:flex !important; gap:8px; }
+    .relatorio-export-btns button{ flex:1; font-size:11.5px; padding:8px 6px; }
+    /* filtros: 1 col */
+    .relatorio-filtros-grid{ grid-template-columns:1fr !important; }
+    /* ação dos filtros: empilha */
+    .relatorio-filtros-actions{
+      flex-direction:column !important; align-items:stretch !important; gap:8px;
     }
-    #relatorio-consulta-area > div:first-child > div:last-child{
-      width:100%; display:flex; gap:8px; flex-wrap:wrap;
+    .relatorio-filtros-actions > div:first-child{ font-size:11px; }
+    .relatorio-filtros-actions > div:last-child{ display:flex; gap:8px; }
+    .relatorio-filtros-actions > div:last-child button{ flex:1; }
+    /* KPIs resultado: 2 col */
+    .relatorio-kpis-grid{ grid-template-columns:repeat(2,1fr) !important; gap:8px !important; }
+    /* tabela resultado: scroll */
+    #relatorio-consulta-area .list-panel{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    /* inline grids */
+    [style*="repeat(5,1fr)"]{ grid-template-columns:repeat(2,1fr) !important; }
+    [style*="repeat(3,1fr)"]{ grid-template-columns:1fr !important; }
+    [style*="repeat(4,1fr)"]{ grid-template-columns:repeat(2,1fr) !important; }
+    .relatorio-kpis-grid [style*="repeat(4,1fr)"]{ grid-template-columns:repeat(2,1fr) !important; }
+
+    /* ── CORRETORAS: form ── */
+    #view-seguradora-form .form-section{ padding:12px; }
+    .logo-upload-row{ flex-direction:column; gap:10px; }
+
+    /* ── USUARIOS ── */
+    #usuarios-tbody td:last-child{
+      display:flex; flex-wrap:wrap; gap:4px; padding:8px 14px;
     }
-    #relatorio-consulta-area > div:first-child > div:last-child button{
-      flex:1; font-size:12px; padding:8px 10px;
-    }
-    /* KPIs 2 col */
-    #relatorio-kpis{ grid-template-columns:repeat(2,1fr) !important; gap:10px !important; }
-    /* Filter row at bottom of card */
-    #relatorio-consulta-area .card > div:last-child{
-      flex-direction:column; align-items:stretch; gap:10px;
-    }
-    #relatorio-consulta-area .card > div:last-child > div:last-child{
-      display:flex; gap:8px;
-    }
-    #relatorio-consulta-area .card > div:last-child > div:last-child button{ flex:1; }
-    /* Result table scroll */
-    #relatorio-consulta-area .list-panel{ overflow-x:auto; }
 
     /* ── BILLING ── */
+    .billing-row-top{ flex-direction:column; }
     .billing-row-actions{ flex-direction:column; gap:8px; }
     .billing-row-actions input{ min-width:0; width:100%; }
 
-    /* ── PERMISSOES inline grid ── */
+    /* ── PERMISSÕES ── */
     .permissoes-layout{ grid-template-columns:1fr !important; }
 
-    /* ── LOGS: inline card layout ── */
+    /* ── LOGS ── */
     .log-field-grid{ grid-template-columns:1fr !important; }
-    .logs-tab-btn{ padding:7px 12px; font-size:12px; }
+    .logs-tab-btn{ padding:7px 10px; font-size:11.5px; }
+
+    /* ── FILES / MATERIAL ── */
+    .files-grid{ grid-template-columns:repeat(2,1fr) !important; gap:10px; }
+    .file-card{ padding:14px; }
+
+    /* ── CROP DE FOTO / LOGO ── */
+    .crop-square-wrap{ width:240px; height:240px; }
+    .crop-square-wrap canvas{ width:240px; height:240px; }
+    #logo-crop-canvas{ width:100% !important; height:auto !important; }
+
+    /* ── SELETOR DE CONTATOS ── */
+    #modal-selecionar-contatos .modal-box{
+      display:flex; flex-direction:column;
+    }
+    #seletor-contatos-list{ flex:1; }
+    /* filtros do seletor */
+    #modal-selecionar-contatos [style*="grid-template-columns:1fr 1fr"]{
+      grid-template-columns:1fr !important;
+    }
+
+    /* ── SEGURADORA responsáveis picker ── */
+    #seguradora-responsaveis-picker{ max-height:160px; }
+
+    /* ── COMUNICADOS ── */
+    .comm-row{ flex-direction:column; align-items:flex-start; gap:8px; }
+    .comm-row .meta{ flex-wrap:wrap; }
+
+    /* ── CARDS de aniversariantes ── */
+    .bday-row .bday-actions{ flex-direction:column; gap:4px; }
   }
 
-  /* ── Fix report model card grid via class (inline style override) ── */
-  @media (max-width: 760px){
-    #relatorio-painel-modelos [style*="minmax(220px"]{
-      grid-template-columns: 1fr !important;
-    }
-    /* producao filter modal filters */
-    #relatorio-consulta-area [style*="repeat(3,1fr)"]{
-      grid-template-columns: 1fr !important;
-    }
-    /* producao inline kpis-row with repeat(5) */
-    [style*="repeat(5,1fr)"]{
-      grid-template-columns: repeat(2,1fr) !important;
-    }
-    /* producao rankings inline grid */
-    [id="producao-rankings"][style*="repeat(3,1fr)"]{
-      grid-template-columns: 1fr !important;
-    }
-    /* Targeted class-based fixes */
-    .relatorio-modelos-grid{ grid-template-columns: 1fr !important; }
-    .relatorio-filtros-grid{ grid-template-columns: 1fr !important; }
-    .relatorio-filtros-actions{ flex-direction:column; align-items:stretch; gap:10px; }
-    .relatorio-filtros-actions > div:last-child{ display:flex; gap:8px; }
-    .relatorio-filtros-actions > div:last-child button{ flex:1; }
-    .relatorio-kpis-grid{ grid-template-columns: repeat(2,1fr) !important; gap:10px !important; }
-    .relatorio-header-bar{ flex-direction:column; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:12px; }
-    .relatorio-export-btns{ width:100%; display:flex; gap:8px; }
-    .relatorio-export-btns button{ flex:1; font-size:11.5px; padding:8px 6px; }
-    .producao-rankings-grid{ grid-template-columns:1fr !important; gap:10px; }
-    .producao-btns{ width:100%; flex-wrap:wrap; }
-    .producao-btns button{ flex:1; min-width:calc(50% - 4px); font-size:12px; padding:9px 8px; }
-    #view-marketing .form-actions{ flex-direction:column; }
-    #view-marketing .form-actions button{ width:100%; justify-content:center; }
+  /* ── iPhone SE / very narrow ≤ 375 px ── */
+  @media (max-width: 375px){
+    .content{ padding:12px 10px calc(86px + env(safe-area-inset-bottom)); }
+    .page-head > div:first-child h1{ font-size:15px; }
+    .kpi-mini .v{ font-size:15px; }
+    .btn-dark, .btn-outline{ font-size:12px; padding:9px 10px; }
+    #quick-access-grid{ grid-template-columns:repeat(3,1fr) !important; gap:6px !important; }
   }
 
   .fab{ display:none !important; }
@@ -1227,9 +1318,9 @@
             <div class="list-toolbar">
               <div class="search-bar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-                <input placeholder="Buscar por razão social ou CNPJ">
+                <input id="corretoras-search" placeholder="Buscar por razão social ou CNPJ" oninput="filtrarCorretoras(this.value)" onkeydown="if(event.key==='Enter') filtrarCorretoras(this.value)">
               </div>
-              <button class="btn-outline">Filtrar</button>
+              <button class="btn-outline" onclick="filtrarCorretoras('')">Limpar</button>
             </div>
             <table>
               <thead><tr><th>Corretora</th><th>Filial</th><th>CNPJ</th><th>Cidade</th><th></th></tr></thead>
@@ -1267,19 +1358,20 @@
             <h3>Dados da seguradora</h3>
             <div class="f-field full">
               <label>Logo da seguradora</label>
-              <div class="logo-upload-row">
-                <div class="logo-preview" id="seguradora-logo-preview"></div>
+              <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+                <div id="seguradora-logo-preview" style="width:130px;height:52px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface-2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+                  <span id="seguradora-logo-placeholder" style="font-size:11px;color:var(--gray-400);font-weight:600;">Sem logo</span>
+                </div>
                 <div style="display:flex;flex-direction:column;gap:8px;">
-                  <label class="btn-outline" style="cursor:pointer;">
+                  <label class="btn-outline" style="cursor:pointer;display:inline-flex;align-items:center;gap:7px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     Escolher logo
                     <input type="file" accept="image/*" id="seguradora-logo-input" style="display:none;" onchange="handleSeguradoraLogo(event)">
                   </label>
-                  <button type="button" class="btn-outline" id="btn-ajustar-logo" style="display:none;" onclick="abrirAjusteLogo()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    Ajustar logo
-                  </button>
+                  <button type="button" id="btn-remover-logo" class="btn-outline" style="display:none;color:#dc2626;border-color:#fecaca;font-size:12px;" onclick="removerLogo()">✕ Remover</button>
                 </div>
               </div>
+              <p class="hint" style="margin-top:8px;margin-bottom:0;">PNG com fundo transparente recomendado. Tamanho ideal: 300 × 100 px.</p>
             </div>
             <div class="form-grid">
               <div class="f-field full"><label>Nome</label><input type="text" id="seguradora-nome" placeholder="Ex: Zenith Seguros"></div>
@@ -1990,7 +2082,11 @@
     <div class="f-field"><label>Nome</label><input id="user-nome" placeholder="Nome completo"></div>
     <div class="f-field"><label>E-mail</label><input id="user-email" type="email" placeholder="usuario@email.com"></div>
     <div class="f-field" id="user-senha-field"><label>Senha inicial</label><input id="user-senha" type="text" placeholder="Senha de acesso (mínimo 6 caracteres)"></div>
-    <p class="hint" id="user-senha-edit-hint" style="margin-top:-8px;">A senha só pode ser alterada pelo próprio usuário. Oriente-o a usar <b>"Esqueci minha senha"</b> na tela de login.</p>
+    <div class="f-field hidden" id="user-nova-senha-field">
+      <label>Nova senha <span style="font-weight:400;color:var(--gray-600);">(deixe em branco para não alterar)</span></label>
+      <input id="user-nova-senha" type="password" placeholder="••••••••">
+    </div>
+    <p class="hint hidden" id="user-senha-edit-hint" style="margin-top:-8px;">A senha só pode ser alterada pelo próprio usuário. Oriente-o a usar <b>"Esqueci minha senha"</b> na tela de login.</p>
     <div class="form-grid">
       <div class="f-field"><label>Data de nascimento</label><input id="user-nascimento" type="date"></div>
       <div class="f-field"><label>Telefone</label><input id="user-telefone" placeholder="Ex: 11988887777"></div>
@@ -2089,31 +2185,6 @@
 
 
 <!-- Modal: Ajustar logo da seguradora -->
-<div class="modal-overlay" id="modal-crop-logo" onclick="if(event.target===this) fecharAjusteLogo()">
-  <div class="modal-box">
-    <h3>Ajustar logo da seguradora</h3>
-    <p class="hint" style="margin-top:-8px;margin-bottom:14px;">Arraste para reposicionar e use o controle deslizante para dar zoom.</p>
-    <div style="position:relative;width:100%;max-width:360px;margin:0 auto;">
-      <div id="logo-crop-wrap" style="width:100%;aspect-ratio:3/1;border-radius:12px;overflow:hidden;background:var(--surface-2);border:1.5px solid var(--border);cursor:grab;touch-action:none;" onmousedown="iniciarLogoCropDrag(event.clientX,event.clientY)" onmousemove="moverLogoCropDrag(event.clientX,event.clientY)" onmouseup="pararLogoCropDrag()" onmouseleave="pararLogoCropDrag()" ontouchstart="iniciarLogoCropDrag(event.touches[0].clientX,event.touches[0].clientY)" ontouchmove="moverLogoCropDrag(event.touches[0].clientX,event.touches[0].clientY);event.preventDefault();" ontouchend="pararLogoCropDrag()">
-        <canvas id="logo-crop-canvas" width="480" height="160"></canvas>
-      </div>
-    </div>
-    <div style="margin-top:14px;">
-      <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:6px;">Zoom</label>
-      <input type="range" id="logo-crop-zoom" min="0.5" max="4" step="0.01" value="1" oninput="onLogoCropZoomChange()" style="width:100%;">
-    </div>
-    <div style="margin-top:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-      <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Fundo</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;"><input type="radio" name="logo-bg" value="transparent" checked onchange="onLogoBgChange(this.value)" style="accent-color:var(--black);"> Transparente</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;"><input type="radio" name="logo-bg" value="white" onchange="onLogoBgChange(this.value)" style="accent-color:var(--black);"> Branco</label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;"><input type="radio" name="logo-bg" value="black" onchange="onLogoBgChange(this.value)" style="accent-color:var(--black);"> Preto</label>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-outline" onclick="fecharAjusteLogo()">Cancelar</button>
-      <button class="btn-dark" onclick="salvarLogoAjustada()">Usar esta logo</button>
-    </div>
-  </div>
-</div>
 <div class="modal-overlay" id="modal-material" onclick="if(event.target===this) closeModal('modal-material')">
   <div class="modal-box">
     <h3>Incluir material</h3>
@@ -4252,9 +4323,17 @@
   function renderCorretorasList(){
     const tbody = document.getElementById('corretoras-tbody');
     if(!tbody) return;
-    const gids = Object.keys(GROUPS);
+    const query = (document.getElementById('corretoras-search')?.value || '').toLowerCase().trim();
+    const gids = Object.keys(GROUPS).filter(gid => {
+      if(!query) return true;
+      const g = GROUPS[gid];
+      return (g.name||'').toLowerCase().includes(query)
+          || (g.cnpj||'').toLowerCase().includes(query)
+          || (g.cidade||'').toLowerCase().includes(query)
+          || (g.apelidos||[]).some(a => a.toLowerCase().includes(query));
+    });
     if(gids.length === 0){
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gray-600);">Nenhuma corretora cadastrada ainda.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gray-600);">${query ? 'Nenhuma corretora encontrada para "'+query+'".' : 'Nenhuma corretora cadastrada ainda.'}</td></tr>`;
       return;
     }
     tbody.innerHTML = gids.map(gid => {
@@ -4269,6 +4348,12 @@
         <td><button class="access-btn" onclick="openCorretoraForm('${gid}')">Editar</button></td>
       </tr>`;
     }).join('');
+  }
+
+  function filtrarCorretoras(q){
+    const inp = document.getElementById('corretoras-search');
+    if(inp && q === '') inp.value = '';
+    renderCorretoras();
   }
 
   let editingCorretoraGid = null;
@@ -4894,11 +4979,13 @@ Os dados de produção deste período serão restaurados para o upload anterior.
         return;
       }
 
-      // Filtrar linhas válidas: produto não vazio, não "total", valor numérico != 0
+      // Filtrar linhas válidas: produto não vazio, não "total"/"filtros"/"codigo", valor numérico != 0
+      const PALAVRAS_DESCARTAR_PROD = ['total', 'filtros', 'filtro', 'codigo', 'código', 'nan'];
       const dataRows = linhas.slice(1).filter(celulas => {
         const prod = String(celulas[idxProduto] ?? '').trim();
-        if(!prod || prod.toLowerCase() === 'nan') return false;
-        if(prod.toLowerCase().includes('total')) return false;
+        if(!prod) return false;
+        const prodLower = prod.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        if(PALAVRAS_DESCARTAR_PROD.some(p => prodLower.includes(p.normalize('NFD').replace(/[\u0300-\u036f]/g,'')))) return false;
         const val = parseFloat(String(celulas[idxValor] ?? '').replace(',','.'));
         return !isNaN(val) && val !== 0;
       });
@@ -5589,6 +5676,25 @@ Os dados de produção deste período serão restaurados para o upload anterior.
       // guarda o número real da linha na planilha (linha 1 = cabeçalho) junto de cada linha de dado
       let dataRows = linhas.slice(1).map((celulas, i) => ({ celulas, numeroLinha: i + 2 }));
 
+      // ── Palavras-chave que identificam linhas de rodapé/metadados a descartar ──
+      // Qualquer linha onde a PRIMEIRA célula não-vazia contenha uma dessas palavras é ignorada.
+      const PALAVRAS_DESCARTAR = ['total', 'filtros', 'filtro', 'codigo', 'código', 'codigo_sistema'];
+
+      function deveDescartarLinha(celulas){
+        // Pega o primeiro valor não-vazio da linha
+        const primeiroValor = celulas.find(c => String(c).trim() !== '');
+        if(!primeiroValor) return true; // linha totalmente vazia
+        const texto = String(primeiroValor).trim().toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove acentos para comparar
+        return PALAVRAS_DESCARTAR.some(p => {
+          const pSemAcento = p.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          return texto === pSemAcento || texto.startsWith(pSemAcento + ' ') || texto.startsWith(pSemAcento + '_');
+        });
+      }
+
+      // Descarta linhas de rodapé/metadados antes de qualquer processamento
+      dataRows = dataRows.filter(({ celulas }) => !deveDescartarLinha(celulas));
+
       const template = encontrarTemplate(seguradora);
       let idxCorretor = -1, idxValor = -1;
       if(template){
@@ -5599,10 +5705,15 @@ Os dados de produção deste período serão restaurados para o upload anterior.
           return;
         }
         if(template.pularPrimeiraLinhaDados) dataRows = dataRows.slice(1);
-        // ignora linhas sem corretor (rodapé, linha em branco, "Total", texto de filtros aplicados etc.)
+        // ignora linhas sem corretor, vazias, "Total", "Filtros", "Codigo_sistema" etc.
         dataRows = dataRows.filter(({ celulas }) => {
           const val = String(celulas[idxCorretor] ?? '').trim();
-          return val && val.toLowerCase() !== 'total';
+          if(!val) return false;
+          const valLower = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+          return !PALAVRAS_DESCARTAR.some(p => {
+            const pn = p.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+            return valLower === pn || valLower.startsWith(pn + ' ') || valLower.startsWith(pn + '_');
+          });
         });
         // se ignorarZeros: descarta silenciosamente linhas com GWP = 0
         if(template.ignorarZeros){
@@ -6025,10 +6136,13 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     document.getElementById('user-modal-title').textContent = id ? 'Editar usuário' : 'Novo usuário';
     document.getElementById('user-nome').value = u ? (u.nome || '') : '';
     document.getElementById('user-email').value = u ? (u.email || '') : '';
-    document.getElementById('user-email').disabled = !!id; // e-mail de login não é editável por aqui
+    document.getElementById('user-email').disabled = !!id;
     document.getElementById('user-senha').value = '';
+    document.getElementById('user-nova-senha').value = '';
+    // Criação: mostra senha inicial. Edição: mostra campo de nova senha
     document.getElementById('user-senha-field').classList.toggle('hidden', !!id);
-    document.getElementById('user-senha-edit-hint').classList.toggle('hidden', !id);
+    document.getElementById('user-nova-senha-field').classList.toggle('hidden', !id);
+    document.getElementById('user-senha-edit-hint').classList.add('hidden');
     document.getElementById('user-nascimento').value = u ? (u.nascimento || '') : '';
     document.getElementById('user-telefone').value = u ? (u.telefone || '') : '';
 
@@ -6077,6 +6191,36 @@ Os dados de produção deste período serão restaurados para o upload anterior.
         errorBox.classList.remove('hidden');
         saveBtn.textContent = 'Salvar alterações';
         return;
+      }
+      // Trocar senha se preenchida (super admin editando outro usuário)
+      const novaSenha = (document.getElementById('user-nova-senha')?.value || '').trim();
+      if(novaSenha){
+        if(novaSenha.length < 6){
+          errorBox.textContent = 'A nova senha precisa ter pelo menos 6 caracteres.';
+          errorBox.classList.remove('hidden');
+          saveBtn.textContent = 'Salvar alterações';
+          return;
+        }
+        if(editingUserId === currentUserId){
+          // Pode trocar a própria senha diretamente
+          const { error: passErr } = await supabase.auth.updateUser({ password: novaSenha });
+          if(passErr){
+            errorBox.textContent = 'Perfil salvo, mas erro ao trocar senha: ' + passErr.message;
+            errorBox.classList.remove('hidden');
+            return;
+          }
+        } else {
+          // Trocar senha de outro usuário via RPC (requer função no Supabase com SECURITY DEFINER)
+          const { error: rpcErr } = await supabase.rpc('admin_reset_user_password', {
+            p_user_id: editingUserId,
+            p_new_password: novaSenha
+          });
+          if(rpcErr){
+            errorBox.textContent = 'Perfil salvo, mas não foi possível trocar a senha: ' + rpcErr.message + '. Verifique se a função admin_reset_user_password existe no Supabase.';
+            errorBox.classList.remove('hidden');
+            return;
+          }
+        }
       }
     } else {
       // guarda a sessão de quem está criando, porque criar um novo login troca a sessão ativa do navegador
@@ -6386,118 +6530,40 @@ Os dados de produção deste período serão restaurados para o upload anterior.
 
   function renderLogoPreview(){
     const box = document.getElementById('seguradora-logo-preview');
-    box.innerHTML = PENDING_SEGURADORA_LOGO ? `<img src="${PENDING_SEGURADORA_LOGO}" alt="Logo">` : '';
-    const btnAjustar = document.getElementById('btn-ajustar-logo');
-    if(btnAjustar) btnAjustar.style.display = PENDING_SEGURADORA_LOGO ? 'flex' : 'none';
+    const placeholder = document.getElementById('seguradora-logo-placeholder');
+    const btnRemover = document.getElementById('btn-remover-logo');
+    if(!box) return;
+    if(PENDING_SEGURADORA_LOGO){
+      box.innerHTML = `<img src="${PENDING_SEGURADORA_LOGO}" alt="Logo" style="width:100%;height:100%;object-fit:contain;padding:4px;">`;
+      if(btnRemover) btnRemover.style.display = 'inline-flex';
+    } else {
+      box.innerHTML = '<span id="seguradora-logo-placeholder" style="font-size:11px;color:var(--gray-400);font-weight:600;">Sem logo</span>';
+      if(btnRemover) btnRemover.style.display = 'none';
+    }
   }
 
   function handleSeguradoraLogo(event){
     const file = event.target.files[0];
     if(!file) return;
+    // Limit to 2MB
+    if(file.size > 2 * 1024 * 1024){
+      alert('A imagem é muito grande. Use uma imagem menor que 2 MB.');
+      event.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
       PENDING_SEGURADORA_LOGO = e.target.result;
       renderLogoPreview();
-      // Abre automaticamente o ajuste de logo ao escolher nova imagem
-      abrirAjusteLogo();
     };
     reader.readAsDataURL(file);
+    event.target.value = ''; // permite escolher o mesmo arquivo de novo
   }
 
-  // ===== CROP DE LOGO DA SEGURADORA =====
-  let LOGO_CROP_IMG = null;
-  let LOGO_CROP_SCALE_BASE = 1;
-  let LOGO_CROP_ZOOM = 1;
-  let LOGO_CROP_OFFSET = { x: 0, y: 0 };
-  let LOGO_CROP_DRAG = null;
-  let LOGO_CROP_BG = 'transparent';
-
-  function abrirAjusteLogo(){
-    if(!PENDING_SEGURADORA_LOGO) return;
-    const img = new Image();
-    img.onload = () => {
-      LOGO_CROP_IMG = img;
-      // Canvas é 480x160 (proporção 3:1). Ajusta escala para caber height
-      LOGO_CROP_SCALE_BASE = Math.min(480 / img.width, 160 / img.height);
-      LOGO_CROP_ZOOM = 1;
-      LOGO_CROP_OFFSET = { x: 0, y: 0 };
-      LOGO_CROP_BG = 'transparent';
-      document.getElementById('logo-crop-zoom').value = 1;
-      // reset radio
-      document.querySelectorAll('input[name="logo-bg"]').forEach(r => r.checked = r.value === 'transparent');
-      desenharLogoCrop();
-      openModal('modal-crop-logo');
-    };
-    img.src = PENDING_SEGURADORA_LOGO;
-  }
-
-  function fecharAjusteLogo(){
-    closeModal('modal-crop-logo');
-  }
-
-  function desenharLogoCrop(){
-    const canvas = document.getElementById('logo-crop-canvas');
-    if(!canvas || !LOGO_CROP_IMG) return;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, 480, 160);
-    // Fundo
-    if(LOGO_CROP_BG === 'white'){ ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 480, 160); }
-    else if(LOGO_CROP_BG === 'black'){ ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, 480, 160); }
-    // Imagem
-    const scale = LOGO_CROP_SCALE_BASE * LOGO_CROP_ZOOM;
-    const w = LOGO_CROP_IMG.width * scale;
-    const h = LOGO_CROP_IMG.height * scale;
-    const x = (480 - w) / 2 + LOGO_CROP_OFFSET.x;
-    const y = (160 - h) / 2 + LOGO_CROP_OFFSET.y;
-    ctx.drawImage(LOGO_CROP_IMG, x, y, w, h);
-  }
-
-  function clampLogoCropOffset(){
-    if(!LOGO_CROP_IMG) return;
-    const scale = LOGO_CROP_SCALE_BASE * LOGO_CROP_ZOOM;
-    const w = LOGO_CROP_IMG.width * scale;
-    const h = LOGO_CROP_IMG.height * scale;
-    const maxX = Math.max(0, (w - 480) / 2);
-    const maxY = Math.max(0, (h - 160) / 2);
-    LOGO_CROP_OFFSET.x = Math.min(maxX, Math.max(-maxX, LOGO_CROP_OFFSET.x));
-    LOGO_CROP_OFFSET.y = Math.min(maxY, Math.max(-maxY, LOGO_CROP_OFFSET.y));
-  }
-
-  function onLogoCropZoomChange(){
-    LOGO_CROP_ZOOM = parseFloat(document.getElementById('logo-crop-zoom').value);
-    clampLogoCropOffset();
-    desenharLogoCrop();
-  }
-
-  function onLogoBgChange(val){
-    LOGO_CROP_BG = val;
-    desenharLogoCrop();
-  }
-
-  function iniciarLogoCropDrag(clientX, clientY){
-    LOGO_CROP_DRAG = { startX: clientX, startY: clientY, origX: LOGO_CROP_OFFSET.x, origY: LOGO_CROP_OFFSET.y };
-  }
-  function moverLogoCropDrag(clientX, clientY){
-    if(!LOGO_CROP_DRAG || !LOGO_CROP_IMG) return;
-    const canvas = document.getElementById('logo-crop-canvas');
-    const rect = canvas.getBoundingClientRect();
-    const escX = 480 / rect.width;
-    const escY = 160 / rect.height;
-    LOGO_CROP_OFFSET.x = LOGO_CROP_DRAG.origX + (clientX - LOGO_CROP_DRAG.startX) * escX;
-    LOGO_CROP_OFFSET.y = LOGO_CROP_DRAG.origY + (clientY - LOGO_CROP_DRAG.startY) * escY;
-    clampLogoCropOffset();
-    desenharLogoCrop();
-  }
-  function pararLogoCropDrag(){ LOGO_CROP_DRAG = null; }
-
-  function salvarLogoAjustada(){
-    const canvas = document.getElementById('logo-crop-canvas');
-    if(!canvas) return;
-    PENDING_SEGURADORA_LOGO = canvas.toDataURL('image/png');
+  function removerLogo(){
+    PENDING_SEGURADORA_LOGO = null;
     renderLogoPreview();
-    fecharAjusteLogo();
   }
-  // ===== FIM CROP DE LOGO =====
 
   function atualizarPreviewCor(){
     const cor = document.getElementById('seguradora-cor').value;
