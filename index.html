@@ -1299,89 +1299,171 @@
 
         <!-- ================= RELATÓRIOS ================= -->
         <section class="view hidden" id="view-relatorios">
-          <!-- Header bar (estilo escuro como na referência) -->
-          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--black);color:#fff;border-radius:14px;padding:14px 20px;margin-bottom:20px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;opacity:.8;"><path d="M9 2h6l5 5v15H4V2z"/><path d="M9 12h6M9 16h6M9 8h2"/></svg>
-              <span style="font-size:15px;font-weight:800;">Relatório de Produção</span>
+
+          <!-- Painel inicial: escolha de modelo ou pesquisa livre -->
+          <div id="relatorio-painel-modelos">
+            <div class="page-head" style="margin-bottom:20px;">
+              <div><h1>Relatórios</h1><p>Escolha um modelo pré-definido ou monte uma consulta personalizada</p></div>
             </div>
-            <div style="display:flex;gap:10px;">
-              <button class="btn-outline" onclick="exportarRelatorioExcel()" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff;font-size:12.5px;padding:8px 14px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
-                Exportar Excel
-              </button>
-              <button class="btn-outline" onclick="exportarRelatorioPDF()" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff;font-size:12.5px;padding:8px 14px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
-                Exportar PDF
-              </button>
+
+            <!-- Modelos pré-definidos -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:28px;">
+
+              <!-- Produção por Corretora -->
+              <div class="card" style="padding:20px;cursor:pointer;transition:box-shadow .2s,transform .15s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='';this.style.transform=''" onclick="aplicarModeloRelatorio('corretora')">
+                <div style="width:42px;height:42px;border-radius:12px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                </div>
+                <div style="font-size:13.5px;font-weight:800;margin-bottom:4px;">Produção por Corretora</div>
+                <div style="font-size:12px;color:var(--gray-600);line-height:1.5;">Visualize o total produzido por cada corretora no período selecionado.</div>
+                <div style="margin-top:14px;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--gray-400);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Abrir relatório
+                </div>
+              </div>
+
+              <!-- Produção por Seguradora -->
+              <div class="card" style="padding:20px;cursor:pointer;transition:box-shadow .2s,transform .15s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='';this.style.transform=''" onclick="aplicarModeloRelatorio('seguradora')">
+                <div style="width:42px;height:42px;border-radius:12px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M12 2l8 3v6c0 5-3.4 8.7-8 11-4.6-2.3-8-6-8-11V5l8-3z"/></svg>
+                </div>
+                <div style="font-size:13.5px;font-weight:800;margin-bottom:4px;">Produção por Seguradora</div>
+                <div style="font-size:12px;color:var(--gray-600);line-height:1.5;">Veja o volume distribuído entre as seguradoras parceiras no período.</div>
+                <div style="margin-top:14px;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--gray-400);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Abrir relatório
+                </div>
+              </div>
+
+              <!-- Produção por Produto -->
+              <div class="card" style="padding:20px;cursor:pointer;transition:box-shadow .2s,transform .15s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='';this.style.transform=''" onclick="aplicarModeloRelatorio('produto')">
+                <div style="width:42px;height:42px;border-radius:12px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><rect x="2" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="18" y="13" width="4" height="8"/></svg>
+                </div>
+                <div style="font-size:13.5px;font-weight:800;margin-bottom:4px;">Produção por Produto</div>
+                <div style="font-size:12px;color:var(--gray-600);line-height:1.5;">Analise quais produtos (Auto, Vida, Empresa…) mais geram receita.</div>
+                <div style="margin-top:14px;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--gray-400);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Abrir relatório
+                </div>
+              </div>
+
+              <!-- Produção Mensal (período) -->
+              <div class="card" style="padding:20px;cursor:pointer;transition:box-shadow .2s,transform .15s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='';this.style.transform=''" onclick="aplicarModeloRelatorio('mensal')">
+                <div style="width:42px;height:42px;border-radius:12px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                </div>
+                <div style="font-size:13.5px;font-weight:800;margin-bottom:4px;">Produção Mensal</div>
+                <div style="font-size:12px;color:var(--gray-600);line-height:1.5;">Comparativo de produção mês a mês no período que desejar.</div>
+                <div style="margin-top:14px;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--gray-400);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Abrir relatório
+                </div>
+              </div>
+
+              <!-- Consulta Personalizada -->
+              <div class="card" style="padding:20px;cursor:pointer;transition:box-shadow .2s,transform .15s;border:1.5px dashed var(--border);" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)';this.style.transform='translateY(-2px)';this.style.borderColor='var(--black)'" onmouseout="this.style.boxShadow='';this.style.transform='';this.style.borderColor='var(--border)'" onclick="aplicarModeloRelatorio('personalizado')">
+                <div style="width:42px;height:42px;border-radius:12px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                </div>
+                <div style="font-size:13.5px;font-weight:800;margin-bottom:4px;">Consulta Personalizada</div>
+                <div style="font-size:12px;color:var(--gray-600);line-height:1.5;">Filtre por competência, corretora, seguradora e produto livremente.</div>
+                <div style="margin-top:14px;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--gray-400);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Abrir relatório
+                </div>
+              </div>
+
             </div>
           </div>
 
-          <!-- Filtros em card -->
-          <div class="card" style="padding:20px;margin-bottom:16px;">
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;">
-              <div class="f-field" style="margin:0;">
-                <label>Competência</label>
-                <input type="month" id="relatorio-competencia" onchange="renderRelatorioBody()" style="width:100%;">
+          <!-- Área de consulta (aparece ao selecionar modelo) -->
+          <div id="relatorio-consulta-area" style="display:none;">
+
+            <!-- Header com nome do modelo e botões de exportação -->
+            <div style="display:flex;align-items:center;justify-content:space-between;background:var(--black);color:#fff;border-radius:14px;padding:14px 20px;margin-bottom:20px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <button onclick="voltarModelosRelatorio()" style="background:rgba(255,255,255,.12);border:none;color:#fff;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                  Modelos
+                </button>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;opacity:.8;"><path d="M9 2h6l5 5v15H4V2z"/><path d="M9 12h6M9 16h6M9 8h2"/></svg>
+                <span id="relatorio-modelo-titulo" style="font-size:15px;font-weight:800;">Relatório de Produção</span>
               </div>
-              <div class="f-field" style="margin:0;">
-                <label>Data atualização (de)</label>
-                <input type="date" id="relatorio-filtro-data-ini" onchange="renderRelatorioBody()" style="width:100%;">
-              </div>
-              <div class="f-field" style="margin:0;">
-                <label>Data atualização (até)</label>
-                <input type="date" id="relatorio-filtro-data-fim" onchange="renderRelatorioBody()" style="width:100%;">
-              </div>
-              <div class="f-field" style="margin:0;">
-                <label>Corretora</label>
-                <select id="relatorio-filtro-corretora" onchange="renderRelatorioBody()" style="width:100%;"><option value="">Todas</option></select>
-              </div>
-              <div class="f-field" style="margin:0;">
-                <label>Seguradora</label>
-                <select id="relatorio-filtro-seguradora" onchange="renderRelatorioBody()" style="width:100%;"><option value="">Todas</option></select>
-              </div>
-              <div class="f-field" style="margin:0;">
-                <label>Produto</label>
-                <select id="relatorio-filtro-produto" onchange="renderRelatorioBody()" style="width:100%;">
-                  <option value="">Todos</option>
-                  <option>Auto</option><option>Frota</option><option>Empresa</option>
-                  <option>Condomínio</option><option>Garantia</option><option>Vida</option>
-                  <option>Residencial</option><option>Engenharia</option><option>Outros</option>
-                </select>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);">
-              <div id="relatorio-resumo-filtros" style="font-size:12px;color:var(--gray-600);"></div>
               <div style="display:flex;gap:10px;">
-                <button class="btn-outline" style="padding:9px 18px;font-size:12.5px;" onclick="limparFiltrosRelatorio()">Limpar</button>
-                <button class="btn-dark" style="padding:9px 18px;font-size:12.5px;" onclick="renderRelatorioBody()">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-                  Pesquisar
+                <button class="btn-outline" onclick="exportarRelatorioExcel()" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff;font-size:12.5px;padding:8px 14px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
+                  Exportar Excel
+                </button>
+                <button class="btn-outline" onclick="exportarRelatorioPDF()" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff;font-size:12.5px;padding:8px 14px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
+                  Exportar PDF
                 </button>
               </div>
             </div>
-          </div>
 
-          <!-- KPIs rápidos -->
-          <div id="relatorio-kpis" style="display:none;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
-            <div class="kpi-mini"><div class="l">Total filtrado</div><div class="v" id="kpi-relatorio-total">R$ 0</div></div>
-            <div class="kpi-mini"><div class="l">Corretoras</div><div class="v" id="kpi-relatorio-corretoras">0</div></div>
-            <div class="kpi-mini"><div class="l">Seguradoras</div><div class="v" id="kpi-relatorio-seguradoras">0</div></div>
-            <div class="kpi-mini"><div class="l">Lançamentos</div><div class="v" id="kpi-relatorio-lancamentos">0</div></div>
-          </div>
+            <!-- Filtros em card -->
+            <div class="card" style="padding:20px;margin-bottom:16px;">
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;">
+                <div class="f-field" style="margin:0;">
+                  <label>Competência</label>
+                  <input type="month" id="relatorio-competencia" onchange="renderRelatorioBody()" style="width:100%;">
+                </div>
+                <div class="f-field" style="margin:0;">
+                  <label>Data atualização (de)</label>
+                  <input type="date" id="relatorio-filtro-data-ini" onchange="renderRelatorioBody()" style="width:100%;">
+                </div>
+                <div class="f-field" style="margin:0;">
+                  <label>Data atualização (até)</label>
+                  <input type="date" id="relatorio-filtro-data-fim" onchange="renderRelatorioBody()" style="width:100%;">
+                </div>
+                <div class="f-field" style="margin:0;" id="relatorio-campo-corretora">
+                  <label>Corretora</label>
+                  <select id="relatorio-filtro-corretora" onchange="renderRelatorioBody()" style="width:100%;"><option value="">Todas</option></select>
+                </div>
+                <div class="f-field" style="margin:0;" id="relatorio-campo-seguradora">
+                  <label>Seguradora</label>
+                  <select id="relatorio-filtro-seguradora" onchange="renderRelatorioBody()" style="width:100%;"><option value="">Todas</option></select>
+                </div>
+                <div class="f-field" style="margin:0;" id="relatorio-campo-produto">
+                  <label>Produto</label>
+                  <select id="relatorio-filtro-produto" onchange="renderRelatorioBody()" style="width:100%;">
+                    <option value="">Todos</option>
+                    <option>Auto</option><option>Frota</option><option>Empresa</option>
+                    <option>Condomínio</option><option>Garantia</option><option>Vida</option>
+                    <option>Residencial</option><option>Engenharia</option><option>Outros</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);">
+                <div id="relatorio-resumo-filtros" style="font-size:12px;color:var(--gray-600);"></div>
+                <div style="display:flex;gap:10px;">
+                  <button class="btn-outline" style="padding:9px 18px;font-size:12.5px;" onclick="limparFiltrosRelatorio()">Limpar</button>
+                  <button class="btn-dark" style="padding:9px 18px;font-size:12.5px;" onclick="renderRelatorioBody()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                    Pesquisar
+                  </button>
+                </div>
+              </div>
+            </div>
 
-          <!-- Resultado -->
-          <div style="background:var(--black);color:#fff;border-radius:12px 12px 0 0;padding:10px 18px;display:flex;align-items:center;gap:8px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;opacity:.7;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-            <span style="font-size:13px;font-weight:700;">Resultado</span>
-            <span id="relatorio-count-label" style="font-size:12px;opacity:.6;margin-left:auto;"></span>
-          </div>
-          <div class="list-panel" style="border-radius:0 0 12px 12px;margin-top:0;">
-            <table>
-              <thead><tr><th>Corretora</th><th>Seguradora</th><th>Produto</th><th>Valor</th><th>Atualizado em</th></tr></thead>
-              <tbody id="relatorio-tbody"><tr><td colspan="5" style="text-align:center;color:var(--gray-600);padding:40px 20px;">Defina os filtros acima e clique em <b>Pesquisar</b>.</td></tr></tbody>
-            </table>
-          </div>
+            <!-- KPIs rápidos -->
+            <div id="relatorio-kpis" style="display:none;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+              <div class="kpi-mini"><div class="l">Total filtrado</div><div class="v" id="kpi-relatorio-total">R$ 0</div></div>
+              <div class="kpi-mini"><div class="l">Corretoras</div><div class="v" id="kpi-relatorio-corretoras">0</div></div>
+              <div class="kpi-mini"><div class="l">Seguradoras</div><div class="v" id="kpi-relatorio-seguradoras">0</div></div>
+              <div class="kpi-mini"><div class="l">Lançamentos</div><div class="v" id="kpi-relatorio-lancamentos">0</div></div>
+            </div>
+
+            <!-- Resultado -->
+            <div style="background:var(--black);color:#fff;border-radius:12px 12px 0 0;padding:10px 18px;display:flex;align-items:center;gap:8px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;opacity:.7;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              <span style="font-size:13px;font-weight:700;">Resultado</span>
+              <span id="relatorio-count-label" style="font-size:12px;opacity:.6;margin-left:auto;"></span>
+            </div>
+            <div class="list-panel" style="border-radius:0 0 12px 12px;margin-top:0;">
+              <table>
+                <thead><tr><th>Corretora</th><th>Seguradora</th><th>Produto</th><th>Valor</th><th>Atualizado em</th></tr></thead>
+                <tbody id="relatorio-tbody"><tr><td colspan="5" style="text-align:center;color:var(--gray-600);padding:40px 20px;">Defina os filtros acima e clique em <b>Pesquisar</b>.</td></tr></tbody>
+              </table>
+            </div>
+
+          </div><!-- /relatorio-consulta-area -->
         </section>
 
 
@@ -1666,20 +1748,22 @@
 <!-- ---------------- MODAL: EDITAR PERFIL DO USUÁRIO ---------------- -->
 <div class="modal-overlay" id="modal-perfil-usuario" onclick="if(event.target===this) closeModal('modal-perfil-usuario')">
   <div class="modal-box">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <h3 style="margin:0;">Meu perfil</h3>
       <button onclick="closeModal('modal-perfil-usuario')" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-600);">✕</button>
     </div>
-    <div class="f-field"><label>Nome completo</label><input id="perfil-nome" placeholder="Seu nome"></div>
+    <p class="hint" style="margin-bottom:18px;">Edite suas informações pessoais e clique em <b>Salvar alterações</b> para atualizar.</p>
+    <div class="f-field"><label>Nome completo</label><input id="perfil-nome" placeholder="Seu nome completo"></div>
     <div class="form-grid">
       <div class="f-field"><label>E-mail</label><input id="perfil-email" type="email" placeholder="seu@email.com"></div>
-      <div class="f-field"><label>Telefone</label><input id="perfil-telefone" placeholder="(00) 00000-0000"></div>
+      <div class="f-field"><label>Telefone / WhatsApp</label><input id="perfil-telefone" placeholder="(00) 00000-0000"></div>
     </div>
     <div class="f-field"><label>Data de nascimento</label><input id="perfil-nascimento" type="date" style="max-width:200px;"></div>
     <div class="f-field" style="margin-top:8px;">
       <label>Nova senha <span style="font-weight:400;color:var(--gray-600);">(deixe em branco para não alterar)</span></label>
       <input id="perfil-senha" type="password" placeholder="••••••••">
     </div>
+    <div id="perfil-success" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:12.5px;font-weight:600;padding:10px 14px;border-radius:10px;margin-top:6px;text-align:center;">✓ Perfil salvo com sucesso!</div>
     <div id="perfil-error" class="login-error hidden" style="margin-top:6px;"></div>
     <div class="modal-actions">
       <button class="btn-outline" onclick="closeModal('modal-perfil-usuario')">Cancelar</button>
@@ -2525,8 +2609,11 @@
     document.getElementById('user-name').textContent = nome;
     document.getElementById('user-av').textContent = initials(nome);
     updateHomeGreeting();
-    closeModal('modal-perfil-usuario');
+    // mostrar mensagem de sucesso por 1.5s antes de fechar
+    const successEl = document.getElementById('perfil-success');
+    if(successEl){ successEl.style.display='block'; }
     registrarLog('Editou perfil', nome);
+    setTimeout(()=>{ closeModal('modal-perfil-usuario'); if(successEl) successEl.style.display='none'; }, 1500);
   }
 
   /* ===== FIM PERFIL ===== */
@@ -2584,6 +2671,11 @@
       renderRankings();
     }
     if(id === 'relatorios'){
+      // sempre mostra painel de modelos ao entrar na aba
+      const painelMod = document.getElementById('relatorio-painel-modelos');
+      const consultaArea = document.getElementById('relatorio-consulta-area');
+      if(painelMod) painelMod.style.display = 'block';
+      if(consultaArea) consultaArea.style.display = 'none';
       renderRelatorios();
     }
     renderSidebar();
@@ -4073,6 +4165,77 @@
      RELATÓRIOS — mesma base de dados da Produção, mas com exportação
      (Produção é só dashboard; exportar só existe aqui)
   ========================================================== */
+  function aplicarModeloRelatorio(modelo) {
+    // Mostrar área de consulta, ocultar painel de modelos
+    document.getElementById('relatorio-painel-modelos').style.display = 'none';
+    document.getElementById('relatorio-consulta-area').style.display = 'block';
+
+    // Limpar filtros
+    limparFiltrosRelatorio();
+
+    // Configurar título e campos visíveis conforme modelo
+    const tituloEl = document.getElementById('relatorio-modelo-titulo');
+    const campoCor = document.getElementById('relatorio-campo-corretora');
+    const campoSeg = document.getElementById('relatorio-campo-seguradora');
+    const campoProd = document.getElementById('relatorio-campo-produto');
+
+    // mostrar tudo por padrão
+    if(campoCor) campoCor.style.display='';
+    if(campoSeg) campoSeg.style.display='';
+    if(campoProd) campoProd.style.display='';
+
+    if(modelo === 'corretora'){
+      if(tituloEl) tituloEl.textContent = 'Produção por Corretora';
+      // pré-seleciona competência atual
+      const hoje = new Date();
+      const comp = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0');
+      const cEl = document.getElementById('relatorio-competencia');
+      if(cEl) cEl.value = comp;
+      // oculta campo corretora (agrupa por todas)
+      if(campoSeg) campoSeg.style.display='none';
+      if(campoProd) campoProd.style.display='none';
+    } else if(modelo === 'seguradora'){
+      if(tituloEl) tituloEl.textContent = 'Produção por Seguradora';
+      const hoje = new Date();
+      const comp = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0');
+      const cEl = document.getElementById('relatorio-competencia');
+      if(cEl) cEl.value = comp;
+      if(campoCor) campoCor.style.display='none';
+      if(campoProd) campoProd.style.display='none';
+    } else if(modelo === 'produto'){
+      if(tituloEl) tituloEl.textContent = 'Produção por Produto';
+      const hoje = new Date();
+      const comp = hoje.getFullYear() + '-' + String(hoje.getMonth()+1).padStart(2,'0');
+      const cEl = document.getElementById('relatorio-competencia');
+      if(cEl) cEl.value = comp;
+      if(campoCor) campoCor.style.display='none';
+      if(campoSeg) campoSeg.style.display='none';
+    } else if(modelo === 'mensal'){
+      if(tituloEl) tituloEl.textContent = 'Produção Mensal';
+      // deixa todos filtros visíveis
+    } else {
+      if(tituloEl) tituloEl.textContent = 'Consulta Personalizada';
+    }
+
+    renderRelatorios();
+    if(modelo !== 'personalizado' && modelo !== 'mensal'){
+      renderRelatorioBody();
+    }
+  }
+
+  function voltarModelosRelatorio(){
+    document.getElementById('relatorio-painel-modelos').style.display = 'block';
+    document.getElementById('relatorio-consulta-area').style.display = 'none';
+    limparFiltrosRelatorio();
+    // restaurar campos
+    const campoCor = document.getElementById('relatorio-campo-corretora');
+    const campoSeg = document.getElementById('relatorio-campo-seguradora');
+    const campoProd = document.getElementById('relatorio-campo-produto');
+    if(campoCor) campoCor.style.display='';
+    if(campoSeg) campoSeg.style.display='';
+    if(campoProd) campoProd.style.display='';
+  }
+
   async function renderRelatorios(){
     const selCorretora = document.getElementById('relatorio-filtro-corretora');
     if(selCorretora && selCorretora.options.length <= 1){
