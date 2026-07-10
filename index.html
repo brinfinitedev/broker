@@ -1302,7 +1302,11 @@
         <!-- ================= CORRETORAS (lista) ================= -->
         <section class="view hidden" id="view-corretoras">
           <div class="page-head">
-            <div><h1>Corretoras</h1><p>Corretoras parceiras cadastradas na assessoria</p></div>
+            <div>
+              <h1>Corretoras</h1>
+              <p>Corretoras parceiras cadastradas na assessoria</p>
+              <div id="corretoras-counters" style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;"></div>
+            </div>
             <div style="display:flex; gap:10px;">
               <button class="btn-outline" onclick="openImportarCorretorasModal()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
@@ -1320,10 +1324,15 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
                 <input id="corretoras-search" placeholder="Buscar por razão social ou CNPJ" oninput="filtrarCorretoras(this.value)" onkeydown="if(event.key==='Enter') filtrarCorretoras(this.value)">
               </div>
+              <select id="corretoras-filter-status" onchange="renderCorretorasList()" style="border:1.4px solid var(--border);border-radius:999px;padding:9px 14px;font-size:12.5px;font-weight:700;outline:none;background:#fff;cursor:pointer;">
+                <option value="">Todas</option>
+                <option value="ativa">✅ Ativas</option>
+                <option value="inativa">⛔ Inativas</option>
+              </select>
               <button class="btn-outline" onclick="filtrarCorretoras('')">Limpar</button>
             </div>
             <table>
-              <thead><tr><th>Corretora</th><th>Filial</th><th>CNPJ</th><th>Cidade</th><th></th></tr></thead>
+              <thead><tr><th>Corretora</th><th>Filial</th><th>CNPJ</th><th>Cidade</th><th>Status</th><th></th></tr></thead>
               <tbody id="corretoras-tbody"></tbody>
             </table>
           </div>
@@ -2250,6 +2259,12 @@
       <div class="form-grid">
         <div class="f-field full"><label>Razão social</label><input type="text" id="corretora-razao-social" placeholder="Ex: Prisma Corretora de Seguros Ltda."></div>
         <div class="f-field"><label>Filial</label><input type="text" id="corretora-filial" placeholder="Ex: Matriz, São Paulo, Curitiba..."></div>
+        <div class="f-field"><label>Status</label>
+          <select id="corretora-status">
+            <option value="ativa">✅ Ativa</option>
+            <option value="inativa">⛔ Inativa</option>
+          </select>
+        </div>
         <div class="f-field"><label>CNPJ</label><input type="text" id="corretora-cnpj" placeholder="00.000.000/0001-00"></div>
         <div class="f-field"><label>Inscrição estadual</label><input type="text" id="corretora-ie" placeholder="000.000.000.000"></div>
         <div class="f-field"><label>SUSEP</label><input type="text" id="corretora-susep" placeholder="00.000000-0"></div>
@@ -4323,28 +4338,54 @@
   function renderCorretorasList(){
     const tbody = document.getElementById('corretoras-tbody');
     if(!tbody) return;
+
+    const allGids = Object.keys(GROUPS);
+    const totalAtivas = allGids.filter(gid => (GROUPS[gid].status || 'ativa') === 'ativa').length;
+    const totalInativas = allGids.filter(gid => (GROUPS[gid].status || 'ativa') === 'inativa').length;
+
+    // Update counters
+    const countersEl = document.getElementById('corretoras-counters');
+    if(countersEl){
+      countersEl.innerHTML = `
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:4px 11px;border-radius:999px;">
+          ✅ ${totalAtivas} ativa${totalAtivas !== 1 ? 's' : ''}
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;padding:4px 11px;border-radius:999px;">
+          ⛔ ${totalInativas} inativa${totalInativas !== 1 ? 's' : ''}
+        </span>`;
+    }
+
     const query = (document.getElementById('corretoras-search')?.value || '').toLowerCase().trim();
-    const gids = Object.keys(GROUPS).filter(gid => {
-      if(!query) return true;
+    const statusFiltro = document.getElementById('corretoras-filter-status')?.value || '';
+
+    const gids = allGids.filter(gid => {
       const g = GROUPS[gid];
+      if(statusFiltro && (g.status || 'ativa') !== statusFiltro) return false;
+      if(!query) return true;
       return (g.name||'').toLowerCase().includes(query)
           || (g.cnpj||'').toLowerCase().includes(query)
           || (g.cidade||'').toLowerCase().includes(query)
           || (g.apelidos||[]).some(a => a.toLowerCase().includes(query));
     }).sort((a, b) => (GROUPS[a].name||'').localeCompare(GROUPS[b].name||'', 'pt-BR'));
+
     if(gids.length === 0){
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gray-600);">${query ? 'Nenhuma corretora encontrada para "'+query+'".' : 'Nenhuma corretora cadastrada ainda.'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--gray-600);">${query || statusFiltro ? 'Nenhuma corretora encontrada para este filtro.' : 'Nenhuma corretora cadastrada ainda.'}</td></tr>`;
       return;
     }
     tbody.innerHTML = gids.map(gid => {
       const g = GROUPS[gid];
       const iniciais = initials(g.name);
+      const status = g.status || 'ativa';
+      const statusBadge = status === 'ativa'
+        ? `<span class="chip on" style="font-size:11px;">Ativa</span>`
+        : `<span class="chip" style="font-size:11px;color:var(--gray-400);">Inativa</span>`;
       return `
-      <tr>
+      <tr style="${status === 'inativa' ? 'opacity:.55;' : ''}">
         <td onclick="openCorretoraForm('${gid}')"><div class="row-avatar"><div class="av">${iniciais}</div><div><div class="cell-strong">${g.name}</div></div></div></td>
         <td onclick="openCorretoraForm('${gid}')">${g.filial || '—'}</td>
         <td onclick="openCorretoraForm('${gid}')">${g.cnpj || 'A preencher'}</td>
         <td onclick="openCorretoraForm('${gid}')">${g.cidade || 'A preencher'}</td>
+        <td onclick="openCorretoraForm('${gid}')">${statusBadge}</td>
         <td><button class="access-btn" onclick="openCorretoraForm('${gid}')">Editar</button></td>
       </tr>`;
     }).join('');
@@ -4352,8 +4393,12 @@
 
   function filtrarCorretoras(q){
     const inp = document.getElementById('corretoras-search');
-    if(inp && q === '') inp.value = '';
-    renderCorretoras();
+    if(inp && q === '') { inp.value = ''; }
+    if(q === '') {
+      const sel = document.getElementById('corretoras-filter-status');
+      if(sel) sel.value = '';
+    }
+    renderCorretorasList();
   }
 
   let editingCorretoraGid = null;
@@ -4381,6 +4426,9 @@
       'corretora-complemento': g ? (g.complemento || '') : '',
     };
     Object.entries(fieldMap).forEach(([id, val]) => { const el=document.getElementById(id); if(el) el.value = val || ''; });
+    // status
+    const statusEl = document.getElementById('corretora-status');
+    if(statusEl) statusEl.value = g ? (g.status || 'ativa') : 'ativa';
 
     PENDING_APELIDOS = g ? [...(g.apelidos || [])] : [];
     renderApelidosList();
@@ -4489,6 +4537,7 @@
       estado: document.getElementById('corretora-estado').value.trim(),
       seguradoras_permitidas: Array.from(document.querySelectorAll('#seg-checklist input:checked')).map(i=>i.value),
       apelidos: [...PENDING_APELIDOS],
+      status: document.getElementById('corretora-status')?.value || 'ativa',
     };
 
     // collect credentials per seguradora
@@ -4518,6 +4567,7 @@
         cidade: payload.cidade, estado: payload.estado,
         seguradoras: payload.seguradoras_permitidas, apelidos: payload.apelidos,
         credenciais_seguradoras: payload.credenciais_seguradoras,
+        status: payload.status,
       });
     } else {
       // criação de uma nova corretora — precisa existir antes de qualquer usuário ser vinculado a ela
@@ -4643,10 +4693,15 @@
   const PLANILHA_TEMPLATES = {
     'tokio marine': {
       tipo: 'corretora',
-      colunaCorretor: 'Corretor',
-      colunaValor: 'Mês/Ano Atual',
-      pularPrimeiraLinhaDados: true,
-      descartarColunaA: true, // coluna A desta planilha não é usada e deve ser ignorada
+      // Planilha Prêmio Líquido — Análise Mensal
+      // Após descartar col A: col B vira índice 0 (corretora), col D vira índice 2 (Mês/Ano Atual)
+      colunaCorretor: 'Corretor',   // fallback por nome
+      colunaValor: 'Mês/Ano Atual', // fallback por nome
+      idxCorretorFixo: 0,  // col B após remover col A
+      idxValorFixo: 2,     // col D após remover col A
+      pularPrimeiraLinhaDados: true, // linha 2 é "Total" geral → pular
+      descartarColunaA: true,
+      ignorarNulos: true,  // descarta linhas onde col D é null/vazio/zero
     },
     'tokio marine produto': {
       // Planilha "Prêmio Líquido — Análise Mensal"
@@ -5707,23 +5762,38 @@ Os dados de produção deste período serão restaurados para o upload anterior.
       }
 
       if(template){
-        idxCorretor = indiceColuna(headerRowFinal, template.colunaCorretor);
-        idxValor = indiceColuna(headerRowFinal, template.colunaValor);
-        if(idxCorretor === -1 || idxValor === -1){
-          resultBox.innerHTML = `<p class="hint">Não encontrei as colunas "${template.colunaCorretor}" e/ou "${template.colunaValor}" nesta planilha. Confira se é o mesmo layout de sempre para ${seguradora}.</p>`;
-          return;
+        // Usa índices fixos se definidos no template (mais confiável que busca por nome)
+        if(template.idxCorretorFixo !== undefined && template.idxValorFixo !== undefined){
+          idxCorretor = template.idxCorretorFixo;
+          idxValor = template.idxValorFixo;
+        } else {
+          idxCorretor = indiceColuna(headerRowFinal, template.colunaCorretor);
+          idxValor = indiceColuna(headerRowFinal, template.colunaValor);
+          if(idxCorretor === -1 || idxValor === -1){
+            resultBox.innerHTML = `<p class="hint">Não encontrei as colunas "${template.colunaCorretor}" e/ou "${template.colunaValor}" nesta planilha. Confira se é o mesmo layout de sempre para ${seguradora}.</p>`;
+            return;
+          }
         }
         if(template.pularPrimeiraLinhaDados) dataRows = dataRows.slice(1);
         // ignora linhas sem corretor, vazias, "Total", "Filtros", "Codigo_sistema" etc.
         dataRows = dataRows.filter(({ celulas }) => {
           const val = String(celulas[idxCorretor] ?? '').trim();
-          if(!val) return false;
+          if(!val || val === 'null' || val === 'undefined') return false;
           const valLower = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
           return !PALAVRAS_DESCARTAR.some(p => {
             const pn = p.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
             return valLower === pn || valLower.startsWith(pn + ' ') || valLower.startsWith(pn + '_');
           });
         });
+        // ignorarNulos: descarta linhas onde o valor é null/vazio/zero
+        if(template.ignorarNulos){
+          dataRows = dataRows.filter(({ celulas }) => {
+            const raw = celulas[idxValor];
+            if(raw === null || raw === undefined || raw === '') return false;
+            const v = Number(String(raw).replace(',','.'));
+            return !isNaN(v) && v !== 0;
+          });
+        }
         // se ignorarZeros: descarta silenciosamente linhas com GWP = 0
         if(template.ignorarZeros){
           dataRows = dataRows.filter(({ celulas }) => {
@@ -6468,6 +6538,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
         cidade: row.cidade || '',
         estado: row.estado || '',
         credenciais_seguradoras: row.credenciais_seguradoras || {},
+        status: row.status || 'ativa',
       };
     });
     refreshCorretoraSelects();
