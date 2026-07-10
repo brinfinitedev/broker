@@ -1030,7 +1030,7 @@
             <div style="display:flex; gap:10px;">
               <button class="btn-outline" onclick="openImportarCorretorasModal()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
-                Importar em lote
+                Importar
               </button>
               <button class="btn-dark" onclick="openCorretoraForm(null)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -1265,6 +1265,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
                 Histórico
               </button>
+              <button class="btn-outline" onclick="openFiltrosProducao()" id="btn-filtros-producao" title="Filtrar produção">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                Filtros
+              </button>
               <button class="btn-outline" onclick="openImportarModal()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
                 Importar planilha
@@ -1318,26 +1322,24 @@
             <div class="kpi-mini"><div class="l">Lançamentos</div><div class="v" id="kpi-producao-lancamentos">0</div></div>
           </div>
 
-          <div class="filters-row">
-            <div class="select-pill">Competência
-              <input type="month" id="producao-competencia" onchange="renderProducao()" style="border:none; outline:none; background:transparent; font-weight:700;">
-            </div>
-            <div class="select-pill">Corretora
-              <select id="producao-filtro-corretora" onchange="renderProducao()"><option value="todas">Todas</option></select>
-            </div>
-            <div class="select-pill">Seguradora
-              <input list="producao-seguradoras-datalist" id="producao-filtro-seguradora" placeholder="Todas" oninput="renderProducao()" style="border:none; outline:none; background:transparent; font-weight:700; width:130px;">
-              <datalist id="producao-seguradoras-datalist"></datalist>
-            </div>
-            <div class="select-pill">Produto
-              <select id="producao-filtro-produto" onchange="renderProducao()" style="border:none;outline:none;background:transparent;font-weight:700;">
-                <option value="">Todos</option>
-                <option>Auto</option><option>Frota</option><option>Empresa</option>
-                <option>Condomínio</option><option>Garantia</option><option>Vida</option>
-                <option>Residencial</option><option>Engenharia</option><option>Outros</option>
-              </select>
-            </div>
-            <button class="btn-outline" style="padding:9px 14px; font-size:12.5px;" onclick="limparFiltrosProducao()">Limpar filtros</button>
+          <!-- Filtros activos badge -->
+          <div id="producao-filtros-ativos" style="display:none;margin-bottom:14px;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:12px;color:var(--gray-600);">Filtros ativos:</span>
+            <span id="producao-filtros-badge" style="font-size:12px;font-weight:600;color:var(--black);"></span>
+            <button onclick="limparFiltrosProducao()" style="font-size:11.5px;font-weight:700;color:var(--gray-400);background:none;border:none;cursor:pointer;">Limpar</button>
+          </div>
+          <!-- Hidden fields mantidos para compatibilidade com renderProducao() -->
+          <div style="display:none;">
+            <input type="month" id="producao-competencia">
+            <select id="producao-filtro-corretora"><option value="todas">Todas</option></select>
+            <input id="producao-filtro-seguradora">
+            <datalist id="producao-seguradoras-datalist"></datalist>
+            <select id="producao-filtro-produto">
+              <option value="">Todos</option>
+              <option>Auto</option><option>Frota</option><option>Empresa</option>
+              <option>Condomínio</option><option>Garantia</option><option>Vida</option>
+              <option>Residencial</option><option>Engenharia</option><option>Outros</option>
+            </select>
           </div>
           <!-- hidden tbody kept for compat, data goes to KPIs only -->
           <tbody id="producao-tbody" style="display:none;"></tbody>
@@ -1643,7 +1645,13 @@
       </div>
       <div class="f-field full">
         <label>Membros responsáveis</label>
-        <div id="card-membros-list" class="checklist"></div>
+        <div id="card-membros-selected-display" style="display:flex;flex-wrap:wrap;gap:6px;min-height:36px;padding:8px 12px;border:1.4px solid var(--border);border-radius:11px;cursor:pointer;align-items:center;transition:border-color .2s;" onclick="toggleMembrosPicker()" title="Clique para selecionar membros">
+          <span id="card-membros-placeholder" style="font-size:13px;color:var(--gray-400);">Nenhum membro selecionado — clique para adicionar</span>
+        </div>
+        <!-- Picker dropdown -->
+        <div id="card-membros-picker" style="display:none;position:absolute;z-index:200;background:#fff;border:1.4px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;max-height:220px;overflow-y:auto;width:calc(100% - 32px);margin-top:4px;">
+          <div id="card-membros-list" class="checklist" style="display:flex;flex-direction:column;gap:4px;"></div>
+        </div>
       </div>
       <!-- Comentários por membro -->
       <div class="f-field" style="margin-top:6px;">
@@ -2103,13 +2111,56 @@
 </div>
 
 <!-- ---------------- MODAL: IMPORTAR PLANILHA DE PRODUÇÃO ---------------- -->
+<!-- ===== MODAL: FILTROS DE PRODUÇÃO ===== -->
+<div class="modal-overlay" id="modal-filtros-producao" onclick="if(event.target===this) fecharFiltrosProducao()">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <h3 style="margin:0;">Filtrar produção</h3>
+      <button onclick="fecharFiltrosProducao()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-600);">✕</button>
+    </div>
+    <div class="f-field">
+      <label>Competência</label>
+      <div id="filtros-producao-competencia-picker"></div>
+      <input type="month" id="filtros-producao-competencia" style="display:none;">
+    </div>
+    <div class="f-field">
+      <label>Corretora</label>
+      <select id="filtros-producao-corretora" style="width:100%;border:1.4px solid var(--border);border-radius:11px;padding:12px 14px;outline:none;font-size:13.5px;font-family:inherit;">
+        <option value="todas">Todas as corretoras</option>
+      </select>
+    </div>
+    <div class="f-field">
+      <label>Seguradora</label>
+      <select id="filtros-producao-seguradora" style="width:100%;border:1.4px solid var(--border);border-radius:11px;padding:12px 14px;outline:none;font-size:13.5px;font-family:inherit;">
+        <option value="">Todas as seguradoras</option>
+      </select>
+    </div>
+    <div class="f-field">
+      <label>Produto</label>
+      <select id="filtros-producao-produto" style="width:100%;border:1.4px solid var(--border);border-radius:11px;padding:12px 14px;outline:none;font-size:13.5px;font-family:inherit;">
+        <option value="">Todos os produtos</option>
+        <option>Auto</option><option>Frota</option><option>Empresa</option>
+        <option>Condomínio</option><option>Garantia</option><option>Vida</option>
+        <option>Residencial</option><option>Engenharia</option><option>Outros</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="limparFiltrosProducao(); fecharFiltrosProducao();">Limpar filtros</button>
+      <button class="btn-dark" onclick="aplicarFiltrosProducao()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        Aplicar
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-historico-producao" onclick="if(event.target===this) closeModal('modal-historico-producao')">
   <div class="modal-box modal-box-lg">
     <h3>Histórico de atualizações de produção</h3>
-    <p class="hint">Data e hora da última atualização recebida de cada seguradora (lançamento manual ou importação de planilha).</p>
+    <p class="hint">Data e hora da última atualização recebida de cada seguradora. Ao excluir uma importação, os dados do período anterior voltam a ser válidos.</p>
     <div class="list-panel">
       <table>
-        <thead><tr><th>Seguradora</th><th>Competência</th><th>Tipo</th><th>Corretoras atualizadas</th><th>Quando</th></tr></thead>
+        <thead><tr><th>Seguradora</th><th>Competência</th><th>Tipo</th><th>Registros</th><th>Quando</th><th style="width:50px;"></th></tr></thead>
         <tbody id="historico-producao-tbody"></tbody>
       </table>
     </div>
@@ -3117,11 +3168,57 @@
     const wrap = document.getElementById('card-membros-list');
     const users = ALL_USERS_CACHE.length ? ALL_USERS_CACHE : [];
     wrap.innerHTML = users.length ? users.map(u => `
-      <label class="chk-item"><input type="checkbox" value="${u.id}" ${selecionados.includes(u.id) ? 'checked' : ''}>
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--black);color:#fff;font-size:10px;font-weight:700;margin-right:4px;">${initials(u.nome)}</span>
-        ${u.nome}
+      <label class="chk-item" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+        <input type="checkbox" value="${u.id}" ${selecionados.includes(u.id) ? 'checked' : ''} onchange="atualizarMembrosDisplay()" style="accent-color:var(--black);width:15px;height:15px;cursor:pointer;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--black);color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">${initials(u.nome)}</span>
+        <span style="font-size:13px;font-weight:600;">${u.nome}</span>
       </label>
-    `).join('') : `<p class="hint" style="margin:0;">Nenhum usuário cadastrado ainda.</p>`;
+    `).join('') : `<p style="font-size:12.5px;color:var(--gray-600);margin:8px 0;">Nenhum usuário cadastrado ainda.</p>`;
+    atualizarMembrosDisplay();
+  }
+
+  function toggleMembrosPicker(){
+    const picker = document.getElementById('card-membros-picker');
+    const display = document.getElementById('card-membros-selected-display');
+    const isOpen = picker.style.display !== 'none';
+    picker.style.display = isOpen ? 'none' : 'block';
+    display.style.borderColor = isOpen ? 'var(--border)' : 'var(--black)';
+    if(!isOpen){
+      // Fechar ao clicar fora
+      setTimeout(()=>{
+        const handler = (e) => {
+          if(!picker.contains(e.target) && !display.contains(e.target)){
+            picker.style.display = 'none';
+            display.style.borderColor = 'var(--border)';
+            document.removeEventListener('click', handler);
+          }
+        };
+        document.addEventListener('click', handler);
+      }, 100);
+    }
+  }
+
+  function atualizarMembrosDisplay(){
+    const checked = Array.from(document.querySelectorAll('#card-membros-list input:checked'));
+    const display = document.getElementById('card-membros-selected-display');
+    const placeholder = document.getElementById('card-membros-placeholder');
+    if(!display) return;
+    // Remove existing avatars (keep placeholder)
+    display.querySelectorAll('.membro-av-chip').forEach(el => el.remove());
+    if(checked.length === 0){
+      if(placeholder) placeholder.style.display = '';
+      return;
+    }
+    if(placeholder) placeholder.style.display = 'none';
+    checked.forEach(inp => {
+      const user = ALL_USERS_CACHE.find(u => u.id === inp.value);
+      if(!user) return;
+      const chip = document.createElement('span');
+      chip.className = 'membro-av-chip';
+      chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:var(--black);color:#fff;padding:3px 10px 3px 5px;border-radius:999px;font-size:11.5px;font-weight:700;';
+      chip.innerHTML = `<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.2);font-size:9px;">${initials(user.nome)}</span>${user.nome.split(' ')[0]}`;
+      display.insertBefore(chip, placeholder);
+    });
   }
 
   async function saveCard(){
@@ -4153,26 +4250,139 @@
     openModal('modal-historico-producao');
   }
 
+  function openFiltrosProducao(){
+    // Populate selects from current hidden fields
+    const selCor = document.getElementById('filtros-producao-corretora');
+    const selSeg = document.getElementById('filtros-producao-seguradora');
+    // Fill corretoras
+    selCor.innerHTML = '<option value="todas">Todas as corretoras</option>' +
+      Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${g.name}</option>`).join('');
+    // Fill seguradoras
+    selSeg.innerHTML = '<option value="">Todas as seguradoras</option>' +
+      Object.values(SEGURADORAS).map(s => `<option value="${s.nome}">${s.nome}</option>`).join('');
+    // Sync current values
+    const curComp = document.getElementById('producao-competencia')?.value || '';
+    const curCor = document.getElementById('producao-filtro-corretora')?.value || 'todas';
+    const curSeg = (document.getElementById('producao-filtro-seguradora')?.value || '').trim();
+    const curProd = document.getElementById('producao-filtro-produto')?.value || '';
+    const fComp = document.getElementById('filtros-producao-competencia');
+    const fCor = document.getElementById('filtros-producao-corretora');
+    const fSeg = document.getElementById('filtros-producao-seguradora');
+    const fProd = document.getElementById('filtros-producao-produto');
+    if(fComp) fComp.value = curComp;
+    if(fCor) fCor.value = curCor;
+    if(fSeg) fSeg.value = curSeg;
+    if(fProd) fProd.value = curProd;
+    // Link the comp picker
+    ligarCompetenciaPicker('filtros-producao-competencia');
+    openModal('modal-filtros-producao');
+  }
+
+  function fecharFiltrosProducao(){
+    closeModal('modal-filtros-producao');
+  }
+
+  function aplicarFiltrosProducao(){
+    const comp = document.getElementById('filtros-producao-competencia')?.value || '';
+    const cor = document.getElementById('filtros-producao-corretora')?.value || 'todas';
+    const seg = document.getElementById('filtros-producao-seguradora')?.value || '';
+    const prod = document.getElementById('filtros-producao-produto')?.value || '';
+    // Apply to hidden fields
+    const hComp = document.getElementById('producao-competencia');
+    const hCor = document.getElementById('producao-filtro-corretora');
+    const hSeg = document.getElementById('producao-filtro-seguradora');
+    const hProd = document.getElementById('producao-filtro-produto');
+    if(hComp) hComp.value = comp;
+    if(hCor) hCor.value = cor;
+    if(hSeg) hSeg.value = seg;
+    if(hProd) hProd.value = prod;
+    // Update active filters badge
+    const partes = [];
+    if(comp){ partes.push(labelCompetencia(comp)); }
+    if(cor && cor !== 'todas'){ partes.push(GROUPS[cor]?.name || cor); }
+    if(seg){ partes.push(seg); }
+    if(prod){ partes.push(prod); }
+    const badge = document.getElementById('producao-filtros-badge');
+    const container = document.getElementById('producao-filtros-ativos');
+    if(badge) badge.textContent = partes.join(' · ') || 'Nenhum';
+    if(container) container.style.display = partes.length ? 'flex' : 'none';
+    // Update button style to show active
+    const btn = document.getElementById('btn-filtros-producao');
+    if(btn) btn.style.borderColor = partes.length ? 'var(--black)' : '';
+    fecharFiltrosProducao();
+    renderProducao();
+  }
+
   async function renderHistoricoProducao(){
     const tbody = document.getElementById('historico-producao-tbody');
     if(!tbody) return;
     const { data, error } = await supabase.from('producao_historico').select('*').order('atualizado_em', {ascending:false});
-    if(error){ tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Erro: ${error.message}</td></tr>`; return; }
-    tbody.innerHTML = data.length ? data.map(h => `
+    if(error){ tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Erro: ${error.message}</td></tr>`; return; }
+    if(!data.length){ tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--gray-600);">Nenhuma atualização registrada ainda.</td></tr>`; return; }
+    tbody.innerHTML = data.map((h, idx) => `
       <tr>
         <td class="cell-strong">${h.seguradora}</td>
         <td>${labelCompetencia(h.competencia)}</td>
-        <td><span class="chip">${h.tipo === 'importacao' ? 'Importação de planilha' : 'Lançamento manual'}</span></td>
+        <td><span class="chip">${h.tipo === 'importacao' ? 'Importação' : 'Manual'}</span></td>
         <td>${h.quantidade}</td>
         <td>${new Date(h.atualizado_em).toLocaleString('pt-BR')}</td>
-      </tr>`).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--gray-600);">Nenhuma atualização registrada ainda.</td></tr>`;
+        <td>
+          ${idx === 0 ? `<button onclick="excluirHistorico('${h.id}','${h.seguradora}','${h.competencia}','${h.tipo}')" style="background:none;border:none;cursor:pointer;color:var(--gray-400);padding:4px;" title="Excluir este registro">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>` : ''}
+        </td>
+      </tr>`).join('');
+  }
+
+  async function excluirHistorico(id, seguradora, competencia, tipo){
+    if(!confirm(`Excluir este registro de ${seguradora} (${labelCompetencia(competencia)})?
+
+Os dados de produção deste período serão restaurados para o upload anterior.`)) return;
+
+    // Buscar registro anterior para o mesmo seguradora+competencia
+    const { data: historicos } = await supabase.from('producao_historico')
+      .select('*').eq('seguradora', seguradora).eq('competencia', competencia)
+      .order('atualizado_em', { ascending: false });
+
+    // O snapshot do registro atual (snapshot_dados = JSON array de {corretora_id, produto, valor})
+    const atual = (historicos || []).find(h => h.id === id);
+    const anterior = (historicos || []).find(h => h.id !== id);
+
+    // 1. Apagar os dados de producao_mensal desse período (todos desta seguradora+competencia)
+    await supabase.from('producao_mensal').delete()
+      .eq('seguradora', seguradora).eq('competencia', competencia);
+
+    // 2. Restaurar dados do snapshot anterior, se existir
+    if(anterior && anterior.snapshot_dados){
+      try {
+        const snapshotAnterior = typeof anterior.snapshot_dados === 'string'
+          ? JSON.parse(anterior.snapshot_dados) : anterior.snapshot_dados;
+        const atualizado_em = new Date().toISOString();
+        for(const item of snapshotAnterior){
+          await supabase.from('producao_mensal').insert({
+            corretora_id: item.corretora_id || null,
+            seguradora, competencia,
+            produto: item.produto || null,
+            valor: item.valor,
+            atualizado_em,
+          });
+        }
+      } catch(e){ console.error('Erro ao restaurar snapshot:', e); }
+    }
+
+    // 3. Apagar o registro do histórico
+    await supabase.from('producao_historico').delete().eq('id', id);
+
+    renderProducao();
+    await renderHistoricoProducao();
   }
 
   // registra, por seguradora + competência, quando foi a última atualização de produção
-  // (lançamento manual ou importação de planilha) — usado na aba Histórico
-  async function registrarHistoricoProducao({ seguradora, competencia, tipo, quantidade }){
+  async function registrarHistoricoProducao({ seguradora, competencia, tipo, quantidade, snapshot_dados }){
     return supabase.from('producao_historico').insert({
-      seguradora, competencia, tipo, quantidade, atualizado_em: new Date().toISOString(),
+      seguradora, competencia, tipo, quantidade,
+      snapshot_dados: snapshot_dados ? JSON.stringify(snapshot_dados) : null,
+      atualizado_em: new Date().toISOString(),
     });
   }
 
@@ -4321,7 +4531,8 @@
         <ul style="margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--gray-600);">
           ${Object.entries(porProduto).map(([p,v]) => `<li><b>${p}</b>: R$ ${v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</li>`).join('')}
         </ul>`;
-      await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: count });
+      const snapProduto = Object.entries(porProduto).map(([produto, valor]) => ({ corretora_id: null, produto, valor }));
+      await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: count, snapshot_dados: snapProduto });
       registrarLog('Importou planilha por produto', `${seguradora} · ${labelCompetencia(competencia)} · ${count} produto(s)`);
       renderProducao();
     };
@@ -4664,10 +4875,14 @@
   }
 
   function limparFiltrosProducao(){
-    document.getElementById('producao-competencia').value = competenciaAtual();
-    document.getElementById('producao-filtro-corretora').value = 'todas';
-    const sf = document.getElementById('producao-filtro-seguradora'); if(sf) sf.value='';
-    const pf = document.getElementById('producao-filtro-produto'); if(pf) pf.value='';
+    ['producao-competencia','filtros-producao-competencia'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    ['producao-filtro-corretora','filtros-producao-corretora'].forEach(id => { const el = document.getElementById(id); if(el) el.value='todas'; });
+    ['producao-filtro-seguradora','filtros-producao-seguradora'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    ['producao-filtro-produto','filtros-producao-produto'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    const badge = document.getElementById('producao-filtros-ativos');
+    if(badge) badge.style.display = 'none';
+    const btn = document.getElementById('btn-filtros-producao');
+    if(btn) btn.style.borderColor = '';
     renderProducao();
   }
 
@@ -4685,15 +4900,41 @@
     openModal('modal-importar');
   }
 
-  function renderSeguradoraPicker(){
+  async function renderSeguradoraPicker(){
     const grid = document.getElementById('importar-seguradora-grid');
     if(!grid) return;
     const selecionada = document.getElementById('importar-seguradora').value;
-    grid.innerHTML = Object.entries(SEGURADORAS).map(([id, s]) => `
-      <button type="button" class="seg-card ${s.nome === selecionada ? 'active' : ''}" onclick="selecionarSeguradoraImportar('${id}')">
+
+    // Buscar último histórico por seguradora para calcular cor da borda
+    const { data: historicos } = await supabase.from('producao_historico')
+      .select('seguradora, atualizado_em').order('atualizado_em', { ascending: false });
+
+    const ultimoImport = {};
+    (historicos || []).forEach(h => {
+      if(!ultimoImport[h.seguradora]) ultimoImport[h.seguradora] = h.atualizado_em;
+    });
+
+    const agora = Date.now();
+    const CINCO_DIAS = 5 * 24 * 60 * 60 * 1000;
+
+    grid.innerHTML = Object.entries(SEGURADORAS).map(([id, s]) => {
+      const ultimo = ultimoImport[s.nome];
+      let borderStyle = 'border:1.8px solid #ef4444;'; // vermelho: nunca importado ou > 5 dias
+      let tituloStatus = 'Nunca importado';
+      if(ultimo){
+        const diff = agora - new Date(ultimo).getTime();
+        if(diff < CINCO_DIAS){
+          borderStyle = 'border:1.8px solid #22c55e;'; // verde: < 5 dias
+          tituloStatus = 'Importado há menos de 5 dias';
+        } else {
+          tituloStatus = 'Importado há mais de 5 dias';
+        }
+      }
+      return `<button type="button" class="seg-card ${s.nome === selecionada ? 'active' : ''}" style="${borderStyle}" onclick="selecionarSeguradoraImportar('${id}')" title="${tituloStatus}">
         <div class="seg-card-logo">${s.logo ? `<img src="${s.logo}" alt="${s.nome}">` : initials(s.nome)}</div>
         <div class="seg-card-name">${s.nome}</div>
-      </button>`).join('');
+      </button>`;
+    }).join('');
   }
 
   function selecionarSeguradoraImportar(id){
@@ -4827,9 +5068,17 @@
           GROUPS[k].name.toLowerCase() === razao.toLowerCase()
         );
         if(existeId){
-          const { error } = await supabase.from('corretoras').update(payload).eq('id', existeId);
+          // Se já existe: adicionar a razão social da planilha como apelido (se ainda não estiver)
+          const corretoraAtual = GROUPS[existeId];
+          const apelidosAtuais = Array.isArray(corretoraAtual.apelidos) ? corretoraAtual.apelidos : [];
+          const novoApelido = razao.trim();
+          const apelidosMerged = apelidosAtuais.includes(novoApelido)
+            ? apelidosAtuais
+            : [...apelidosAtuais, novoApelido];
+          const payloadUpdate = { ...payload, apelidos: apelidosMerged };
+          const { error } = await supabase.from('corretoras').update(payloadUpdate).eq('id', existeId);
           if(!error){
-            GROUPS[existeId] = { ...GROUPS[existeId], name: razao, seguradoras, apelidos,
+            GROUPS[existeId] = { ...GROUPS[existeId], name: corretoraAtual.name, seguradoras, apelidos: apelidosMerged,
               cnpj: payload.cnpj, susep: payload.susep, email: payload.email,
               telefone: payload.telefone, cidade: payload.cidade, estado: payload.estado,
               endereco: payload.endereco };
@@ -4966,7 +5215,13 @@
 
       esconderSplashOp();
       resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${identificadas.length} linha(s) importada(s) com sucesso para ${seguradora}, competência ${labelCompetencia(competencia)}.</p>`;
-      await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: identificadas.length });
+      // snapshot para permitir restauração se excluído do histórico
+      const snapCorretora = identificadas.map(({ gid, celulas }) => ({
+        corretora_id: gid,
+        produto: null,
+        valor: template ? Number(celulas[idxValor]) : extrairValorDaLinha(headerRow, celulas),
+      }));
+      await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: identificadas.length, snapshot_dados: snapCorretora });
       registrarLog('Importou planilha de produção', `${seguradora} · ${labelCompetencia(competencia)} · ${identificadas.length} linha(s)`);
       renderProducao();
     };
