@@ -68,6 +68,10 @@
   /* ==========================================================
      LOGIN
   ========================================================== */
+  /* All views hidden by default — JS removes .hidden to show active */
+  .view{ display:none; }
+  .view:not(.hidden){ display:block; }
+
   #view-login{
     min-height:100vh;
     display:none;
@@ -1059,7 +1063,7 @@
       <div class="content">
 
         <!-- ================= HOME ================= -->
-        <section class="view" id="view-home">
+        <section class="view hidden" id="view-home">
           <div class="welcome-wrap">
             <div>
               <h1 id="home-greeting">Boa tarde</h1>
