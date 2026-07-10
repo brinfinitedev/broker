@@ -788,32 +788,51 @@
     .kpis-row{ grid-template-columns: repeat(2,1fr); }
   }
 
+
   @media (max-width: 760px){
     .sidebar{ display:none; }
     .shell, .shell.collapsed{ grid-template-columns: 1fr; }
-    .topbar{ padding:16px 18px; }
+    .topbar{ padding:14px 16px; gap:10px; }
+    .topbar .crumb{ font-size:12px; }
     .role-demo{ display:none; }
-    .content{ padding:18px 18px 100px; }
+    .content{ padding:16px 16px 100px; }
     .bottom-nav.show{ display:flex; }
-    .welcome-wrap{ flex-direction:column; align-items:flex-start; padding:6px 2px 20px; }
-    .welcome-wrap h1{ font-size:22px; }
+    .welcome-wrap{ flex-direction:column; align-items:flex-start; padding:4px 0 18px; }
+    .welcome-wrap h1{ font-size:20px; }
+    .welcome-wrap .today-pill{ font-size:11px; padding:6px 12px; }
     .home-grid{ grid-template-columns:1fr; }
-    .page-head h1{ font-size:19px; }
+    .page-head{ flex-direction:column; align-items:flex-start; gap:12px; }
+    .page-head h1{ font-size:18px; }
+    .page-head .page-actions{ width:100%; display:flex; flex-wrap:wrap; gap:8px; }
+    .page-head .page-actions .btn{ flex:1; min-width:120px; text-align:center; justify-content:center; }
     .search-bar{ width:100%; }
-    .list-toolbar{ flex-direction:column; align-items:stretch; }
-    table{ display:block; overflow-x:auto; white-space:nowrap; }
-    .team-row{ grid-template-columns: 1fr; }
-    .fab{
-      position:fixed; right:18px; bottom:88px; z-index:45;
-      width:54px; height:54px; border-radius:50%; background:var(--black); color:#fff;
-      display:flex; align-items:center; justify-content:center; box-shadow: var(--shadow-lg);
-      transition: transform .2s var(--ease);
-    }
-    .fab:active{ transform: scale(.9); }
-    .fab svg{ width:22px; height:22px; }
+    .list-toolbar{ flex-direction:column; align-items:stretch; gap:10px; }
+    .list-toolbar .btn-group{ flex-wrap:wrap; }
+    table{ display:block; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    table th, table td{ white-space:nowrap; }
+    .team-row{ grid-template-columns: 1fr; gap:8px; }
+    /* modals full-width on mobile */
+    .modal-box{ max-width:100%; border-radius:20px 20px 0 0; max-height:92vh; }
+    .modal-overlay{ padding:0; align-items:flex-end; }
+    .modal-box-lg{ max-width:100%; }
+    .form-grid{ grid-template-columns:1fr !important; }
+    .form-grid.cols-3{ grid-template-columns:1fr !important; }
+    .modal-actions{ flex-wrap:wrap; }
+    .modal-actions .btn{ flex:1; text-align:center; justify-content:center; }
+    /* kanban stack on mobile */
+    .kanban{ grid-template-columns:1fr; gap:12px; }
+    /* kpis 2 col */
+    .kpis-row{ grid-template-columns: repeat(2,1fr); gap:10px; }
+    /* billing */
+    .billing-row-actions{ flex-direction:column; }
+    .billing-row-actions input{ min-width:0; width:100%; }
+    /* contatos table */
+    .list-table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    /* logs filters */
+    .log-field-grid{ grid-template-columns:1fr !important; }
   }
-  .fab{ display:none; }
-  @media (max-width:760px){ .fab.show-mobile{ display:flex; } }
+
+  .fab{ display:none !important; }
 
   /* ===== QUICK ACCESS ===== */
   .qa-card{
@@ -1755,7 +1774,7 @@
   <div class="nav-list" id="sheet-nav"></div>
 </div>
 
-<button class="fab" id="fab" onclick="openCorretoraForm(null)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button>
+<!-- FAB removed -->
 
 <!-- ---------------- MODAL: CARD DO CRM (criar/editar) ---------------- -->
 <div class="modal-overlay" id="modal-card" onclick="if(event.target===this) closeModal('modal-card')">
@@ -3026,7 +3045,6 @@
     document.getElementById('view-'+id).classList.remove('hidden');
     const crumbEl = document.getElementById('crumb-current');
     if(crumbEl) crumbEl.textContent = VIEW_LABELS[id] || id;
-    document.getElementById('fab').classList.toggle('show-mobile', id==='corretoras' || id==='crm');
     // mark active nav item first
     document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.view===id));
     // move sidebar active bar — rAF garante posição correta após reflow
@@ -6042,11 +6060,11 @@ Os dados de produção deste período serão restaurados para o upload anterior.
         saveBtn.textContent = 'Criar usuário';
         return;
       }
-      const { error: profileError } = await supabase.from('profiles').insert({
+      const { error: profileError } = await supabase.from('profiles').upsert({
         id: signUpData.user.id, nome, email, role, nascimento, telefone,
         status:'ativo',
         abas_bloqueadas: [],
-      });
+      }, { onConflict: 'id' });
       if(profileError){
         errorBox.textContent = 'Usuário criado no login, mas houve erro ao salvar o perfil: ' + profileError.message;
         errorBox.classList.remove('hidden');
