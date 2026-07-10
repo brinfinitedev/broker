@@ -62,8 +62,13 @@
     min-height:20px;
   }
   /* ============ scrollbars ============ */
-  ::-webkit-scrollbar{ width:6px; height:6px; }
-  ::-webkit-scrollbar-thumb{ background: var(--gray-200); border-radius:4px; }
+  ::-webkit-scrollbar{ width:4px; height:4px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:transparent; border-radius:4px; transition:background .2s; }
+  *:hover::-webkit-scrollbar-thumb{ background: var(--gray-200); }
+  /* Firefox */
+  * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+  *:hover { scrollbar-color: var(--gray-200) transparent; }
 
   /* ==========================================================
      LOGIN
@@ -779,57 +784,173 @@
   /* ==========================================================
      RESPONSIVE
   ========================================================== */
+  /* ─── 980 px: tablets ─── */
   @media (max-width: 980px){
-    .rank-grid{ grid-template-columns: 1fr !important; }
     .home-grid{ grid-template-columns: 1fr; }
     .kanban{ grid-template-columns: 1fr; }
     .form-grid{ grid-template-columns: 1fr; }
     .files-grid{ grid-template-columns: repeat(2,1fr); }
-    .kpis-row{ grid-template-columns: repeat(2,1fr); }
+    .kpis-row{ grid-template-columns: repeat(2,1fr) !important; gap:12px; }
+    #producao-rankings{ grid-template-columns: 1fr !important; }
+    .rank-grid{ grid-template-columns: 1fr !important; }
   }
 
-
+  /* ─── 760 px: mobile ─── */
   @media (max-width: 760px){
+    /* Layout shell */
     .sidebar{ display:none; }
     .shell, .shell.collapsed{ grid-template-columns: 1fr; }
-    .topbar{ padding:14px 16px; gap:10px; }
-    .topbar .crumb{ font-size:12px; }
     .role-demo{ display:none; }
-    .content{ padding:16px 16px 100px; }
+    .content{ padding:16px 14px 100px; max-width:100%; }
+
+    /* Topbar */
+    .topbar{ padding:12px 14px; gap:8px; }
+    .topbar .crumb{ font-size:11.5px; }
+
+    /* Bottom nav */
     .bottom-nav.show{ display:flex; }
-    .welcome-wrap{ flex-direction:column; align-items:flex-start; padding:4px 0 18px; }
-    .welcome-wrap h1{ font-size:20px; }
-    .welcome-wrap .today-pill{ font-size:11px; padding:6px 12px; }
-    .home-grid{ grid-template-columns:1fr; }
-    .page-head{ flex-direction:column; align-items:flex-start; gap:12px; }
+
+    /* ── PAGE HEAD: stack title + buttons ── */
+    .page-head{
+      flex-direction:column; align-items:flex-start;
+      gap:10px; margin-bottom:16px;
+    }
     .page-head h1{ font-size:18px; }
-    .page-head .page-actions{ width:100%; display:flex; flex-wrap:wrap; gap:8px; }
-    .page-head .page-actions .btn{ flex:1; min-width:120px; text-align:center; justify-content:center; }
-    .search-bar{ width:100%; }
-    .list-toolbar{ flex-direction:column; align-items:stretch; gap:10px; }
-    .list-toolbar .btn-group{ flex-wrap:wrap; }
-    table{ display:block; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    table th, table td{ white-space:nowrap; }
+    .page-head p{ font-size:12px; }
+    /* Every direct-child button/div in page-head goes full-width */
+    .page-head > button,
+    .page-head > a,
+    .page-head > div:last-child:not(:first-child){
+      width:100%; display:flex; flex-wrap:wrap; gap:8px;
+    }
+    .page-head > button,
+    .page-head > a{ justify-content:center; }
+    .page-head > div:last-child:not(:first-child) > button,
+    .page-head > div:last-child:not(:first-child) > a{
+      flex:1; min-width:0; justify-content:center; text-align:center; white-space:nowrap;
+    }
+
+    /* ── HOME ── */
+    .welcome-wrap{ flex-direction:column; align-items:flex-start; padding:2px 0 16px; gap:8px; }
+    .welcome-wrap h1{ font-size:20px; }
+    .welcome-wrap .today-pill{ font-size:11px; padding:5px 12px; }
+    .home-grid{ grid-template-columns:1fr; gap:12px; }
+
+    /* ── FORMS & GRIDS ── */
+    .form-grid, .form-grid.cols-3{ grid-template-columns:1fr !important; }
     .team-row{ grid-template-columns: 1fr; gap:8px; }
-    /* modals full-width on mobile */
-    .modal-box{ max-width:100%; border-radius:20px 20px 0 0; max-height:92vh; }
-    .modal-overlay{ padding:0; align-items:flex-end; }
-    .modal-box-lg{ max-width:100%; }
-    .form-grid{ grid-template-columns:1fr !important; }
-    .form-grid.cols-3{ grid-template-columns:1fr !important; }
-    .modal-actions{ flex-wrap:wrap; }
-    .modal-actions .btn{ flex:1; text-align:center; justify-content:center; }
-    /* kanban stack on mobile */
-    .kanban{ grid-template-columns:1fr; gap:12px; }
-    /* kpis 2 col */
-    .kpis-row{ grid-template-columns: repeat(2,1fr); gap:10px; }
-    /* billing */
-    .billing-row-actions{ flex-direction:column; }
-    .billing-row-actions input{ min-width:0; width:100%; }
-    /* contatos table */
+    .form-section{ padding:16px; }
+
+    /* ── SEARCH / FILTERS BAR ── */
+    .search-bar{ width:100%; }
+    .list-toolbar{ flex-direction:column; align-items:stretch; gap:8px; padding:12px 14px; }
+    .filters-row{ flex-direction:column; align-items:stretch; gap:8px; }
+    .filters-row .select-pill{ width:100%; border-radius:10px; }
+    .filters-row .select-pill select{ width:100%; }
+    .filters-row > button{ align-self:flex-end; }
+
+    /* ── TABLES: scroll horizontally, never overflow ── */
+    .list-panel{ overflow:hidden; }
+    table{ display:block; overflow-x:auto; -webkit-overflow-scrolling:touch; width:100%; }
+    table th, table td{ white-space:nowrap; }
     .list-table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    /* logs filters */
+
+    /* ── MODALS: full-width bottom sheet ── */
+    .modal-overlay{ padding:0; align-items:flex-end; }
+    .modal-box{ max-width:100% !important; border-radius:22px 22px 0 0; max-height:92vh; width:100%; }
+    .modal-box-lg{ max-width:100% !important; }
+    .modal-actions{ flex-wrap:wrap; gap:8px; }
+    .modal-actions button, .modal-actions .btn{ flex:1; min-width:0; justify-content:center; text-align:center; }
+    .modal-box h3{ font-size:15px; }
+
+    /* ── KANBAN / CRM ── */
+    .kanban{ grid-template-columns:1fr; gap:10px; }
+
+    /* ── KPIs ── */
+    .kpis-row{ grid-template-columns: repeat(2,1fr) !important; gap:10px; margin-bottom:14px; }
+    .kpi-mini .v{ font-size:18px; }
+    .kpi-mini .l{ font-size:11px; }
+
+    /* ── PRODUÇÃO: rankings stack, export buttons wrap ── */
+    #producao-rankings{ grid-template-columns:1fr !important; gap:12px; }
+    #producao-rankings .card{ padding:14px; }
+    .page-head > div > .btn-outline,
+    .page-head > div > .btn-dark{ font-size:12px; padding:9px 12px; }
+
+    /* ── RELATÓRIOS ── */
+    /* Model cards grid: 1 col */
+    #relatorio-painel-modelos > div:first-of-type > div:first-of-type{ /* override inline grid */
+      grid-template-columns: 1fr !important;
+    }
+    /* Filter grid in consulta: stack to 1 col */
+    #relatorio-consulta-area .card > div[style*="grid-template-columns:repeat(3"]{ grid-template-columns:1fr !important; }
+    /* Report header: stack buttons below title */
+    #relatorio-consulta-area > div:first-child{
+      flex-direction:column; gap:12px; align-items:flex-start; padding:14px;
+    }
+    #relatorio-consulta-area > div:first-child > div:last-child{
+      width:100%; display:flex; gap:8px; flex-wrap:wrap;
+    }
+    #relatorio-consulta-area > div:first-child > div:last-child button{
+      flex:1; font-size:12px; padding:8px 10px;
+    }
+    /* KPIs 2 col */
+    #relatorio-kpis{ grid-template-columns:repeat(2,1fr) !important; gap:10px !important; }
+    /* Filter row at bottom of card */
+    #relatorio-consulta-area .card > div:last-child{
+      flex-direction:column; align-items:stretch; gap:10px;
+    }
+    #relatorio-consulta-area .card > div:last-child > div:last-child{
+      display:flex; gap:8px;
+    }
+    #relatorio-consulta-area .card > div:last-child > div:last-child button{ flex:1; }
+    /* Result table scroll */
+    #relatorio-consulta-area .list-panel{ overflow-x:auto; }
+
+    /* ── BILLING ── */
+    .billing-row-actions{ flex-direction:column; gap:8px; }
+    .billing-row-actions input{ min-width:0; width:100%; }
+
+    /* ── PERMISSOES inline grid ── */
+    .permissoes-layout{ grid-template-columns:1fr !important; }
+
+    /* ── LOGS: inline card layout ── */
     .log-field-grid{ grid-template-columns:1fr !important; }
+    .logs-tab-btn{ padding:7px 12px; font-size:12px; }
+  }
+
+  /* ── Fix report model card grid via class (inline style override) ── */
+  @media (max-width: 760px){
+    #relatorio-painel-modelos [style*="minmax(220px"]{
+      grid-template-columns: 1fr !important;
+    }
+    /* producao filter modal filters */
+    #relatorio-consulta-area [style*="repeat(3,1fr)"]{
+      grid-template-columns: 1fr !important;
+    }
+    /* producao inline kpis-row with repeat(5) */
+    [style*="repeat(5,1fr)"]{
+      grid-template-columns: repeat(2,1fr) !important;
+    }
+    /* producao rankings inline grid */
+    [id="producao-rankings"][style*="repeat(3,1fr)"]{
+      grid-template-columns: 1fr !important;
+    }
+    /* Targeted class-based fixes */
+    .relatorio-modelos-grid{ grid-template-columns: 1fr !important; }
+    .relatorio-filtros-grid{ grid-template-columns: 1fr !important; }
+    .relatorio-filtros-actions{ flex-direction:column; align-items:stretch; gap:10px; }
+    .relatorio-filtros-actions > div:last-child{ display:flex; gap:8px; }
+    .relatorio-filtros-actions > div:last-child button{ flex:1; }
+    .relatorio-kpis-grid{ grid-template-columns: repeat(2,1fr) !important; gap:10px !important; }
+    .relatorio-header-bar{ flex-direction:column; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:12px; }
+    .relatorio-export-btns{ width:100%; display:flex; gap:8px; }
+    .relatorio-export-btns button{ flex:1; font-size:11.5px; padding:8px 6px; }
+    .producao-rankings-grid{ grid-template-columns:1fr !important; gap:10px; }
+    .producao-btns{ width:100%; flex-wrap:wrap; }
+    .producao-btns button{ flex:1; min-width:calc(50% - 4px); font-size:12px; padding:9px 8px; }
+    #view-marketing .form-actions{ flex-direction:column; }
+    #view-marketing .form-actions button{ width:100%; justify-content:center; }
   }
 
   .fab{ display:none !important; }
@@ -1186,10 +1307,16 @@
               <label>Logo da seguradora</label>
               <div class="logo-upload-row">
                 <div class="logo-preview" id="seguradora-logo-preview"></div>
-                <label class="btn-outline" style="cursor:pointer;">
-                  Escolher logo
-                  <input type="file" accept="image/*" id="seguradora-logo-input" style="display:none;" onchange="handleSeguradoraLogo(event)">
-                </label>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <label class="btn-outline" style="cursor:pointer;">
+                    Escolher logo
+                    <input type="file" accept="image/*" id="seguradora-logo-input" style="display:none;" onchange="handleSeguradoraLogo(event)">
+                  </label>
+                  <button type="button" class="btn-outline" id="btn-ajustar-logo" style="display:none;" onclick="abrirAjusteLogo()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Ajustar logo
+                  </button>
+                </div>
               </div>
             </div>
             <div class="form-grid">
@@ -1386,19 +1513,13 @@
             <input type="hidden" id="brevo-nome-remetente">
           </div>
           <div class="form-section hidden" id="mkt-whats">
-            <h3>Seguradora</h3>
-            <p class="hint">Selecione a seguradora desta campanha. Apenas usuários responsáveis podem disparar.</p>
-            <select id="whats-seguradora-sel" onchange="onWhatsSeguradoraChange()" style="max-width:340px;border:1.4px solid var(--border);border-radius:11px;padding:12px 14px;outline:none;font-size:13.5px;font-family:inherit;margin-bottom:8px;">
-              <option value="">— Selecione uma seguradora —</option>
-            </select>
-            <div id="whats-perm-aviso" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;padding:10px 14px;border-radius:10px;font-size:12.5px;font-weight:600;margin-bottom:14px;">
-              Você não tem permissão para disparar WhatsApp por esta seguradora.
-            </div>
-
             <h3>Contatos selecionados</h3>
             <p class="hint">Escolha até <b>20 contatos</b> que vão receber esta mensagem.</p>
             <button class="btn-outline" onclick="abrirSeletorContatos()">Selecionar contatos</button>
             <p class="hint" id="whats-selecionados-resumo" style="margin-top:12px;">Nenhum contato selecionado ainda.</p>
+            <!-- campo oculto para manter compatibilidade com JS -->
+            <select id="whats-seguradora-sel" style="display:none;"></select>
+            <div id="whats-perm-aviso" style="display:none;"></div>
 
             <h3 style="margin-top:24px;">Mensagem do disparo</h3>
             <div class="form-grid">
@@ -1419,7 +1540,7 @@
         <section class="view hidden" id="view-producao">
           <div class="page-head">
             <div><h1>Produção</h1><p id="producao-sub">Produção de julho de 2026</p></div>
-            <div style="display:flex; gap:10px;">
+            <div class="producao-btns" style="display:flex; gap:8px; flex-wrap:wrap;">
               <button class="btn-outline" onclick="abrirHistoricoProducao()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
                 Histórico
@@ -1440,7 +1561,7 @@
           </div>
 
           <!-- Rankings em gráfico de barras - mês atual fixo -->
-          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:20px;" id="producao-rankings">
+          <div class="producao-rankings-grid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:20px;" id="producao-rankings">
             <div class="card" style="padding:20px;">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M8 21H5a2 2 0 01-2-2v-2a2 2 0 012-2h3m0 6V9m0 12h8m0-12v12m0 0h3a2 2 0 002-2v-2a2 2 0 00-2-2h-3m-8-6V5a2 2 0 012-2h4a2 2 0 012 2v4"/></svg>
@@ -1509,7 +1630,7 @@
             </div>
 
             <!-- Modelos pré-definidos -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:28px;">
+            <div class="relatorio-modelos-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:28px;">
 
               <!-- Produção por Corretora -->
               <div class="card" style="padding:20px;cursor:pointer;transition:box-shadow .2s,transform .15s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='';this.style.transform=''" onclick="aplicarModeloRelatorio('corretora')">
@@ -1578,7 +1699,7 @@
           <div id="relatorio-consulta-area" style="display:none;">
 
             <!-- Header com nome do modelo e botões de exportação -->
-            <div style="display:flex;align-items:center;justify-content:space-between;background:var(--black);color:#fff;border-radius:14px;padding:14px 20px;margin-bottom:20px;">
+            <div class="relatorio-header-bar" style="display:flex;align-items:center;justify-content:space-between;background:var(--black);color:#fff;border-radius:14px;padding:14px 20px;margin-bottom:20px;">
               <div style="display:flex;align-items:center;gap:10px;">
                 <button onclick="voltarModelosRelatorio()" style="background:rgba(255,255,255,.12);border:none;color:#fff;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
@@ -1587,7 +1708,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;opacity:.8;"><path d="M9 2h6l5 5v15H4V2z"/><path d="M9 12h6M9 16h6M9 8h2"/></svg>
                 <span id="relatorio-modelo-titulo" style="font-size:15px;font-weight:800;">Relatório de Produção</span>
               </div>
-              <div style="display:flex;gap:10px;">
+              <div class="relatorio-export-btns" style="display:flex;gap:10px;">
                 <button class="btn-outline" onclick="exportarRelatorioExcel()" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff;font-size:12.5px;padding:8px 14px;">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
                   Exportar Excel
@@ -1601,7 +1722,7 @@
 
             <!-- Filtros em card -->
             <div class="card" style="padding:20px;margin-bottom:16px;">
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;">
+              <div class="relatorio-filtros-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;">
                 <div class="f-field" style="margin:0;">
                   <label>Competência</label>
                   <input type="month" id="relatorio-competencia" onchange="renderRelatorioBody()" style="width:100%;">
@@ -1632,7 +1753,7 @@
                   </select>
                 </div>
               </div>
-              <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);">
+              <div class="relatorio-filtros-actions" style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);">
                 <div id="relatorio-resumo-filtros" style="font-size:12px;color:var(--gray-600);"></div>
                 <div style="display:flex;gap:10px;">
                   <button class="btn-outline" style="padding:9px 18px;font-size:12.5px;" onclick="limparFiltrosRelatorio()">Limpar</button>
@@ -1645,7 +1766,7 @@
             </div>
 
             <!-- KPIs rápidos -->
-            <div id="relatorio-kpis" style="display:none;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+            <div id="relatorio-kpis" class="relatorio-kpis-grid" style="display:none;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
               <div class="kpi-mini"><div class="l">Total filtrado</div><div class="v" id="kpi-relatorio-total">R$ 0</div></div>
               <div class="kpi-mini"><div class="l">Corretoras</div><div class="v" id="kpi-relatorio-corretoras">0</div></div>
               <div class="kpi-mini"><div class="l">Seguradoras</div><div class="v" id="kpi-relatorio-seguradoras">0</div></div>
@@ -1797,14 +1918,14 @@
           </select>
         </div>
       </div>
-      <div class="f-field full">
+      <div class="f-field full" style="position:relative;">
         <label>Membros responsáveis</label>
         <div id="card-membros-selected-display" style="display:flex;flex-wrap:wrap;gap:6px;min-height:36px;padding:8px 12px;border:1.4px solid var(--border);border-radius:11px;cursor:pointer;align-items:center;transition:border-color .2s;" onclick="toggleMembrosPicker()" title="Clique para selecionar membros">
           <span id="card-membros-placeholder" style="font-size:13px;color:var(--gray-400);">Nenhum membro selecionado — clique para adicionar</span>
         </div>
-        <!-- Picker dropdown -->
-        <div id="card-membros-picker" style="display:none;position:absolute;z-index:200;background:#fff;border:1.4px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:8px;max-height:220px;overflow-y:auto;width:calc(100% - 32px);margin-top:4px;">
-          <div id="card-membros-list" class="checklist" style="display:flex;flex-direction:column;gap:4px;"></div>
+        <!-- Picker dropdown — contained inside modal -->
+        <div id="card-membros-picker" style="display:none;position:relative;z-index:10;background:#fff;border:1.4px solid var(--border);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.10);padding:6px;max-height:200px;overflow-y:auto;width:100%;margin-top:6px;">
+          <div id="card-membros-list" class="checklist" style="display:flex;flex-direction:column;gap:2px;"></div>
         </div>
       </div>
       <!-- Comentários por membro -->
@@ -1906,8 +2027,8 @@
     <p class="hint" style="margin-top:-8px;">Somente o <b>Super Administrador</b> pode criar, editar e excluir usuários.</p>
     <div class="f-field"><label>Nome</label><input id="user-nome" placeholder="Nome completo"></div>
     <div class="f-field"><label>E-mail</label><input id="user-email" type="email" placeholder="usuario@email.com"></div>
-    <div class="f-field" id="user-senha-field"><label>Senha</label><input id="user-senha" type="text" placeholder="Senha de acesso"></div>
-    <p class="hint" id="user-senha-edit-hint" style="margin-top:-8px;">A senha não é alterada por aqui. Para trocar, oriente o usuário a usar "Esqueci minha senha" na tela de login.</p>
+    <div class="f-field" id="user-senha-field"><label>Senha inicial</label><input id="user-senha" type="text" placeholder="Senha de acesso (mínimo 6 caracteres)"></div>
+    <p class="hint" id="user-senha-edit-hint" style="margin-top:-8px;">A senha só pode ser alterada pelo próprio usuário. Oriente-o a usar <b>"Esqueci minha senha"</b> na tela de login.</p>
     <div class="form-grid">
       <div class="f-field"><label>Data de nascimento</label><input id="user-nascimento" type="date"></div>
       <div class="f-field"><label>Telefone</label><input id="user-telefone" placeholder="Ex: 11988887777"></div>
@@ -2070,6 +2191,33 @@
   </div>
 </div>
 
+
+<!-- Modal: Ajustar logo da seguradora -->
+<div class="modal-overlay" id="modal-crop-logo" onclick="if(event.target===this) fecharAjusteLogo()">
+  <div class="modal-box">
+    <h3>Ajustar logo da seguradora</h3>
+    <p class="hint" style="margin-top:-8px;margin-bottom:14px;">Arraste para reposicionar e use o controle deslizante para dar zoom.</p>
+    <div style="position:relative;width:100%;max-width:360px;margin:0 auto;">
+      <div id="logo-crop-wrap" style="width:100%;aspect-ratio:3/1;border-radius:12px;overflow:hidden;background:var(--surface-2);border:1.5px solid var(--border);cursor:grab;touch-action:none;" onmousedown="iniciarLogoCropDrag(event.clientX,event.clientY)" onmousemove="moverLogoCropDrag(event.clientX,event.clientY)" onmouseup="pararLogoCropDrag()" onmouseleave="pararLogoCropDrag()" ontouchstart="iniciarLogoCropDrag(event.touches[0].clientX,event.touches[0].clientY)" ontouchmove="moverLogoCropDrag(event.touches[0].clientX,event.touches[0].clientY);event.preventDefault();" ontouchend="pararLogoCropDrag()">
+        <canvas id="logo-crop-canvas" width="480" height="160"></canvas>
+      </div>
+    </div>
+    <div style="margin-top:14px;">
+      <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:6px;">Zoom</label>
+      <input type="range" id="logo-crop-zoom" min="0.5" max="4" step="0.01" value="1" oninput="onLogoCropZoomChange()" style="width:100%;">
+    </div>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Fundo</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;"><input type="radio" name="logo-bg" value="transparent" checked onchange="onLogoBgChange(this.value)" style="accent-color:var(--black);"> Transparente</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;"><input type="radio" name="logo-bg" value="white" onchange="onLogoBgChange(this.value)" style="accent-color:var(--black);"> Branco</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;"><input type="radio" name="logo-bg" value="black" onchange="onLogoBgChange(this.value)" style="accent-color:var(--black);"> Preto</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="fecharAjusteLogo()">Cancelar</button>
+      <button class="btn-dark" onclick="salvarLogoAjustada()">Usar esta logo</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="modal-material" onclick="if(event.target===this) closeModal('modal-material')">
   <div class="modal-box">
     <h3>Incluir material</h3>
@@ -2288,12 +2436,12 @@
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
       <div style="display:flex;flex-direction:column;gap:3px;">
-        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Corretora</label>
-        <select id="seletor-filtro-corretora" onchange="filtrarSeletor()" style="border:1.4px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;"><option value="">Todas</option></select>
+        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Seguradora</label>
+        <select id="seletor-filtro-seguradora" onchange="onSeletorSeguradoraChange()" style="border:1.4px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;"><option value="">Todas</option></select>
       </div>
       <div style="display:flex;flex-direction:column;gap:3px;">
-        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Seguradora</label>
-        <select id="seletor-filtro-seguradora" onchange="filtrarSeletor()" style="border:1.4px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;"><option value="">Todas</option></select>
+        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Corretora</label>
+        <select id="seletor-filtro-corretora" onchange="filtrarSeletor()" style="border:1.4px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;"><option value="">Todas</option></select>
       </div>
     </div>
 
@@ -2526,7 +2674,7 @@
   let currentRole = 'admin';
 
   function isSuperAdmin(){
-    return ['super_admin','superadmin'].includes((currentRole||'').toLowerCase());
+    return ['admin','super_admin','superadmin','administrador'].includes((currentRole||'').toLowerCase());
   }
   // Retorna true se o usuário pode importar ou disparar para a seguradora
   function canActOnSeguradora(segId){
@@ -4009,24 +4157,42 @@
     if(error){ wrap.innerHTML = `<p class="hint" style="margin:12px;">Erro ao carregar contatos: ${error.message}</p>`; openModal('modal-selecionar-contatos'); return; }
     _seletorTodosContatos = (data || []).filter(c => c.whatsapp);
 
-    // populate corretora filter
-    const selCorr = document.getElementById('seletor-filtro-corretora');
-    selCorr.innerHTML = '<option value="">Todas</option>' + Object.values(GROUPS).map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
-
-    // populate seguradora filter (from SEGURADORAS + corretora.seguradoras_permitidas)
+    // populate seguradora filter first (drives corretora cascade)
     const segs = new Set();
     Object.values(SEGURADORAS).forEach(s => segs.add(s.nome));
     Object.values(GROUPS).forEach(g => (g.seguradoras||[]).forEach(s => segs.add(s)));
     const selSeg = document.getElementById('seletor-filtro-seguradora');
     selSeg.innerHTML = '<option value="">Todas</option>' + [...segs].sort().map(s=>`<option value="${s}">${s}</option>`).join('');
 
+    // populate corretora with all initially
+    const selCorr = document.getElementById('seletor-filtro-corretora');
+    selCorr.innerHTML = '<option value="">Todas</option>' + Object.values(GROUPS).map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+
     document.getElementById('seletor-filtro-texto').value = '';
-    selCorr.value = '';
     selSeg.value = '';
+    selCorr.value = '';
 
     filtrarSeletor();
     atualizarContadorSeletor();
     openModal('modal-selecionar-contatos');
+  }
+
+  // Quando seleciona seguradora: restringe corretoras vinculadas a ela
+  function onSeletorSeguradoraChange(){
+    const segFiltro = document.getElementById('seletor-filtro-seguradora').value;
+    const selCorr = document.getElementById('seletor-filtro-corretora');
+    if(segFiltro){
+      // Show only corretoras linked to this seguradora
+      const corrsFiltradas = Object.values(GROUPS).filter(g => (g.seguradoras||[]).includes(segFiltro));
+      selCorr.innerHTML = '<option value="">Todas as vinculadas</option>' +
+        corrsFiltradas.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+    } else {
+      // Reset to all corretoras
+      selCorr.innerHTML = '<option value="">Todas</option>' +
+        Object.values(GROUPS).map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+    }
+    selCorr.value = '';
+    filtrarSeletor();
   }
 
   function filtrarSeletor(){
@@ -4036,16 +4202,17 @@
 
     let lista = _seletorTodosContatos;
     if(texto) lista = lista.filter(c => (c.nome||'').toLowerCase().includes(texto) || (c.whatsapp||'').includes(texto));
+    if(segFiltro){
+      // Filter by corretoras linked to this seguradora
+      const corrIdsVinculadas = Object.entries(GROUPS)
+        .filter(([,g]) => (g.seguradoras||[]).includes(segFiltro))
+        .map(([id]) => id);
+      lista = lista.filter(c => corrIdsVinculadas.includes(c.corretora_id));
+    }
     if(corrFiltro){
       lista = lista.filter(c => {
         const g = c.corretora_id && GROUPS[c.corretora_id];
         return g && g.name === corrFiltro;
-      });
-    }
-    if(segFiltro){
-      lista = lista.filter(c => {
-        const g = c.corretora_id && GROUPS[c.corretora_id];
-        return g && (g.seguradoras||[]).includes(segFiltro);
       });
     }
 
@@ -5791,7 +5958,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
   }
 
   async function toggleUserStatus(id){
-    if(currentRole !== 'admin'){ alert('Somente o Super Administrador pode alterar usuários.'); return; }
+    if(!isSuperAdmin()){ alert('Somente o Super Administrador pode alterar usuários.'); return; }
     const u = USERS_CACHE.find(x=>x.id===id);
     if(!u) return;
     const novoStatus = u.status === 'ativo' ? 'suspenso' : 'ativo';
@@ -6083,7 +6250,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
   // mas a remoção definitiva da conta de autenticação exige uma Edge Function com a
   // service role key, que não deve ficar exposta neste arquivo.
   async function excluirUsuario(id){
-    if(currentRole !== 'admin'){ alert('Somente o Super Administrador pode excluir usuários.'); return; }
+    if(!isSuperAdmin()){ alert('Somente o Super Administrador pode excluir usuários.'); return; }
     if(!confirm('Remover o acesso deste usuário? Ele não conseguirá mais entrar no sistema.')) return;
     const alvo = USERS_CACHE.find(u => u.id === id);
     const { error } = await supabase.from('profiles').delete().eq('id', id);
@@ -6410,6 +6577,8 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     if(error){ console.error('Erro ao carregar seguradoras:', error); return; }
     Object.keys(SEGURADORAS).forEach(k => delete SEGURADORAS[k]);
     data.forEach(row => {
+      // Suporte a credenciais em JSONB (coluna `credenciais`) ou colunas individuais legadas
+      const cred = row.credenciais || {};
       SEGURADORAS[row.id] = {
         nome: row.nome,
         comercial: row.comercial || '',
@@ -6419,10 +6588,10 @@ Os dados de produção deste período serão restaurados para o upload anterior.
         logo: row.logo || null,
         cor: row.cor || '#132728',
         assistencia_24h: row.assistencia_24h || '',
-        link_corretor: row.link_corretor || '',
-        link_assessoria: row.link_assessoria || '',
-        login_assessoria: row.login_assessoria || '',
-        senha_assessoria: row.senha_assessoria || '',
+        link_corretor: cred.link_corretor || row.link_corretor || '',
+        link_assessoria: cred.link_assessoria || row.link_assessoria || '',
+        login_assessoria: cred.login_assessoria || row.login_assessoria || '',
+        senha_assessoria: cred.senha_assessoria || row.senha_assessoria || '',
         responsaveisIds: Array.isArray(row.responsaveis_ids) ? row.responsaveis_ids : [],
       };
     });
@@ -6472,6 +6641,8 @@ Os dados de produção deste período serão restaurados para o upload anterior.
   function renderLogoPreview(){
     const box = document.getElementById('seguradora-logo-preview');
     box.innerHTML = PENDING_SEGURADORA_LOGO ? `<img src="${PENDING_SEGURADORA_LOGO}" alt="Logo">` : '';
+    const btnAjustar = document.getElementById('btn-ajustar-logo');
+    if(btnAjustar) btnAjustar.style.display = PENDING_SEGURADORA_LOGO ? 'flex' : 'none';
   }
 
   function handleSeguradoraLogo(event){
@@ -6481,9 +6652,106 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     reader.onload = (e) => {
       PENDING_SEGURADORA_LOGO = e.target.result;
       renderLogoPreview();
+      // Abre automaticamente o ajuste de logo ao escolher nova imagem
+      abrirAjusteLogo();
     };
     reader.readAsDataURL(file);
   }
+
+  // ===== CROP DE LOGO DA SEGURADORA =====
+  let LOGO_CROP_IMG = null;
+  let LOGO_CROP_SCALE_BASE = 1;
+  let LOGO_CROP_ZOOM = 1;
+  let LOGO_CROP_OFFSET = { x: 0, y: 0 };
+  let LOGO_CROP_DRAG = null;
+  let LOGO_CROP_BG = 'transparent';
+
+  function abrirAjusteLogo(){
+    if(!PENDING_SEGURADORA_LOGO) return;
+    const img = new Image();
+    img.onload = () => {
+      LOGO_CROP_IMG = img;
+      // Canvas é 480x160 (proporção 3:1). Ajusta escala para caber height
+      LOGO_CROP_SCALE_BASE = Math.min(480 / img.width, 160 / img.height);
+      LOGO_CROP_ZOOM = 1;
+      LOGO_CROP_OFFSET = { x: 0, y: 0 };
+      LOGO_CROP_BG = 'transparent';
+      document.getElementById('logo-crop-zoom').value = 1;
+      // reset radio
+      document.querySelectorAll('input[name="logo-bg"]').forEach(r => r.checked = r.value === 'transparent');
+      desenharLogoCrop();
+      openModal('modal-crop-logo');
+    };
+    img.src = PENDING_SEGURADORA_LOGO;
+  }
+
+  function fecharAjusteLogo(){
+    closeModal('modal-crop-logo');
+  }
+
+  function desenharLogoCrop(){
+    const canvas = document.getElementById('logo-crop-canvas');
+    if(!canvas || !LOGO_CROP_IMG) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 480, 160);
+    // Fundo
+    if(LOGO_CROP_BG === 'white'){ ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 480, 160); }
+    else if(LOGO_CROP_BG === 'black'){ ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, 480, 160); }
+    // Imagem
+    const scale = LOGO_CROP_SCALE_BASE * LOGO_CROP_ZOOM;
+    const w = LOGO_CROP_IMG.width * scale;
+    const h = LOGO_CROP_IMG.height * scale;
+    const x = (480 - w) / 2 + LOGO_CROP_OFFSET.x;
+    const y = (160 - h) / 2 + LOGO_CROP_OFFSET.y;
+    ctx.drawImage(LOGO_CROP_IMG, x, y, w, h);
+  }
+
+  function clampLogoCropOffset(){
+    if(!LOGO_CROP_IMG) return;
+    const scale = LOGO_CROP_SCALE_BASE * LOGO_CROP_ZOOM;
+    const w = LOGO_CROP_IMG.width * scale;
+    const h = LOGO_CROP_IMG.height * scale;
+    const maxX = Math.max(0, (w - 480) / 2);
+    const maxY = Math.max(0, (h - 160) / 2);
+    LOGO_CROP_OFFSET.x = Math.min(maxX, Math.max(-maxX, LOGO_CROP_OFFSET.x));
+    LOGO_CROP_OFFSET.y = Math.min(maxY, Math.max(-maxY, LOGO_CROP_OFFSET.y));
+  }
+
+  function onLogoCropZoomChange(){
+    LOGO_CROP_ZOOM = parseFloat(document.getElementById('logo-crop-zoom').value);
+    clampLogoCropOffset();
+    desenharLogoCrop();
+  }
+
+  function onLogoBgChange(val){
+    LOGO_CROP_BG = val;
+    desenharLogoCrop();
+  }
+
+  function iniciarLogoCropDrag(clientX, clientY){
+    LOGO_CROP_DRAG = { startX: clientX, startY: clientY, origX: LOGO_CROP_OFFSET.x, origY: LOGO_CROP_OFFSET.y };
+  }
+  function moverLogoCropDrag(clientX, clientY){
+    if(!LOGO_CROP_DRAG || !LOGO_CROP_IMG) return;
+    const canvas = document.getElementById('logo-crop-canvas');
+    const rect = canvas.getBoundingClientRect();
+    const escX = 480 / rect.width;
+    const escY = 160 / rect.height;
+    LOGO_CROP_OFFSET.x = LOGO_CROP_DRAG.origX + (clientX - LOGO_CROP_DRAG.startX) * escX;
+    LOGO_CROP_OFFSET.y = LOGO_CROP_DRAG.origY + (clientY - LOGO_CROP_DRAG.startY) * escY;
+    clampLogoCropOffset();
+    desenharLogoCrop();
+  }
+  function pararLogoCropDrag(){ LOGO_CROP_DRAG = null; }
+
+  function salvarLogoAjustada(){
+    const canvas = document.getElementById('logo-crop-canvas');
+    if(!canvas) return;
+    PENDING_SEGURADORA_LOGO = canvas.toDataURL('image/png');
+    renderLogoPreview();
+    fecharAjusteLogo();
+  }
+  // ===== FIM CROP DE LOGO =====
 
   function atualizarPreviewCor(){
     const cor = document.getElementById('seguradora-cor').value;
@@ -6595,7 +6863,17 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     const nome = document.getElementById('seguradora-nome').value.trim();
     if(!nome){ alert('Informe o nome da seguradora.'); return; }
     const responsaveisIds = Array.from(document.querySelectorAll('#seguradora-responsaveis-list input:checked')).map(el=>el.value);
-    const payload = {
+
+    // Credenciais agrupadas em JSONB para evitar colunas extras na tabela
+    const credenciais = {
+      link_corretor: document.getElementById('seguradora-link-corretor').value.trim(),
+      link_assessoria: document.getElementById('seguradora-link-assessoria').value.trim(),
+      login_assessoria: document.getElementById('seguradora-login-assessoria').value.trim(),
+      senha_assessoria: document.getElementById('seguradora-senha-assessoria').value.trim(),
+    };
+
+    // Payload base — apenas colunas que certamente existem no banco
+    const payloadBase = {
       nome,
       comercial: document.getElementById('seguradora-comercial').value.trim(),
       comercialNascimento: document.getElementById('seguradora-comercial-nascimento').value || null,
@@ -6603,22 +6881,30 @@ Os dados de produção deste período serão restaurados para o upload anterior.
       email: document.getElementById('seguradora-email').value.trim(),
       telefone: document.getElementById('seguradora-telefone').value.trim(),
       assistencia_24h: document.getElementById('seguradora-assistencia-24h').value.trim(),
-      link_corretor: document.getElementById('seguradora-link-corretor').value.trim(),
-      link_assessoria: document.getElementById('seguradora-link-assessoria').value.trim(),
-      login_assessoria: document.getElementById('seguradora-login-assessoria').value.trim(),
-      senha_assessoria: document.getElementById('seguradora-senha-assessoria').value.trim(),
       logo: PENDING_SEGURADORA_LOGO,
       responsaveis_ids: responsaveisIds,
     };
 
-    if(editingSeguradoraId){
-      const { error } = await supabase.from('seguradoras').update(payload).eq('id', editingSeguradoraId);
-      if(error){ alert('Erro ao salvar: ' + error.message); return; }
-      SEGURADORAS[editingSeguradoraId] = { ...payload, responsaveisIds };
-    } else {
-      const { data, error } = await supabase.from('seguradoras').insert(payload).select().single();
-      if(error){ alert('Erro ao cadastrar seguradora: ' + error.message); return; }
-      SEGURADORAS[data.id] = { ...payload, responsaveisIds };
+    // Tenta salvar com credenciais JSONB; se a coluna não existir no banco, salva sem ela
+    async function trySave(payload){
+      if(editingSeguradoraId){
+        return await supabase.from('seguradoras').update(payload).eq('id', editingSeguradoraId);
+      } else {
+        return await supabase.from('seguradoras').insert(payload).select().single();
+      }
+    }
+
+    let result = await trySave({ ...payloadBase, credenciais });
+    if(result.error && result.error.message && result.error.message.includes('credenciais')){
+      // Coluna credenciais não existe — salva sem ela
+      result = await trySave(payloadBase);
+    }
+
+    if(result.error){ alert('Erro ao salvar: ' + result.error.message); return; }
+
+    const savedId = editingSeguradoraId || result.data?.id;
+    if(savedId){
+      SEGURADORAS[savedId] = { ...payloadBase, ...credenciais, responsaveisIds };
     }
 
     registrarLog(editingSeguradoraId ? 'Editou seguradora' : 'Criou seguradora', nome);
