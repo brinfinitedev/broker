@@ -4736,17 +4736,14 @@
     'tokio marine': {
       tipo: 'corretora',
       // Planilha Prêmio Líquido — Análise Mensal
-      // Header real: col A "Assessoria | Corretor", col B "Corretor", col C "Mês/Ano Anterior", col D "Mês/Ano Atual"
-      // Após descartar col A: col B vira índice 0 (corretora), col D vira índice 2 (Mês/Ano Atual)
-      colunaCorretor: 'Corretor',   // fallback por nome
-      colunaValor: 'Mês/Ano Atual', // fallback por nome
-      idxCorretorFixo: 0,  // col B após remover col A
-      idxValorFixo: 2,     // col D após remover col A
+      // Col A (idx 0): Assessoria — IGNORADA
+      // Col B (idx 1): Corretor  ← corretora
+      // Col C (idx 2): Mês/Ano Anterior — IGNORADA
+      // Col D (idx 3): Mês/Ano Atual    ← valor
+      idxCorretorFixo: 1,  // col B (índice direto, sem remover col A)
+      idxValorFixo: 3,     // col D (índice direto, sem remover col A)
       pularPrimeiraLinhaDados: true, // linha 2 é "Total" geral → pular
-      descartarColunaA: true,
-      // IMPORTANTE: NÃO ignora linhas com valor 0 ou vazio — toda corretora identificada
-      // é importada, mesmo sem produção no mês (o valor é gravado como 0,00 nesses casos).
-      // Isso garante que o mês fique completo e não fique com corretoras "faltando".
+      descartarColunaA: false,       // NÃO remove col A — lê pelos índices diretos
     },
     'tokio marine produto': {
       // Planilha "Prêmio Líquido — Análise Mensal"
