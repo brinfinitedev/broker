@@ -3427,7 +3427,10 @@
 
   document.addEventListener('keydown', e=>{
     if(e.key !== 'Escape') return;
-    document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));
+    // Usa closeModal() para CADA modal aberto (em vez de mexer direto na classe),
+    // garantindo que efeitos colaterais (como reabrir a confirmação de importação
+    // após cadastrar corretora) sejam sempre tratados de forma consistente.
+    document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
     if(document.getElementById('sheet').classList.contains('open')) closeSheet();
   });
 
@@ -5075,8 +5078,12 @@
     resultBox.innerHTML = `<p class="hint">Lendo arquivo...</p>`;
     mostrarSplashOp('Importando arquivo...');
 
+    // Marca esta tentativa como a "atual" — descarta se uma nova importação começar antes desta terminar.
+    const meuSessionId = (window._importSessionId = (window._importSessionId || 0) + 1);
+
     const reader = new FileReader();
     reader.onload = async (e) => {
+      if(window._importSessionId !== meuSessionId){ esconderSplashOp(); return; }
       let linhas;
       try {
         const wb = XLSX.read(e.target.result, { type:'array' });
@@ -5557,6 +5564,9 @@
     closeModal('modal-confirmar-importacao');
     window._importRowsAtual = null;
     window._importContexto = null;
+    // Invalida qualquer leitura de arquivo anterior ainda em andamento (evita que uma
+    // resposta atrasada de uma tentativa antiga sobrescreva a nova com dados velhos).
+    window._importSessionId = (window._importSessionId || 0) + 1;
 
     document.getElementById('importar-seguradora').value = '';
     document.getElementById('importar-arquivo-section').classList.add('hidden');
@@ -5825,8 +5835,12 @@
     resultBox.innerHTML = `<p class="hint">Lendo arquivo...</p>`;
     mostrarSplashOp('Importando arquivo...');
 
+    // Marca esta tentativa como a "atual" — descarta se uma nova importação começar antes desta terminar.
+    const meuSessionId = (window._importSessionId = (window._importSessionId || 0) + 1);
+
     const reader = new FileReader();
     reader.onload = async (e) => {
+      if(window._importSessionId !== meuSessionId){ esconderSplashOp(); return; }
       let linhas;
       try {
         const wb = XLSX.read(e.target.result, { type:'array' });
