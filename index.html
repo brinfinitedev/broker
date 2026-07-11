@@ -3407,7 +3407,16 @@
   }
 
   /* ---------------- MODAL GENÉRICO ---------------- */
-  function openModal(id){ const el=document.getElementById(id); if(el) el.classList.add('open'); }
+  function openModal(id){
+    // GARANTIA GLOBAL: nunca deixa mais de um modal visível ao mesmo tempo.
+    // Antes de abrir o modal pedido, fecha QUALQUER outro que esteja aberto —
+    // isso elimina de vez qualquer cenário de janelas empilhadas, seja qual for a causa.
+    document.querySelectorAll('.modal-overlay.open').forEach(m => {
+      if(m.id !== id) closeModal(m.id);
+    });
+    const el = document.getElementById(id);
+    if(el) el.classList.add('open');
+  }
   function closeModal(id){
     const el = document.getElementById(id);
     if(el){
@@ -4723,11 +4732,15 @@
   // (usado tanto no lançamento manual quanto, mais à frente, na leitura automática da planilha)
   function identificarCorretoraPorNome(texto){
     if(!texto) return null;
-    const alvo = texto.trim().toLowerCase();
+    const alvo = String(texto).trim().toLowerCase();
+    if(!alvo) return null;
     for(const gid of Object.keys(GROUPS)){
       const g = GROUPS[gid];
-      if(g.name.toLowerCase() === alvo) return gid;
-      if((g.apelidos || []).some(ap => ap.toLowerCase() === alvo)) return gid;
+      if(!g) continue;
+      const nome = String(g.name || '').toLowerCase();
+      if(nome && nome === alvo) return gid;
+      const apelidos = Array.isArray(g.apelidos) ? g.apelidos : [];
+      if(apelidos.some(ap => String(ap || '').toLowerCase() === alvo)) return gid;
     }
     return null;
   }
@@ -4741,16 +4754,14 @@
       // O nome cadastrado no sistema pode ser "Tokio Marine", "Tokio Seguros", etc. — qualquer um com "tokio" bate aqui.
       aliases: ['tokio seguros', 'tokio marine seguros', 'tokio'],
       // Planilha Prêmio Líquido — Análise Mensal
-      // Col A (idx 0): Assessoria — IGNORADA (só tem conteúdo na linha de total geral)
       // Col B (idx 1): Corretor  ← corretora
-      // Col C (idx 2): Mês/Ano Anterior — IGNORADA
-      // Col D (idx 3): Mês/Ano Atual    ← valor
-      idxCorretorFixo: 1,  // col B (índice direto, sem remover col A)
-      idxValorFixo: 3,     // col D (índice direto, sem remover col A)
-      pularPrimeiraLinhaDados: false, // NÃO usar mais — o filtro por col A vazia já remove a linha de total com segurança
-      descartarColunaA: false,       // NÃO remove col A — lê pelos índices diretos
-      descartarSeColunaANaoVazia: true, // reforço: linhas de corretora real SEMPRE têm col A vazia;
-                                         // qualquer linha com algo em col A é resumo/total/assessoria, não corretora
+      // Col D (idx 3): Mês/Ano Atual ← valor
+      // Todas as outras colunas são ignoradas. Linhas com "Total"/"Filtros"/"Codigo" na
+      // coluna B são descartadas — essa é a ÚNICA regra de descarte (simples e direta).
+      idxCorretorFixo: 1,  // col B
+      idxValorFixo: 3,     // col D
+      pularPrimeiraLinhaDados: false,
+      descartarColunaA: false,
     },
     'tokio marine produto': {
       // Planilha "Prêmio Líquido — Análise Mensal"
@@ -5049,29 +5060,39 @@
   }
 
   async function upsertProducao({ corretora_id, seguradora, produto, competencia, valor }){
-    const { data: existentes } = await supabase.from('producao_mensal').select('*')
+    const { data: existentes, error: errSelect } = await supabase.from('producao_mensal').select('*')
       .eq('corretora_id', corretora_id).eq('seguradora', seguradora).eq('competencia', competencia);
+    if(errSelect){ console.error('Erro ao consultar producao_mensal:', errSelect.message); return { error: errSelect }; }
     const atual = (existentes || [])[0];
     const atualizado_em = new Date().toISOString();
+    let result;
     if(atual){
-      return supabase.from('producao_mensal').update({ valor, produto: produto||null, atualizado_em }).eq('id', atual.id);
+      result = await supabase.from('producao_mensal').update({ valor, produto: produto||null, atualizado_em }).eq('id', atual.id);
+    } else {
+      result = await supabase.from('producao_mensal').insert({ corretora_id, seguradora, produto: produto||null, competencia, valor, atualizado_em });
     }
-    return supabase.from('producao_mensal').insert({ corretora_id, seguradora, produto: produto||null, competencia, valor, atualizado_em });
+    if(result.error) console.error('Erro ao salvar produção:', result.error.message, { corretora_id, seguradora, competencia, valor });
+    return result;
   }
 
   async function upsertProducaoPorProduto({ seguradora, produto, competencia, valor }){
     // Busca linha existente sem corretora (is null) com mesmo seguradora+produto+competencia
-    const { data: existentes } = await supabase.from('producao_mensal').select('*')
+    const { data: existentes, error: errSelect } = await supabase.from('producao_mensal').select('*')
       .is('corretora_id', null)
       .eq('seguradora', seguradora)
       .eq('produto', produto)
       .eq('competencia', competencia);
+    if(errSelect){ console.error('Erro ao consultar producao_mensal (produto):', errSelect.message); return { error: errSelect }; }
     const atual = (existentes || [])[0];
     const atualizado_em = new Date().toISOString();
+    let result;
     if(atual){
-      return supabase.from('producao_mensal').update({ valor, atualizado_em }).eq('id', atual.id);
+      result = await supabase.from('producao_mensal').update({ valor, atualizado_em }).eq('id', atual.id);
+    } else {
+      result = await supabase.from('producao_mensal').insert({ corretora_id: null, seguradora, produto, competencia, valor, atualizado_em });
     }
-    return supabase.from('producao_mensal').insert({ corretora_id: null, seguradora, produto, competencia, valor, atualizado_em });
+    if(result.error) console.error('Erro ao salvar produção por produto:', result.error.message, { seguradora, produto, competencia, valor });
+    return result;
   }
 
   async function processarPlanilhaPorProduto(seguradora, competencia, file, resultBox){
@@ -5192,15 +5213,33 @@
       btnConf.onclick = async () => {
         btnConf.disabled = true; btnConf.textContent = 'Importando...';
         mostrarSplashOp('Importando...');
-        await supabase.from('producao_mensal').delete().is('corretora_id', null).eq('seguradora', seguradora).eq('competencia', competencia);
+        const { error: errDelete } = await supabase.from('producao_mensal').delete().is('corretora_id', null).eq('seguradora', seguradora).eq('competencia', competencia);
+        if(errDelete) console.error('Erro ao limpar registros antigos por produto:', errDelete.message);
+
+        let sucesso = 0;
+        const erros = [];
         for(const item of snapProduto){
-          await upsertProducaoPorProduto({ seguradora, produto: item.produto, competencia, valor: item.valor });
+          const r = await upsertProducaoPorProduto({ seguradora, produto: item.produto, competencia, valor: item.valor });
+          if(r && r.error){ erros.push({ nome: item.produto, msg: r.error.message }); }
+          else { sucesso++; }
         }
+
         esconderSplashOp();
         closeModal('modal-confirmar-importacao');
-        resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${snapProduto.length} produto(s) importado(s) com sucesso para ${seguradora}, ${labelCompetencia(competencia)}.</p>`;
-        await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: snapProduto.length, snapshot_dados: snapProduto });
-        registrarLog('Importou planilha por produto', `${seguradora} · ${labelCompetencia(competencia)} · ${snapProduto.length} produto(s)`);
+        if(erros.length){
+          resultBox.innerHTML = `
+            <div class="login-error">
+              <b>${sucesso} de ${snapProduto.length} produto(s) foram salvos.</b>
+              <p style="margin:6px 0 4px;font-weight:400;">${erros.length} falharam ao gravar no banco. Erro reportado pelo Supabase:</p>
+              <p style="font-family:monospace;font-size:11.5px;background:#fff;padding:8px;border-radius:6px;">${erros[0].msg}</p>
+            </div>`;
+        } else {
+          resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${sucesso} produto(s) importado(s) com sucesso para ${seguradora}, ${labelCompetencia(competencia)}.</p>`;
+        }
+        if(sucesso > 0){
+          await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: sucesso, snapshot_dados: snapProduto });
+          registrarLog('Importou planilha por produto', `${seguradora} · ${labelCompetencia(competencia)} · ${sucesso} produto(s)`);
+        }
         renderProducao();
       };
       openModal('modal-confirmar-importacao');
@@ -5860,48 +5899,29 @@
       const headerRow = linhas[0];
       // guarda o número real da linha na planilha (linha 1 = cabeçalho) junto de cada linha de dado
       let dataRows = linhas.slice(1).map((celulas, i) => ({ celulas, numeroLinha: i + 2 }));
+      const DIAG = [`Linhas brutas (sem cabeçalho): ${dataRows.length}`];
 
       // ── Palavras-chave que identificam linhas de rodapé/metadados a descartar ──
-      // Qualquer linha onde a PRIMEIRA célula não-vazia contenha uma dessas palavras é ignorada.
       const PALAVRAS_DESCARTAR = ['total', 'filtros', 'filtro', 'codigo', 'código', 'codigo_sistema'];
-
-      function deveDescartarLinha(celulas){
-        // Pega o primeiro valor não-vazio da linha
-        const primeiroValor = celulas.find(c => String(c).trim() !== '');
-        if(!primeiroValor) return true; // linha totalmente vazia
-        const texto = String(primeiroValor).trim().toLowerCase()
-          .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove acentos para comparar
+      function bateComPalavraDescartar(valor){
+        const t = String(valor||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        if(!t) return false;
         return PALAVRAS_DESCARTAR.some(p => {
-          const pSemAcento = p.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-          return texto === pSemAcento || texto.startsWith(pSemAcento + ' ') || texto.startsWith(pSemAcento + '_');
+          const pn = p.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+          return t === pn || t.startsWith(pn + ' ') || t.startsWith(pn + '_');
         });
       }
 
-      // Descarta linhas de rodapé/metadados antes de qualquer processamento
-      dataRows = dataRows.filter(({ celulas }) => !deveDescartarLinha(celulas));
-
       const template = encontrarTemplate(seguradora);
-
-      // Reforço específico: se o template marca que a coluna A só deve conter
-      // conteúdo em linhas de resumo (nunca em linhas de corretora real),
-      // qualquer linha com algo em col A é descartada por CONTEÚDO — não por posição.
-      // Isso evita que o texto da coluna A (ex: nome da Assessoria) vaze para a leitura
-      // mesmo que a linha de total mude de posição em uma planilha futura.
-      if(template?.descartarSeColunaANaoVazia){
-        dataRows = dataRows.filter(({ celulas }) => String(celulas[0] ?? '').trim() === '');
-      }
-
       let idxCorretor = -1, idxValor = -1;
-
-      // Se o template pede para descartar a coluna A, remove índice 0 do cabeçalho e de todas as linhas
       let headerRowFinal = headerRow;
+
       if(template?.descartarColunaA){
         headerRowFinal = headerRow.slice(1);
         dataRows = dataRows.map(({ celulas, numeroLinha }) => ({ celulas: celulas.slice(1), numeroLinha }));
       }
 
       if(template){
-        // Usa índices fixos se definidos no template (mais confiável que busca por nome)
         if(template.idxCorretorFixo !== undefined && template.idxValorFixo !== undefined){
           idxCorretor = template.idxCorretorFixo;
           idxValor = template.idxValorFixo;
@@ -5913,25 +5933,36 @@
             return;
           }
         }
+        DIAG.push(`Índice corretora: ${idxCorretor} · Índice valor: ${idxValor}`);
+
         if(template.pularPrimeiraLinhaDados) dataRows = dataRows.slice(1);
-        // ignora linhas sem corretor, vazias, "Total", "Filtros", "Codigo_sistema" etc.
-        // (NÃO filtra por valor — corretoras sem produção no mês entram com valor 0,00)
+        DIAG.push(`Após pular primeira linha (se aplicável): ${dataRows.length}`);
+
+        // ÚNICA regra de descarte: olha SOMENTE a coluna da corretora (ex: col B).
+        // Vazia, ou contendo "Total"/"Filtros"/"Codigo" → descarta. Nada mais é considerado.
         dataRows = dataRows.filter(({ celulas }) => {
-          const val = String(celulas[idxCorretor] ?? '').trim();
-          if(!val || val === 'null' || val === 'undefined') return false;
-          const valLower = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-          return !PALAVRAS_DESCARTAR.some(p => {
-            const pn = p.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-            return valLower === pn || valLower.startsWith(pn + ' ') || valLower.startsWith(pn + '_');
-          });
+          const val = celulas[idxCorretor];
+          const valStr = String(val ?? '').trim();
+          if(!valStr) return false;
+          return !bateComPalavraDescartar(valStr);
         });
-        // se ignorarZeros: descarta silenciosamente linhas com GWP = 0 (usado por outras seguradoras, não Tokio Marine)
+        DIAG.push(`Após descartar vazias/Total/Filtros/Codigo na coluna da corretora: ${dataRows.length}`);
+
         if(template.ignorarZeros){
           dataRows = dataRows.filter(({ celulas }) => {
             const v = Number(String(celulas[idxValor] ?? '').replace(',','.'));
             return !isNaN(v) && v !== 0;
           });
+          DIAG.push(`Após ignorarZeros: ${dataRows.length}`);
         }
+      } else {
+        // Sem template — aplica a regra genérica antiga (primeira célula não vazia da linha)
+        dataRows = dataRows.filter(({ celulas }) => {
+          const primeiro = celulas.find(c => String(c).trim() !== '');
+          if(!primeiro) return false;
+          return !bateComPalavraDescartar(primeiro);
+        });
+        DIAG.push(`Após filtro genérico (sem template): ${dataRows.length}`);
       }
 
       // Usa headerRowFinal para extração de valor sem template
@@ -5939,18 +5970,46 @@
 
       // Monta TODAS as linhas (identificadas ou não) — nada bloqueia a importação.
       // Cada linha guarda: número original na planilha, nome bruto lido, gid (se já identificado) e valor.
-      window._importRowsAtual = dataRows.map(({ celulas, numeroLinha }) => {
-        const nomeBruto = template ? celulas[idxCorretor] : (celulas.find(c => String(c).trim() !== '') || '');
-        const gid = template ? identificarCorretoraPorNome(String(nomeBruto||'')) : identificarCorretoraNaLinha(celulas);
-        const bruto = template ? celulas[idxValor] : extrairValorDaLinha(headerParaExtracao, celulas);
-        const num = Number(String(bruto ?? '0').replace(',','.'));
-        return {
-          linha: numeroLinha,
-          nomeBruto: String(nomeBruto || '').trim(),
-          gid,
-          valor: isNaN(num) ? 0 : num,
-        };
-      });
+      // Protegido com try/catch: se QUALQUER coisa der erro aqui (ex: corretora cadastrada com
+      // dados corrompidos), mostramos o erro real na tela em vez de falhar silenciosamente
+      // e deixar a janela de confirmação vazia ("0 linhas").
+      try {
+        window._importRowsAtual = dataRows.map(({ celulas, numeroLinha }) => {
+          const nomeBruto = template ? celulas[idxCorretor] : (celulas.find(c => String(c).trim() !== '') || '');
+          let gid = null;
+          try {
+            gid = template ? identificarCorretoraPorNome(String(nomeBruto||'')) : identificarCorretoraNaLinha(celulas);
+          } catch(errMatch){
+            console.error('Erro ao identificar corretora na linha', numeroLinha, ':', errMatch.message);
+            gid = null;
+          }
+          const bruto = template ? celulas[idxValor] : extrairValorDaLinha(headerParaExtracao, celulas);
+          const num = Number(String(bruto ?? '0').replace(',','.'));
+          return {
+            linha: numeroLinha,
+            nomeBruto: String(nomeBruto || '').trim(),
+            gid,
+            valor: isNaN(num) ? 0 : num,
+          };
+        });
+      } catch(errBuild){
+        esconderSplashOp();
+        console.error('Erro ao montar linhas de importação:', errBuild);
+        resultBox.innerHTML = `<p class="hint" style="color:#dc2626;font-weight:700;">Erro ao processar a planilha: ${errBuild.message}</p>
+          <p class="hint">Verifique o console do navegador (F12) para mais detalhes técnicos.</p>`;
+        return;
+      }
+
+      if(!window._importRowsAtual.length){
+        esconderSplashOp();
+        resultBox.innerHTML = `<p class="hint" style="color:#dc2626;font-weight:700;">Nenhuma linha de dados foi encontrada após os filtros.</p>
+          <p class="hint">Diagnóstico passo a passo:</p>
+          <ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--gray-600);">
+            ${DIAG.map(d => `<li>${d}</li>`).join('')}
+          </ul>`;
+        return;
+      }
+
       window._importContexto = { seguradora, competencia, resultBoxId: 'importar-resultado' };
 
       esconderSplashOp();
@@ -5974,7 +6033,11 @@
       (naoIdentificadas.length ? ` · <span style="color:#b45309;font-weight:700;">${naoIdentificadas.length} corretora(s) não cadastrada(s)</span>` : '');
 
     document.getElementById('conf-import-thead').innerHTML =
-      '<tr><th>Corretora</th><th style="text-align:right;">Valor (Mês Atual)</th><th style="width:110px;text-align:center;">Ações</th></tr>';
+      '<tr><th>Corretora</th><th style="text-align:right;">Valor (Mês Atual)</th><th style="width:230px;text-align:center;">Ações</th></tr>';
+
+    // Lista de corretoras já cadastradas, em ordem alfabética, para o seletor "Vincular a"
+    const corretorasOrdenadas = Object.keys(GROUPS)
+      .sort((a,b) => (GROUPS[a].name||'').localeCompare(GROUPS[b].name||'', 'pt-BR'));
 
     document.getElementById('conf-import-tbody').innerHTML = rows.map(r => {
       const fmt = 'R$\u00a0' + (r.valor||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -5983,15 +6046,23 @@
         : `<span style="color:#b45309;">${r.nomeBruto || '(vazio)'}</span><br><span style="font-size:10.5px;color:var(--gray-400);font-weight:600;">não cadastrada no sistema</span>`;
       const acaoExtra = r.gid
         ? ''
-        : `<button onclick="cadastrarCorretoraDaLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;margin-right:4px;white-space:nowrap;">+ Cadastrar</button>`;
+        : `<div style="display:flex;flex-direction:column;gap:4px;align-items:stretch;">
+            <button onclick="cadastrarCorretoraDaLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;white-space:nowrap;">+ Cadastrar nova</button>
+            <select onchange="vincularCorretoraDaLinha(${r.linha}, this.value)" style="font-size:11px;padding:5px 6px;border:1.4px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;">
+              <option value="">Vincular a existente…</option>
+              ${corretorasOrdenadas.map(gid => `<option value="${gid}">${GROUPS[gid].name}</option>`).join('')}
+            </select>
+          </div>`;
       return `<tr style="${r.gid ? '' : 'background:#fffbeb;'}">
         <td>${nomeCol}</td>
         <td style="text-align:right;font-weight:700;">${fmt}</td>
         <td style="text-align:center;white-space:nowrap;">
-          ${acaoExtra}
-          <button onclick="removerLinhaImportacao(${r.linha})" title="Remover esta linha" style="background:none;border:none;cursor:pointer;color:#dc2626;padding:4px;vertical-align:middle;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-          </button>
+          <div style="display:flex;gap:4px;align-items:flex-start;justify-content:center;">
+            ${acaoExtra}
+            <button onclick="removerLinhaImportacao(${r.linha})" title="Remover esta linha" style="background:none;border:none;cursor:pointer;color:#dc2626;padding:4px;flex-shrink:0;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </button>
+          </div>
         </td>
       </tr>`;
     }).join('') || `<tr><td colspan="3" style="text-align:center;color:var(--gray-500);">Nenhuma linha restante. Todas foram removidas.</td></tr>`;
@@ -6007,18 +6078,44 @@
       btnConf.disabled = true; btnConf.textContent = 'Importando...';
       mostrarSplashOp('Importando...');
       const snapCorretora = identificadas.map(r => ({ corretora_id: r.gid, produto: null, valor: r.valor }));
+
+      let sucesso = 0;
+      const erros = [];
       for(const item of snapCorretora){
-        await upsertProducao({ corretora_id: item.corretora_id, seguradora, competencia, valor: item.valor });
+        const r = await upsertProducao({ corretora_id: item.corretora_id, seguradora, competencia, valor: item.valor });
+        if(r && r.error){
+          erros.push({ nome: GROUPS[item.corretora_id]?.name || item.corretora_id, msg: r.error.message });
+        } else {
+          sucesso++;
+        }
       }
+
       esconderSplashOp();
       closeModal('modal-confirmar-importacao');
       const resultBox = document.getElementById((window._importContexto||{}).resultBoxId || 'importar-resultado');
       if(resultBox){
-        resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${snapCorretora.length} linha(s) importada(s) com sucesso para ${seguradora}, ${labelCompetencia(competencia)}.</p>` +
-          (naoIdentificadas.length ? `<p class="hint" style="color:#b45309;">${naoIdentificadas.length} linha(s) não foram importadas (corretora não cadastrada ou removida manualmente).</p>` : '');
+        if(erros.length){
+          // Mostra o erro REAL do banco — não finge que deu certo
+          resultBox.innerHTML = `
+            <div class="login-error">
+              <b>${sucesso} de ${snapCorretora.length} linha(s) foram salvas.</b>
+              <p style="margin:6px 0 4px;font-weight:400;">${erros.length} falharam ao gravar no banco. Erro reportado pelo Supabase:</p>
+              <p style="font-family:monospace;font-size:11.5px;background:#fff;padding:8px;border-radius:6px;">${erros[0].msg}</p>
+              <ul style="margin:8px 0 0;padding-left:18px;">
+                ${erros.slice(0,10).map(e => `<li>${e.nome}</li>`).join('')}
+                ${erros.length > 10 ? `<li>...e mais ${erros.length - 10}.</li>` : ''}
+              </ul>
+            </div>`;
+        } else {
+          resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${sucesso} linha(s) importada(s) com sucesso para ${seguradora}, ${labelCompetencia(competencia)}.</p>` +
+            (naoIdentificadas.length ? `<p class="hint" style="color:#b45309;">${naoIdentificadas.length} linha(s) não foram importadas (corretora não cadastrada ou removida manualmente).</p>` : '');
+        }
       }
-      await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: snapCorretora.length, snapshot_dados: snapCorretora });
-      registrarLog('Importou planilha de produção', `${seguradora} · ${labelCompetencia(competencia)} · ${snapCorretora.length} linha(s)`);
+
+      if(sucesso > 0){
+        await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: sucesso, snapshot_dados: snapCorretora });
+        registrarLog('Importou planilha de produção', `${seguradora} · ${labelCompetencia(competencia)} · ${sucesso} linha(s)`);
+      }
       renderProducao();
       window._importRowsAtual = null;
       window._importContexto = null;
@@ -6050,6 +6147,35 @@
     // Pré-preenche a razão social com o nome exato lido da planilha
     const campoNome = document.getElementById('corretora-razao-social');
     if(campoNome) campoNome.value = row.nomeBruto;
+  }
+
+  // Vincula a linha (nome bruto lido da planilha) a uma corretora JÁ cadastrada.
+  // Além de vincular esta importação, salva o nome bruto como APELIDO da corretora,
+  // para que na próxima importação o sistema já reconheça sozinho, sem precisar vincular de novo.
+  async function vincularCorretoraDaLinha(linha, gid){
+    if(!gid) return; // usuário selecionou a opção em branco ("Vincular a existente…")
+    const row = (window._importRowsAtual || []).find(r => r.linha === linha);
+    if(!row || !GROUPS[gid]) return;
+
+    const nomeBruto = row.nomeBruto;
+    const apelidosAtuais = Array.isArray(GROUPS[gid].apelidos) ? GROUPS[gid].apelidos : [];
+    const jaTemApelido = apelidosAtuais.some(a => a.toLowerCase() === nomeBruto.toLowerCase());
+
+    // Vincula a linha imediatamente na tela, mesmo antes de salvar o apelido no banco
+    row.gid = gid;
+    renderModalConfirmacaoImportacao();
+
+    if(!jaTemApelido && nomeBruto){
+      const novosApelidos = [...apelidosAtuais, nomeBruto];
+      const { error } = await supabase.from('corretoras').update({ apelidos: novosApelidos }).eq('id', gid);
+      if(error){
+        console.error('Erro ao salvar apelido:', error.message);
+        // Não desfaz o vínculo desta importação — só avisa que o apelido não pôde ser salvo
+        alert(`Vinculado com sucesso, mas não consegui salvar "${nomeBruto}" como apelido de ${GROUPS[gid].name} (erro: ${error.message}). Você vai precisar vincular de novo na próxima importação.`);
+        return;
+      }
+      GROUPS[gid].apelidos = novosApelidos;
+    }
   }
 
   let currentUserId = null;
