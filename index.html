@@ -2539,10 +2539,10 @@
 <div class="modal-overlay" id="modal-historico-producao" onclick="if(event.target===this) closeModal('modal-historico-producao')">
   <div class="modal-box modal-box-lg">
     <h3>Histórico de importações</h3>
-    <p class="hint">Importações de produção nos últimos 90 dias. Ao excluir a última, os dados do período anterior voltam a valer.</p>
+    <p class="hint">Importações de produção registradas. Super administradores podem excluir qualquer importação — os dados voltam ao estado anterior.</p>
     <div class="list-panel">
       <table>
-        <thead><tr><th>Seguradora</th><th>Competência</th><th>Tipo</th><th>Quando</th><th style="width:80px;text-align:center;">Ações</th></tr></thead>
+        <thead><tr><th>Seguradora</th><th>Competência</th><th>Tipo</th><th>Qtd</th><th>Quando</th><th style="width:90px;text-align:center;">Ações</th></tr></thead>
         <tbody id="historico-producao-tbody"></tbody>
       </table>
     </div>
@@ -2552,29 +2552,58 @@
   </div>
 </div>
 
+
+<!-- Modal: Confirmar importação -->
+<div class="modal-overlay" id="modal-confirmar-importacao" onclick="if(event.target===this) closeModal('modal-confirmar-importacao')">
+  <div class="modal-box modal-box-lg">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <h3 style="margin:0;">Confirmar importação</h3>
+      <button onclick="closeModal('modal-confirmar-importacao')" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-500);">✕</button>
+    </div>
+    <p class="hint" id="conf-import-subtitulo" style="margin-bottom:14px;"></p>
+    <div class="list-panel" style="max-height:52vh;overflow-y:auto;">
+      <table>
+        <thead id="conf-import-thead"></thead>
+        <tbody id="conf-import-tbody"></tbody>
+      </table>
+    </div>
+    <div id="conf-import-total" style="padding:10px 16px;background:var(--surface-2);border-radius:10px;margin-top:10px;font-size:13px;font-weight:700;"></div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn-outline" onclick="closeModal('modal-confirmar-importacao')">Voltar e corrigir</button>
+      <button class="btn-dark" id="conf-import-btn-confirmar">Confirmar e importar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-importar" onclick="if(event.target===this) closeModal('modal-importar')">
   <div class="modal-box">
     <h3>Importar planilha de produção</h3>
 
-    <label style="display:block; font-size:12px; font-weight:600; color:var(--gray-600); margin-bottom:9px;">De qual seguradora é o arquivo?</label>
-    <div class="seg-picker-grid" id="importar-seguradora-grid"></div>
-    <input type="hidden" id="importar-seguradora">
+    <!-- 1. Tipo de planilha — SEMPRE visível -->
+    <div class="f-field" style="margin-bottom:4px;">
+      <label>Tipo de planilha</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="importar-tipo-btns">
+        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:11px 16px;border:1.4px solid var(--border);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;transition:border-color .15s;" id="tipo-corretora-label">
+          <input type="radio" name="importar-tipo" id="tipo-corretora" value="corretora" checked style="accent-color:var(--black);" onchange="onImportTipoChange()">
+          Por corretora
+        </label>
+        <label style="flex:1;display:flex;align-items:center;gap:8px;padding:11px 16px;border:1.4px solid var(--border);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;transition:border-color .15s;" id="tipo-produto-label">
+          <input type="radio" name="importar-tipo" id="tipo-produto" value="produto" style="accent-color:var(--black);" onchange="onImportTipoChange()">
+          Por produto
+        </label>
+      </div>
+    </div>
+
+    <!-- 2. Seguradora -->
+    <div class="f-field" style="margin-top:14px;">
+      <label>De qual seguradora é o arquivo?</label>
+      <div class="seg-picker-grid" id="importar-seguradora-grid"></div>
+      <input type="hidden" id="importar-seguradora">
+    </div>
 
     <div id="importar-arquivo-section" class="hidden">
-      <!-- Tipo de importação (se seguradora tiver template por produto) -->
-      <div class="f-field" id="importar-tipo-field" style="display:none;">
-        <label>Tipo de planilha</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:1.4px solid var(--border);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;transition:border-color .2s;" id="tipo-corretora-label">
-            <input type="radio" name="importar-tipo" id="tipo-corretora" value="corretora" style="accent-color:var(--black);" onchange="onImportTipoChange()">
-            Por corretora
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:1.4px solid var(--border);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;transition:border-color .2s;" id="tipo-produto-label">
-            <input type="radio" name="importar-tipo" id="tipo-produto" value="produto" style="accent-color:var(--black);" onchange="onImportTipoChange()">
-            Por produto
-          </label>
-        </div>
-      </div>
+      <!-- Campo tipo legado (oculto — mantido por compatibilidade) -->
+      <div id="importar-tipo-field" style="display:none;"></div>
       <div class="f-field"><label>Competência</label>
         <input type="month" id="importar-competencia">
       </div>
@@ -2988,7 +3017,7 @@
           : valor >= 1000
             ? 'R$' + (valor/1000).toFixed(0) + 'k'
             : 'R$' + valor.toFixed(0);
-        const medal = i===0 ? '🥇' : i===1 ? '🥈' : i===2 ? '🥉' : `${i+1}º`;
+        const medal = `${i+1}º`;
         return `<div style="margin-bottom:4px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
             <span style="font-size:11.5px;font-weight:700;max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${nome}">${medal} ${nome}</span>
@@ -3385,6 +3414,14 @@
       el.classList.remove('open');
       // if it was injected dynamically, remove from DOM
       if(el.closest('#modal-permissoes-inline-wrap')) el.closest('#modal-permissoes-inline-wrap').remove();
+    }
+    // Se o cadastro de corretora foi aberto a partir da confirmação de importação
+    // (via botão "+ Cadastrar"), reabre a janela de confirmação ao fechá-lo —
+    // seja porque salvou, cancelou ou clicou no X.
+    if(id === 'modal-corretora' && window._reabrirConfirmacaoImportacaoAoFechar){
+      window._reabrirConfirmacaoImportacaoAoFechar = false;
+      window._corretoraQuickCreateCallback = null; // cancelado sem salvar — não deixa callback pendente
+      openModal('modal-confirmar-importacao');
     }
   }
 
@@ -4583,6 +4620,18 @@
     refreshCorretoraSelects();
     refreshGroupUI(gid);
     registrarLog(editingCorretoraGid ? 'Editou corretora' : 'Criou corretora', nomeCompleto);
+
+    // Se essa corretora foi criada "na hora" a partir de uma linha não identificada
+    // na importação de planilha, vincula automaticamente e volta para a confirmação.
+    if(window._corretoraQuickCreateCallback){
+      const cb = window._corretoraQuickCreateCallback;
+      window._corretoraQuickCreateCallback = null;
+      closeModal('modal-corretora');
+      renderCorretorasList();
+      cb(gid);
+      return;
+    }
+
     alert('Cadastro salvo. A equipe informada já foi levada para a aba Contatos.');
     closeModal('modal-corretora');
     renderCorretorasList();
@@ -4694,6 +4743,7 @@
     'tokio marine': {
       tipo: 'corretora',
       // Planilha Prêmio Líquido — Análise Mensal
+      // Header real: col A "Assessoria | Corretor", col B "Corretor", col C "Mês/Ano Anterior", col D "Mês/Ano Atual"
       // Após descartar col A: col B vira índice 0 (corretora), col D vira índice 2 (Mês/Ano Atual)
       colunaCorretor: 'Corretor',   // fallback por nome
       colunaValor: 'Mês/Ano Atual', // fallback por nome
@@ -4701,7 +4751,9 @@
       idxValorFixo: 2,     // col D após remover col A
       pularPrimeiraLinhaDados: true, // linha 2 é "Total" geral → pular
       descartarColunaA: true,
-      ignorarNulos: true,  // descarta linhas onde col D é null/vazio/zero
+      // IMPORTANTE: NÃO ignora linhas com valor 0 ou vazio — toda corretora identificada
+      // é importada, mesmo sem produção no mês (o valor é gravado como 0,00 nesses casos).
+      // Isso garante que o mês fique completo e não fique com corretoras "faltando".
     },
     'tokio marine produto': {
       // Planilha "Prêmio Líquido — Análise Mensal"
@@ -4828,17 +4880,26 @@
     if(!data || !data.length){ tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gray-600);">Nenhuma importação registrada ainda.</td></tr>`; return; }
     tbody.innerHTML = data.map((h, idx) => {
       const quando = new Date(h.atualizado_em || h.created_at).toLocaleString('pt-BR');
+      const total = h.snapshot_dados ? (() => {
+        try {
+          const snap = typeof h.snapshot_dados === 'string' ? JSON.parse(h.snapshot_dados) : h.snapshot_dados;
+          const t = snap.reduce((s, i) => s + (i.valor || 0), 0);
+          return 'R$' + t.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+        } catch(e){ return '—'; }
+      })() : '—';
+      const podeExcluir = isSuperAdmin();
       return `<tr>
         <td class="cell-strong">${h.seguradora}</td>
         <td>${labelCompetencia(h.competencia)}</td>
         <td><span class="chip">${h.tipo === 'importacao' ? 'Importação' : 'Manual'}</span></td>
-        <td style="font-size:12.5px;color:var(--gray-600);">${quando}</td>
+        <td style="font-size:12px;color:var(--gray-600);">${h.quantidade || '—'} linhas</td>
+        <td style="font-size:12px;color:var(--gray-600);">${quando}</td>
         <td style="text-align:center;">
           <div style="display:flex;gap:4px;justify-content:center;align-items:center;">
-            ${h.snapshot_dados ? `<button onclick="baixarDetalheHistorico('${h.id}')" style="background:none;border:none;cursor:pointer;color:var(--gray-400);padding:4px;" title="Baixar detalhes">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
+            ${h.snapshot_dados ? `<button onclick="verDetalheHistorico('${h.id}')" style="background:none;border:none;cursor:pointer;color:var(--gray-500);padding:4px;" title="Ver detalhes">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
             </button>` : ''}
-            ${idx === 0 ? `<button onclick="excluirHistorico('${h.id}','${h.seguradora}','${h.competencia}','${h.tipo}')" style="background:none;border:none;cursor:pointer;color:var(--gray-400);padding:4px;" title="Excluir">
+            ${podeExcluir ? `<button onclick="excluirHistorico('${h.id}','${h.seguradora}','${h.competencia}','${h.tipo}')" style="background:none;border:none;cursor:pointer;color:#dc2626;padding:4px;" title="Apagar esta importação">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
             </button>` : ''}
           </div>
@@ -4847,35 +4908,35 @@
     }).join('');
   }
 
-  function baixarDetalheHistorico(id){
-    // Find in latest data (cached in DOM)
-    // We need to re-fetch or store data — simple approach: re-fetch
+  function verDetalheHistorico(id){
     supabase.from('producao_historico').select('*').eq('id', id).single().then(({data: h}) => {
       if(!h || !h.snapshot_dados) return;
       try {
         const snap = typeof h.snapshot_dados === 'string' ? JSON.parse(h.snapshot_dados) : h.snapshot_dados;
-        // Build CSV
-        const rows = [['Corretora','Produto','Valor']];
-        snap.forEach(item => {
-          const corretoraName = item.corretora_id ? (GROUPS[item.corretora_id]?.name || item.corretora_id) : '—';
-          rows.push([corretoraName, item.produto || '—', item.valor]);
-        });
-        const csv = rows.map(r => r.join(',')).join('\n');
-        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `detalhe_importacao_${h.seguradora}_${h.competencia}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
-      } catch(e){ alert('Erro ao gerar arquivo: ' + e.message); }
+        const isProduto = snap.some(i => i.produto && !i.corretora_id);
+        const total = snap.reduce((s, i) => s + (i.valor || 0), 0);
+        document.getElementById('conf-import-subtitulo').textContent =
+          `${h.seguradora} · ${labelCompetencia(h.competencia)} · importado em ${new Date(h.atualizado_em || h.created_at).toLocaleString('pt-BR')}`;
+        document.getElementById('conf-import-thead').innerHTML = isProduto
+          ? '<tr><th>Produto</th><th style="text-align:right;">Valor</th></tr>'
+          : '<tr><th>Corretora</th><th style="text-align:right;">Valor</th></tr>';
+        document.getElementById('conf-import-tbody').innerHTML = snap.map(item => {
+          const nome = item.corretora_id ? (GROUPS[item.corretora_id]?.name || item.corretora_id) : (item.produto || '—');
+          const fmt = 'R$' + (item.valor||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+          return `<tr><td>${nome}</td><td style="text-align:right;font-weight:700;">${fmt}</td></tr>`;
+        }).join('');
+        document.getElementById('conf-import-total').innerHTML =
+          `Total: <span style="color:var(--black);">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>`;
+        document.getElementById('conf-import-btn-confirmar').textContent = 'Fechar';
+        document.getElementById('conf-import-btn-confirmar').onclick = () => closeModal('modal-confirmar-importacao');
+        openModal('modal-confirmar-importacao');
+      } catch(e){ alert('Erro ao exibir detalhes: ' + e.message); }
     });
   }
 
   async function excluirHistorico(id, seguradora, competencia, tipo){
-    if(!confirm(`Excluir este registro de ${seguradora} (${labelCompetencia(competencia)})?
-
-Os dados de produção deste período serão restaurados para o upload anterior.`)) return;
+    if(!isSuperAdmin()){ alert('Apenas super administradores podem apagar importações.'); return; }
+    if(!confirm(`Apagar a importação de ${seguradora} (${labelCompetencia(competencia)})?\n\nOs dados de produção deste período serão removidos. Se houver uma importação anterior, ela voltará a valer.`)) return;
 
     // Buscar registro anterior para o mesmo seguradora+competencia
     let historicos;
@@ -5035,14 +5096,26 @@ Os dados de produção deste período serão restaurados para o upload anterior.
         return;
       }
 
-      // Filtrar linhas válidas: produto não vazio, não "total"/"filtros"/"codigo", valor numérico != 0
-      const PALAVRAS_DESCARTAR_PROD = ['total', 'filtros', 'filtro', 'codigo', 'código', 'nan'];
+      // Filtrar linhas válidas para planilha de produto da Tokio Marine:
+      // Col B (idx 1) = Carteira/produto — descarta se vazio ou "Total"
+      // Col G (idx 6) = Mês/Ano Atual — descarta se null/vazio/zero
+      // Col A (idx 0) — descarta linhas onde col A contém "Total" ou "Filtros"
+      const PALAVRAS_DESC_PROD = ['total', 'filtros', 'filtro', 'codigo', 'código'];
+      function descartarProd(celulas){
+        const colA = String(celulas[0] ?? '').trim().toLowerCase();
+        if(PALAVRAS_DESC_PROD.some(p => colA.startsWith(p))) return true;
+        return false;
+      }
+
       const dataRows = linhas.slice(1).filter(celulas => {
+        if(descartarProd(celulas)) return false;
         const prod = String(celulas[idxProduto] ?? '').trim();
         if(!prod) return false;
-        const prodLower = prod.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-        if(PALAVRAS_DESCARTAR_PROD.some(p => prodLower.includes(p.normalize('NFD').replace(/[\u0300-\u036f]/g,'')))) return false;
-        const val = parseFloat(String(celulas[idxValor] ?? '').replace(',','.'));
+        // descarta se col B é "Total" (linhas de total geral por produtor)
+        if(prod.toLowerCase() === 'total') return false;
+        const raw = celulas[idxValor];
+        if(raw === null || raw === undefined || raw === '') return false;
+        const val = parseFloat(String(raw).replace(',','.'));
         return !isNaN(val) && val !== 0;
       });
 
@@ -5060,29 +5133,41 @@ Os dados de produção deste período serão restaurados para o upload anterior.
         porProduto[prod] = (porProduto[prod] || 0) + val;
       });
 
-      // "Last upload wins" — apagar registros anteriores sem corretora para essa seguradora+competencia
-      await supabase.from('producao_mensal')
-        .delete()
-        .is('corretora_id', null)
-        .eq('seguradora', seguradora)
-        .eq('competencia', competencia);
-
-      // Inserir novos registros por produto
-      let count = 0;
-      for(const [produto, valor] of Object.entries(porProduto)){
-        await upsertProducaoPorProduto({ seguradora, produto, competencia, valor });
-        count++;
-      }
+      const snapProduto = Object.entries(porProduto)
+        .map(([produto, valor]) => ({ corretora_id: null, produto, valor }))
+        .sort((a, b) => b.valor - a.valor);
 
       esconderSplashOp();
-      resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${count} produto(s) importado(s) com sucesso para ${seguradora}, competência ${labelCompetencia(competencia)}.</p>
-        <ul style="margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--gray-600);">
-          ${Object.entries(porProduto).map(([p,v]) => `<li><b>${p}</b>: R$ ${v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}</li>`).join('')}
-        </ul>`;
-      const snapProduto = Object.entries(porProduto).map(([produto, valor]) => ({ corretora_id: null, produto, valor }));
-      await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: count, snapshot_dados: snapProduto });
-      registrarLog('Importou planilha por produto', `${seguradora} · ${labelCompetencia(competencia)} · ${count} produto(s)`);
-      renderProducao();
+
+      // Abrir modal de confirmação
+      const totalGeralProd = snapProduto.reduce((s, i) => s + (i.valor || 0), 0);
+      document.getElementById('conf-import-subtitulo').textContent =
+        `${seguradora} · ${labelCompetencia(competencia)} · ${snapProduto.length} produto(s)`;
+      document.getElementById('conf-import-thead').innerHTML =
+        '<tr><th>Produto</th><th style="text-align:right;">Valor (Mês Atual)</th></tr>';
+      document.getElementById('conf-import-tbody').innerHTML = snapProduto.map(item => {
+        const fmt = 'R$\u00a0' + (item.valor||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+        return `<tr><td>${item.produto}</td><td style="text-align:right;font-weight:700;">${fmt}</td></tr>`;
+      }).join('');
+      document.getElementById('conf-import-total').innerHTML =
+        `Total geral: <span style="color:var(--black);">R$\u00a0${totalGeralProd.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>`;
+      const btnConf = document.getElementById('conf-import-btn-confirmar');
+      btnConf.textContent = 'Confirmar e importar';
+      btnConf.onclick = async () => {
+        btnConf.disabled = true; btnConf.textContent = 'Importando...';
+        mostrarSplashOp('Importando...');
+        await supabase.from('producao_mensal').delete().is('corretora_id', null).eq('seguradora', seguradora).eq('competencia', competencia);
+        for(const item of snapProduto){
+          await upsertProducaoPorProduto({ seguradora, produto: item.produto, competencia, valor: item.valor });
+        }
+        esconderSplashOp();
+        closeModal('modal-confirmar-importacao');
+        resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${snapProduto.length} produto(s) importado(s) com sucesso para ${seguradora}, ${labelCompetencia(competencia)}.</p>`;
+        await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: snapProduto.length, snapshot_dados: snapProduto });
+        registrarLog('Importou planilha por produto', `${seguradora} · ${labelCompetencia(competencia)} · ${snapProduto.length} produto(s)`);
+        renderProducao();
+      };
+      openModal('modal-confirmar-importacao');
     };
     reader.readAsArrayBuffer(file);
   }
@@ -5495,15 +5580,10 @@ Os dados de produção deste período serão restaurados para o upload anterior.
     document.getElementById('importar-seguradora').value = nomeSeguradora;
     document.getElementById('importar-arquivo-section').classList.remove('hidden');
     renderSeguradoraPicker();
-
-    // Mostrar campo de tipo se a seguradora tem template por produto
-    const tipoField = document.getElementById('importar-tipo-field');
-    const temProduto = TEMPLATES_COM_PRODUTO.some(k => nomeSeguradora.trim().toLowerCase().includes(k));
-    if(tipoField) tipoField.style.display = temProduto ? 'block' : 'none';
-    if(temProduto){
-      const tipoCor = document.getElementById('tipo-corretora');
-      if(tipoCor){ tipoCor.checked = true; onImportTipoChange(); }
-    }
+    // tipo-corretora sempre selecionado por padrão ao trocar seguradora
+    const tipoCor = document.getElementById('tipo-corretora');
+    if(tipoCor && !document.querySelector('input[name="importar-tipo"]:checked')){ tipoCor.checked = true; }
+    onImportTipoChange();
   }
 
   // Procura, em qualquer célula da linha, um texto que bata com o apelido ou a razão
@@ -5776,6 +5856,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
         }
         if(template.pularPrimeiraLinhaDados) dataRows = dataRows.slice(1);
         // ignora linhas sem corretor, vazias, "Total", "Filtros", "Codigo_sistema" etc.
+        // (NÃO filtra por valor — corretoras sem produção no mês entram com valor 0,00)
         dataRows = dataRows.filter(({ celulas }) => {
           const val = String(celulas[idxCorretor] ?? '').trim();
           if(!val || val === 'null' || val === 'undefined') return false;
@@ -5785,16 +5866,7 @@ Os dados de produção deste período serão restaurados para o upload anterior.
             return valLower === pn || valLower.startsWith(pn + ' ') || valLower.startsWith(pn + '_');
           });
         });
-        // ignorarNulos: descarta linhas onde o valor é null/vazio/zero
-        if(template.ignorarNulos){
-          dataRows = dataRows.filter(({ celulas }) => {
-            const raw = celulas[idxValor];
-            if(raw === null || raw === undefined || raw === '') return false;
-            const v = Number(String(raw).replace(',','.'));
-            return !isNaN(v) && v !== 0;
-          });
-        }
-        // se ignorarZeros: descarta silenciosamente linhas com GWP = 0
+        // se ignorarZeros: descarta silenciosamente linhas com GWP = 0 (usado por outras seguradoras, não Tokio Marine)
         if(template.ignorarZeros){
           dataRows = dataRows.filter(({ celulas }) => {
             const v = Number(String(celulas[idxValor] ?? '').replace(',','.'));
@@ -5806,83 +5878,119 @@ Os dados de produção deste período serão restaurados para o upload anterior.
       // Usa headerRowFinal para extração de valor sem template
       const headerParaExtracao = headerRowFinal;
 
-      // 1ª passada: tenta identificar TODAS as linhas antes de gravar qualquer coisa
-      const naoIdentificadas = [];
-      const identificadas = [];
-      dataRows.forEach(({ celulas, numeroLinha }) => {
-        const nomeCorretor = template ? celulas[idxCorretor] : null;
-        const gid = template ? identificarCorretoraPorNome(String(nomeCorretor||'')) : identificarCorretoraNaLinha(celulas);
-        if(!gid){
-          const pista = template ? (nomeCorretor || '(vazio)') : (celulas.find(c => String(c).trim() !== '') || '(linha vazia)');
-          naoIdentificadas.push({ linha: numeroLinha, pista });
-        } else {
-          identificadas.push({ gid, celulas });
-        }
+      // Monta TODAS as linhas (identificadas ou não) — nada bloqueia a importação.
+      // Cada linha guarda: número original na planilha, nome bruto lido, gid (se já identificado) e valor.
+      window._importRowsAtual = dataRows.map(({ celulas, numeroLinha }) => {
+        const nomeBruto = template ? celulas[idxCorretor] : (celulas.find(c => String(c).trim() !== '') || '');
+        const gid = template ? identificarCorretoraPorNome(String(nomeBruto||'')) : identificarCorretoraNaLinha(celulas);
+        const bruto = template ? celulas[idxValor] : extrairValorDaLinha(headerParaExtracao, celulas);
+        const num = Number(String(bruto ?? '0').replace(',','.'));
+        return {
+          linha: numeroLinha,
+          nomeBruto: String(nomeBruto || '').trim(),
+          gid,
+          valor: isNaN(num) ? 0 : num,
+        };
       });
-
-      if(naoIdentificadas.length){
-        esconderSplashOp();
-        const temIdentificadas = identificadas.length > 0;
-        resultBox.innerHTML = `
-          <div class="login-error" style="margin-top:10px;">
-            <b>${naoIdentificadas.length} corretora(s) não encontrada(s) no sistema.</b>
-            <p style="margin:6px 0 4px;font-weight:400;">Os nomes abaixo estão na planilha mas não batem com nenhuma corretora cadastrada. Para resolver: abra o cadastro de cada corretora e adicione o nome exato como <b>apelido</b>.</p>
-            <ul style="margin:8px 0 0; padding-left:18px;">
-              ${naoIdentificadas.slice(0,15).map(n => `<li style="margin-bottom:3px;"><b>${n.pista}</b></li>`).join('')}
-              ${naoIdentificadas.length > 15 ? `<li>...e mais ${naoIdentificadas.length - 15} corretora(s).</li>` : ''}
-            </ul>
-          </div>
-          ${temIdentificadas ? `
-          <div style="margin-top:10px;padding:10px 14px;background:var(--surface-2);border-radius:10px;font-size:12.5px;">
-            <b>${identificadas.length} corretora(s) foram identificadas</b> e podem ser importadas agora.
-            As ${naoIdentificadas.length} acima ficarão de fora até você cadastrar os apelidos.
-            <div style="margin-top:10px;">
-              <button class="btn-dark" id="btn-importar-parcial" style="font-size:12.5px;padding:9px 16px;">
-                Importar só as ${identificadas.length} identificadas
-              </button>
-            </div>
-          </div>` : ''}`;
-
-        if(temIdentificadas){
-          document.getElementById('btn-importar-parcial').onclick = async () => {
-            document.getElementById('btn-importar-parcial').disabled = true;
-            document.getElementById('btn-importar-parcial').textContent = 'Importando...';
-            mostrarSplashOp('Importando...');
-            for(const { gid, celulas } of identificadas){
-              const valor = template ? Number(celulas[idxValor]) : extrairValorDaLinha(headerParaExtracao, celulas);
-              if(valor === null || isNaN(valor)) continue;
-              await upsertProducao({ corretora_id: gid, seguradora, competencia, valor });
-            }
-            esconderSplashOp();
-            resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${identificadas.length} linha(s) importada(s). As ${naoIdentificadas.length} não identificadas foram ignoradas — cadastre os apelidos e reimporte.</p>`;
-            await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: identificadas.length, snapshot_dados: identificadas.map(({ gid, celulas }) => ({ corretora_id: gid, produto: null, valor: template ? Number(celulas[idxValor]) : extrairValorDaLinha(headerParaExtracao, celulas) })) });
-            registrarLog('Importou planilha (parcial)', `${seguradora} · ${labelCompetencia(competencia)} · ${identificadas.length}/${identificadas.length + naoIdentificadas.length} linha(s)`);
-            renderProducao();
-          };
-        }
-        return;
-      }
-
-      // 2ª passada: já com 100% identificado, agora sim grava
-      for(const { gid, celulas } of identificadas){
-        const valor = template ? Number(celulas[idxValor]) : extrairValorDaLinha(headerParaExtracao, celulas);
-        if(valor === null || isNaN(valor)) continue;
-        await upsertProducao({ corretora_id: gid, seguradora, competencia, valor });
-      }
+      window._importContexto = { seguradora, competencia, resultBoxId: 'importar-resultado' };
 
       esconderSplashOp();
-      resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${identificadas.length} linha(s) importada(s) com sucesso para ${seguradora}, competência ${labelCompetencia(competencia)}.</p>`;
-      // snapshot para permitir restauração se excluído do histórico
-      const snapCorretora = identificadas.map(({ gid, celulas }) => ({
-        corretora_id: gid,
-        produto: null,
-        valor: template ? Number(celulas[idxValor]) : extrairValorDaLinha(headerParaExtracao, celulas),
-      }));
-      await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: identificadas.length, snapshot_dados: snapCorretora });
-      registrarLog('Importou planilha de produção', `${seguradora} · ${labelCompetencia(competencia)} · ${identificadas.length} linha(s)`);
-      renderProducao();
+      renderModalConfirmacaoImportacao();
+      openModal('modal-confirmar-importacao');
     };
     reader.readAsArrayBuffer(file);
+  }
+
+  // Redesenha a tabela de confirmação a partir de window._importRowsAtual.
+  // Chamada sempre que uma linha é removida ou uma corretora é cadastrada na hora.
+  function renderModalConfirmacaoImportacao(){
+    const rows = window._importRowsAtual || [];
+    const { seguradora, competencia } = window._importContexto || {};
+    const identificadas = rows.filter(r => r.gid);
+    const naoIdentificadas = rows.filter(r => !r.gid);
+    const totalGeral = identificadas.reduce((s, r) => s + (r.valor || 0), 0);
+
+    document.getElementById('conf-import-subtitulo').innerHTML =
+      `${seguradora} · ${labelCompetencia(competencia)} · ${rows.length} linha(s) na planilha` +
+      (naoIdentificadas.length ? ` · <span style="color:#b45309;font-weight:700;">${naoIdentificadas.length} corretora(s) não cadastrada(s)</span>` : '');
+
+    document.getElementById('conf-import-thead').innerHTML =
+      '<tr><th>Corretora</th><th style="text-align:right;">Valor (Mês Atual)</th><th style="width:110px;text-align:center;">Ações</th></tr>';
+
+    document.getElementById('conf-import-tbody').innerHTML = rows.map(r => {
+      const fmt = 'R$\u00a0' + (r.valor||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+      const nomeCol = r.gid
+        ? `<span>${GROUPS[r.gid]?.name || r.gid}</span>`
+        : `<span style="color:#b45309;">${r.nomeBruto || '(vazio)'}</span><br><span style="font-size:10.5px;color:var(--gray-400);font-weight:600;">não cadastrada no sistema</span>`;
+      const acaoExtra = r.gid
+        ? ''
+        : `<button onclick="cadastrarCorretoraDaLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;margin-right:4px;white-space:nowrap;">+ Cadastrar</button>`;
+      return `<tr style="${r.gid ? '' : 'background:#fffbeb;'}">
+        <td>${nomeCol}</td>
+        <td style="text-align:right;font-weight:700;">${fmt}</td>
+        <td style="text-align:center;white-space:nowrap;">
+          ${acaoExtra}
+          <button onclick="removerLinhaImportacao(${r.linha})" title="Remover esta linha" style="background:none;border:none;cursor:pointer;color:#dc2626;padding:4px;vertical-align:middle;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="3" style="text-align:center;color:var(--gray-500);">Nenhuma linha restante. Todas foram removidas.</td></tr>`;
+
+    document.getElementById('conf-import-total').innerHTML =
+      `Total a importar (${identificadas.length} corretora${identificadas.length!==1?'s':''}): <span style="color:var(--black);">R$\u00a0${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>` +
+      (naoIdentificadas.length ? `<div style="font-weight:400;font-size:11.5px;color:#b45309;margin-top:4px;">${naoIdentificadas.length} linha(s) ficarão de fora até você cadastrar a corretora ou removê-las.</div>` : '');
+
+    const btnConf = document.getElementById('conf-import-btn-confirmar');
+    btnConf.disabled = identificadas.length === 0;
+    btnConf.textContent = `Confirmar e importar (${identificadas.length})`;
+    btnConf.onclick = async () => {
+      btnConf.disabled = true; btnConf.textContent = 'Importando...';
+      mostrarSplashOp('Importando...');
+      const snapCorretora = identificadas.map(r => ({ corretora_id: r.gid, produto: null, valor: r.valor }));
+      for(const item of snapCorretora){
+        await upsertProducao({ corretora_id: item.corretora_id, seguradora, competencia, valor: item.valor });
+      }
+      esconderSplashOp();
+      closeModal('modal-confirmar-importacao');
+      const resultBox = document.getElementById((window._importContexto||{}).resultBoxId || 'importar-resultado');
+      if(resultBox){
+        resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${snapCorretora.length} linha(s) importada(s) com sucesso para ${seguradora}, ${labelCompetencia(competencia)}.</p>` +
+          (naoIdentificadas.length ? `<p class="hint" style="color:#b45309;">${naoIdentificadas.length} linha(s) não foram importadas (corretora não cadastrada ou removida manualmente).</p>` : '');
+      }
+      await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: snapCorretora.length, snapshot_dados: snapCorretora });
+      registrarLog('Importou planilha de produção', `${seguradora} · ${labelCompetencia(competencia)} · ${snapCorretora.length} linha(s)`);
+      renderProducao();
+      window._importRowsAtual = null;
+      window._importContexto = null;
+    };
+  }
+
+  // Remove uma linha específica da lista antes de confirmar a importação
+  function removerLinhaImportacao(linha){
+    if(!window._importRowsAtual) return;
+    window._importRowsAtual = window._importRowsAtual.filter(r => r.linha !== linha);
+    renderModalConfirmacaoImportacao();
+  }
+
+  // Abre o cadastro de corretora pré-preenchido com o nome bruto da linha da planilha.
+  // Ao salvar, a corretora recém-criada é vinculada automaticamente a essa linha.
+  function cadastrarCorretoraDaLinha(linha){
+    const row = (window._importRowsAtual || []).find(r => r.linha === linha);
+    if(!row) return;
+
+    window._reabrirConfirmacaoImportacaoAoFechar = true;
+    window._corretoraQuickCreateCallback = (novoGid) => {
+      const r = (window._importRowsAtual || []).find(x => x.linha === linha);
+      if(r) r.gid = novoGid;
+      renderModalConfirmacaoImportacao();
+    };
+
+    closeModal('modal-confirmar-importacao');
+    openCorretoraForm(null);
+    // Pré-preenche a razão social com o nome exato lido da planilha
+    const campoNome = document.getElementById('corretora-razao-social');
+    if(campoNome) campoNome.value = row.nomeBruto;
   }
 
   let currentUserId = null;
