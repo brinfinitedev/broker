@@ -4735,20 +4735,25 @@
   const PLANILHA_TEMPLATES = {
     'tokio marine': {
       tipo: 'corretora',
+      // O nome cadastrado no sistema pode ser "Tokio Marine", "Tokio Seguros", etc. — qualquer um com "tokio" bate aqui.
+      aliases: ['tokio seguros', 'tokio marine seguros', 'tokio'],
       // Planilha Prêmio Líquido — Análise Mensal
-      // Col A (idx 0): Assessoria — IGNORADA
+      // Col A (idx 0): Assessoria — IGNORADA (só tem conteúdo na linha de total geral)
       // Col B (idx 1): Corretor  ← corretora
       // Col C (idx 2): Mês/Ano Anterior — IGNORADA
       // Col D (idx 3): Mês/Ano Atual    ← valor
       idxCorretorFixo: 1,  // col B (índice direto, sem remover col A)
       idxValorFixo: 3,     // col D (índice direto, sem remover col A)
-      pularPrimeiraLinhaDados: true, // linha 2 é "Total" geral → pular
+      pularPrimeiraLinhaDados: false, // NÃO usar mais — o filtro por col A vazia já remove a linha de total com segurança
       descartarColunaA: false,       // NÃO remove col A — lê pelos índices diretos
+      descartarSeColunaANaoVazia: true, // reforço: linhas de corretora real SEMPRE têm col A vazia;
+                                         // qualquer linha com algo em col A é resumo/total/assessoria, não corretora
     },
     'tokio marine produto': {
       // Planilha "Prêmio Líquido — Análise Mensal"
       // Col B = Carteira (produto), Col G = Mês/Ano Atual
       tipo: 'produto',
+      aliases: ['tokio seguros', 'tokio marine seguros', 'tokio'],
       colunaProduto: 'Carteira',
       colunaValor: 'Mês/Ano Atual',
       // Linhas com "total" em Carteira ou Carteira vazia são descartadas
@@ -4775,10 +4780,18 @@
     if(lblProd) lblProd.style.borderColor = tipo==='produto' ? 'var(--black)' : 'var(--border)';
   }
 
+  // Cada template pode ter "aliases": palavras-chave alternativas para reconhecer a seguradora,
+  // já que o nome cadastrado no sistema pode variar (ex: "Tokio Seguros", "Tokio Marine", "Tokio Marine Seguros S.A.").
+  // Isso evita que o template deixe de ser encontrado só porque o nome não bate 100%.
   function encontrarTemplate(seguradora){
-    const alvo = seguradora.trim().toLowerCase();
-    const chave = Object.keys(PLANILHA_TEMPLATES).find(k => alvo.includes(k) || k.includes(alvo));
-    return chave ? PLANILHA_TEMPLATES[chave] : null;
+    const alvo = (seguradora||'').trim().toLowerCase();
+    if(!alvo) return null;
+    for(const chave of Object.keys(PLANILHA_TEMPLATES)){
+      const tpl = PLANILHA_TEMPLATES[chave];
+      const candidatos = [chave, ...(tpl.aliases || [])];
+      if(candidatos.some(c => alvo.includes(c) || c.includes(alvo))) return tpl;
+    }
+    return null;
   }
 
   function indiceColuna(headerRow, nomeColuna){
@@ -5084,11 +5097,15 @@
 
       const headerRow = linhas[0];
 
-      // Localizar template "por produto" para essa seguradora
-      const alvo = seguradora.trim().toLowerCase();
-      const chaveTemplate = Object.keys(PLANILHA_TEMPLATES).find(k =>
-        PLANILHA_TEMPLATES[k].tipo === 'produto' && (alvo.includes(k.replace(' produto','').trim()) || k.replace(' produto','').trim().includes(alvo))
-      );
+      // Localizar template "por produto" para essa seguradora — mesma lógica robusta de aliases
+      const alvo = (seguradora||'').trim().toLowerCase();
+      const chaveTemplate = Object.keys(PLANILHA_TEMPLATES).find(k => {
+        const tpl = PLANILHA_TEMPLATES[k];
+        if(tpl.tipo !== 'produto') return false;
+        const base = k.replace(' produto','').trim();
+        const candidatos = [base, ...(tpl.aliases || [])];
+        return candidatos.some(c => alvo.includes(c) || c.includes(alvo));
+      });
       const template = chaveTemplate ? PLANILHA_TEMPLATES[chaveTemplate] : null;
 
       // Índices: col B = index 1 (Carteira), col G = index 6 (Mês/Ano Atual)
@@ -5535,6 +5552,12 @@
   // seguradora será implementada assim que os modelos de planilha forem enviados.
   function openImportarModal(){
     if(!Object.keys(SEGURADORAS).length){ alert('Cadastre ao menos uma seguradora antes de importar uma planilha.'); return; }
+    // Fecha e limpa qualquer confirmação de importação anterior que tenha ficado aberta,
+    // evitando que duas janelas fiquem empilhadas uma sobre a outra.
+    closeModal('modal-confirmar-importacao');
+    window._importRowsAtual = null;
+    window._importContexto = null;
+
     document.getElementById('importar-seguradora').value = '';
     document.getElementById('importar-arquivo-section').classList.add('hidden');
     document.getElementById('importar-competencia').value = competenciaAtual();
@@ -5844,6 +5867,16 @@
       dataRows = dataRows.filter(({ celulas }) => !deveDescartarLinha(celulas));
 
       const template = encontrarTemplate(seguradora);
+
+      // Reforço específico: se o template marca que a coluna A só deve conter
+      // conteúdo em linhas de resumo (nunca em linhas de corretora real),
+      // qualquer linha com algo em col A é descartada por CONTEÚDO — não por posição.
+      // Isso evita que o texto da coluna A (ex: nome da Assessoria) vaze para a leitura
+      // mesmo que a linha de total mude de posição em uma planilha futura.
+      if(template?.descartarSeColunaANaoVazia){
+        dataRows = dataRows.filter(({ celulas }) => String(celulas[0] ?? '').trim() === '');
+      }
+
       let idxCorretor = -1, idxValor = -1;
 
       // Se o template pede para descartar a coluna A, remove índice 0 do cabeçalho e de todas as linhas
