@@ -4356,16 +4356,9 @@
   /* ==========================================================
      CORRETORAS — cache local em memória (espelha a tabela `corretoras`)
   ========================================================== */
-  const GROUPS = {
-    prisma: { name:'Prisma Corretora', filial:'São Paulo', ie:'', seguradoras:['TOKIO MARINE'], apelidos:['Prisma Seguros','Prisma Corretora de Seguros'], cnpj:'12.345.678/0001-90', susep:'20.4501234-5', email:'contato@prisma.com.br', telefone:'(11) 4002-8922', endereco:'', cidade:'São Paulo', estado:'SP' },
-    zenith: { name:'Zenith Corretora', filial:'', ie:'', seguradoras:[], apelidos:[], cnpj:'', susep:'', email:'', telefone:'', endereco:'', cidade:'', estado:'' },
-    ancora: { name:'Âncora Corretora', filial:'', ie:'', seguradoras:[], apelidos:[], cnpj:'', susep:'', email:'', telefone:'', endereco:'', cidade:'', estado:'' },
-  };
+  const GROUPS = {};
 
-  const SEGURADORAS = {
-    'tokio-marine': { nome:'TOKIO MARINE', comercial:'Ricardo Prado', comercialNascimento:'1985-07-09', email:'', telefone:'11976543210', logo:null, cor:'#E30613', responsaveisIds:[] },
-    'pier': { nome:'PIER', comercial:'', comercialNascimento:null, email:'', telefone:'', logo:null, cor:'#00A9E0', responsaveisIds:[] },
-  };
+  const SEGURADORAS = {};
 
   function refreshGroupUI(gid){
     if(!GROUPS[gid]) return;
@@ -4866,31 +4859,43 @@
   async function renderHistoricoProducao(){
     const tbody = document.getElementById('historico-producao-tbody');
     if(!tbody) return;
-    // Try both 'atualizado_em' and 'created_at' as column names
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--gray-400);">Carregando...</td></tr>`;
+
+    // Tenta ordenar por created_at (padrão Supabase); fallback para atualizado_em
     let data, error;
-    const resp = await supabase.from('producao_historico').select('*').order('created_at', {ascending:false});
-    if(resp.error){
-      // try atualizado_em
-      const resp2 = await supabase.from('producao_historico').select('*').order('atualizado_em', {ascending:false});
-      data = resp2.data; error = resp2.error;
+    const r1 = await supabase.from('producao_historico').select('*').order('created_at', {ascending:false});
+    if(!r1.error){
+      data = r1.data; error = null;
     } else {
-      data = resp.data; error = resp.error;
+      const r2 = await supabase.from('producao_historico').select('*').order('atualizado_em', {ascending:false});
+      if(!r2.error){
+        data = r2.data; error = null;
+      } else {
+        // Última tentativa: sem ordenação
+        const r3 = await supabase.from('producao_historico').select('*');
+        data = r3.data; error = r3.error;
+      }
     }
-    if(error){ tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Erro: ${error.message}</td></tr>`; return; }
-    if(!data || !data.length){ tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--gray-600);">Nenhuma importação registrada ainda.</td></tr>`; return; }
-    tbody.innerHTML = data.map((h, idx) => {
-      const quando = new Date(h.atualizado_em || h.created_at).toLocaleString('pt-BR');
-      const total = h.snapshot_dados ? (() => {
-        try {
-          const snap = typeof h.snapshot_dados === 'string' ? JSON.parse(h.snapshot_dados) : h.snapshot_dados;
-          const t = snap.reduce((s, i) => s + (i.valor || 0), 0);
-          return 'R$' + t.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
-        } catch(e){ return '—'; }
-      })() : '—';
+
+    if(error){
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#dc2626;font-size:12px;">
+        Erro ao carregar histórico: <b>${error.message}</b><br>
+        <span style="color:var(--gray-400);">Verifique se a tabela <code>producao_historico</code> existe no Supabase.</span>
+      </td></tr>`;
+      return;
+    }
+    if(!data || !data.length){
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--gray-600);">Nenhuma importação registrada ainda.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map(h => {
+      const ts = h.created_at || h.atualizado_em;
+      const quando = ts ? new Date(ts).toLocaleString('pt-BR') : '—';
       const podeExcluir = isSuperAdmin();
       return `<tr>
-        <td class="cell-strong">${h.seguradora}</td>
-        <td>${labelCompetencia(h.competencia)}</td>
+        <td class="cell-strong">${h.seguradora || '—'}</td>
+        <td>${h.competencia ? labelCompetencia(h.competencia) : '—'}</td>
         <td><span class="chip">${h.tipo === 'importacao' ? 'Importação' : 'Manual'}</span></td>
         <td style="font-size:12px;color:var(--gray-600);">${h.quantidade || '—'} linhas</td>
         <td style="font-size:12px;color:var(--gray-600);">${quando}</td>
@@ -4986,11 +4991,21 @@
 
   // registra, por seguradora + competência, quando foi a última atualização de produção
   async function registrarHistoricoProducao({ seguradora, competencia, tipo, quantidade, snapshot_dados }){
-    return supabase.from('producao_historico').insert({
-      seguradora, competencia, tipo, quantidade,
+    // Tenta inserir com atualizado_em; se a coluna não existir, tenta sem ela (created_at é automático no Supabase)
+    const payload = { seguradora, competencia, tipo, quantidade,
       snapshot_dados: snapshot_dados ? JSON.stringify(snapshot_dados) : null,
       atualizado_em: new Date().toISOString(),
-    });
+    };
+    const r1 = await supabase.from('producao_historico').insert(payload);
+    if(r1.error && r1.error.message && r1.error.message.includes('atualizado_em')){
+      // coluna atualizado_em não existe — tenta sem ela
+      const { atualizado_em: _, ...payloadSemTs } = payload;
+      const r2 = await supabase.from('producao_historico').insert(payloadSemTs);
+      if(r2.error) console.error('Erro ao registrar histórico:', r2.error.message);
+      return r2;
+    }
+    if(r1.error) console.error('Erro ao registrar histórico:', r1.error.message);
+    return r1;
   }
 
   // ---------- LOGS (auditoria — só o Super Administrador acessa) ----------
@@ -6650,15 +6665,42 @@
   // Carrega todas as corretoras do Supabase e monta o objeto GROUPS
   // usado por todo o front-end (mesma estrutura de antes, agora vinda do banco).
   async function loadCorretorasFromSupabase(){
-    const { data, error } = await supabase.from('corretoras').select('*');
+    // Tenta carregar todas as colunas; se falhar por coluna inexistente, tenta só as essenciais
+    let data, error;
+    const r1 = await supabase.from('corretoras').select('*');
+    if(!r1.error){
+      data = r1.data; error = null;
+    } else {
+      console.warn('Erro ao carregar corretoras (full):', r1.error.message, '— tentando colunas essenciais...');
+      // Fallback: apenas colunas que certamente existem
+      const r2 = await supabase.from('corretoras').select('id, razao_social, filial, cnpj, susep, email, telefone, cidade, estado, seguradoras_permitidas, apelidos');
+      data = r2.data; error = r2.error;
+    }
+
     if(error){
-      console.error('Erro ao carregar corretoras:', error);
+      console.error('Erro crítico ao carregar corretoras:', error.message);
+      // Mostra aviso visível na tela
+      const el = document.getElementById('view-corretoras');
+      if(el){
+        const aviso = document.createElement('div');
+        aviso.style.cssText = 'background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;font-weight:600;';
+        aviso.textContent = 'Erro ao carregar corretoras: ' + error.message;
+        el.prepend(aviso);
+      }
       return;
     }
-    Object.keys(GROUPS).forEach(k => delete GROUPS[k]); // limpa dados de exemplo
+
+    if(!data || data.length === 0){
+      console.log('Nenhuma corretora encontrada no banco.');
+      Object.keys(GROUPS).forEach(k => delete GROUPS[k]);
+      renderCorretorasList();
+      return;
+    }
+
+    Object.keys(GROUPS).forEach(k => delete GROUPS[k]);
     data.forEach(row => {
       GROUPS[row.id] = {
-        name: row.razao_social,
+        name: row.razao_social || '',
         filial: row.filial || '',
         ie: row.ie || '',
         seguradoras: row.seguradoras_permitidas || [],
@@ -6678,7 +6720,9 @@
         status: row.status || 'ativa',
       };
     });
+    console.log(`✅ ${data.length} corretora(s) carregada(s).`);
     refreshCorretoraSelects();
+    renderCorretorasList();
   }
 
   /* ---------------- SEGURADORAS ---------------- */
