@@ -6000,6 +6000,14 @@
         return;
       }
 
+      // Algumas seguradoras (ex: Tokio Marine) repetem a MESMA corretora em mais de uma
+      // linha da planilha (ex: uma vez na lista alfabética com valor 0, outra vez numa seção
+      // de ajustes/correções com o valor real). Se não consolidarmos, a importação salvaria
+      // cada linha separadamente e a ÚLTIMA sobrescreveria a anterior no banco — podendo
+      // zerar um valor real por engano. Por isso somamos aqui todas as linhas que já
+      // apontam para a MESMA corretora antes de sequer mostrar a tela de confirmação.
+      window._importRowsAtual = consolidarLinhasDuplicadas(window._importRowsAtual);
+
       if(!window._importRowsAtual.length){
         esconderSplashOp();
         resultBox.innerHTML = `<p class="hint" style="color:#dc2626;font-weight:700;">Nenhuma linha de dados foi encontrada após os filtros.</p>
@@ -6021,16 +6029,42 @@
 
   // Redesenha a tabela de confirmação a partir de window._importRowsAtual.
   // Chamada sempre que uma linha é removida ou uma corretora é cadastrada na hora.
+  // Junta linhas que já apontam para a MESMA corretora (mesmo gid) em uma única linha,
+  // somando os valores. Isso evita que a mesma corretora, repetida na planilha, tenha
+  // seu valor real sobrescrito por um valor zerado de uma segunda ocorrência.
+  // Linhas ainda não identificadas (gid nulo) continuam separadas — só são
+  // consolidadas quando, mais tarde, forem vinculadas/cadastradas e passarem a
+  // compartilhar o mesmo gid de uma linha já existente.
+  function consolidarLinhasDuplicadas(rows){
+    const porGid = new Map();
+    const semGid = [];
+    for(const r of rows){
+      if(!r.gid){ semGid.push(r); continue; }
+      if(porGid.has(r.gid)){
+        const existente = porGid.get(r.gid);
+        existente.valor += r.valor;
+        existente.linhasOriginais.push(r.linha);
+      } else {
+        porGid.set(r.gid, { ...r, linhasOriginais: [r.linha] });
+      }
+    }
+    return [...porGid.values(), ...semGid];
+  }
+
   function renderModalConfirmacaoImportacao(){
     const rows = window._importRowsAtual || [];
     const { seguradora, competencia } = window._importContexto || {};
+    // Valores negativos AGORA entram no total normalmente (reduzem o total, como soma comum)
+    // e SÃO salvos individualmente no banco com o próprio valor negativo.
     const identificadas = rows.filter(r => r.gid);
+    const negativasCount = identificadas.filter(r => r.valor < 0).length;
     const naoIdentificadas = rows.filter(r => !r.gid);
     const totalGeral = identificadas.reduce((s, r) => s + (r.valor || 0), 0);
 
     document.getElementById('conf-import-subtitulo').innerHTML =
       `${seguradora} · ${labelCompetencia(competencia)} · ${rows.length} linha(s) na planilha` +
-      (naoIdentificadas.length ? ` · <span style="color:#b45309;font-weight:700;">${naoIdentificadas.length} corretora(s) não cadastrada(s)</span>` : '');
+      (naoIdentificadas.length ? ` · <span style="color:#b45309;font-weight:700;">${naoIdentificadas.length} corretora(s) não cadastrada(s)</span>` : '') +
+      (negativasCount ? ` · <span style="color:#dc2626;font-weight:700;">${negativasCount} valor(es) negativo(s) — descontam do total</span>` : '');
 
     document.getElementById('conf-import-thead').innerHTML =
       '<tr><th>Corretora</th><th style="text-align:right;">Valor (Mês Atual)</th><th style="width:200px;text-align:left;">Ações</th></tr>';
@@ -6040,9 +6074,15 @@
       .sort((a,b) => (GROUPS[a].name||'').localeCompare(GROUPS[b].name||'', 'pt-BR'));
 
     document.getElementById('conf-import-tbody').innerHTML = rows.map(r => {
+      const ehNegativa = r.gid && r.valor < 0;
       const fmt = 'R$\u00a0' + (r.valor||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+      const avisoDuplicata = (r.linhasOriginais && r.linhasOriginais.length > 1)
+        ? `<br><span style="font-size:10.5px;color:var(--gray-500);font-weight:600;">soma de ${r.linhasOriginais.length} linhas da planilha (linhas ${r.linhasOriginais.join(', ')})</span>`
+        : '';
       const nomeCol = r.gid
-        ? `<span>${GROUPS[r.gid]?.name || r.gid}</span>`
+        ? `<span>${GROUPS[r.gid]?.name || r.gid}</span>` +
+          (ehNegativa ? `<br><span style="font-size:10.5px;color:#dc2626;font-weight:600;">valor negativo — desconta do total e será salvo assim</span>` : '') +
+          avisoDuplicata
         : `<span style="color:#b45309;">${r.nomeBruto || '(vazio)'}</span><br><span style="font-size:10.5px;color:var(--gray-400);font-weight:600;">não cadastrada no sistema</span>`;
       const acaoExtra = r.gid
         ? ''
@@ -6051,9 +6091,10 @@
              <option value="">Vincular a existente…</option>
              ${corretorasOrdenadas.map(gid => `<option value="${gid}">${GROUPS[gid].name}</option>`).join('')}
            </select>`;
-      return `<tr style="${r.gid ? '' : 'background:#fffbeb;'}">
+      const corPainel = ehNegativa ? 'background:#fef2f2;' : (r.gid ? '' : 'background:#fffbeb;');
+      return `<tr style="${corPainel}">
         <td>${nomeCol}</td>
-        <td style="text-align:right;font-weight:700;">${fmt}</td>
+        <td style="text-align:right;font-weight:700;${ehNegativa ? 'color:#dc2626;' : ''}">${fmt}</td>
         <td style="vertical-align:top;padding-top:10px;">
           ${acaoExtra}
           <button onclick="removerLinhaImportacao(${r.linha})" style="width:100%;box-sizing:border-box;background:none;border:1.4px solid #fecaca;border-radius:8px;cursor:pointer;color:#dc2626;padding:5px 6px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px;">
@@ -6066,7 +6107,8 @@
 
     document.getElementById('conf-import-total').innerHTML =
       `Total a importar (${identificadas.length} corretora${identificadas.length!==1?'s':''}): <span style="color:var(--black);">R$\u00a0${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>` +
-      (naoIdentificadas.length ? `<div style="font-weight:400;font-size:11.5px;color:#b45309;margin-top:4px;">${naoIdentificadas.length} linha(s) ficarão de fora até você cadastrar a corretora ou removê-las.</div>` : '');
+      (naoIdentificadas.length ? `<div style="font-weight:400;font-size:11.5px;color:#b45309;margin-top:4px;">${naoIdentificadas.length} linha(s) ficarão de fora até você cadastrar a corretora ou removê-las.</div>` : '') +
+      (negativasCount ? `<div style="font-weight:400;font-size:11.5px;color:#dc2626;margin-top:4px;">${negativasCount} linha(s) com valor negativo já estão descontadas neste total e serão salvas com o valor negativo.</div>` : '');
 
     const btnConf = document.getElementById('conf-import-btn-confirmar');
     btnConf.disabled = identificadas.length === 0;
@@ -6105,7 +6147,8 @@
             </div>`;
         } else {
           resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${sucesso} linha(s) importada(s) com sucesso para ${seguradora}, ${labelCompetencia(competencia)}.</p>` +
-            (naoIdentificadas.length ? `<p class="hint" style="color:#b45309;">${naoIdentificadas.length} linha(s) não foram importadas (corretora não cadastrada ou removida manualmente).</p>` : '');
+            (naoIdentificadas.length ? `<p class="hint" style="color:#b45309;">${naoIdentificadas.length} linha(s) não foram importadas (corretora não cadastrada ou removida manualmente).</p>` : '') +
+            (negativasCount ? `<p class="hint" style="color:#dc2626;">${negativasCount} linha(s) com valor negativo foram importadas normalmente (descontando do total).</p>` : '');
         }
       }
 
@@ -6136,6 +6179,8 @@
     window._corretoraQuickCreateCallback = (novoGid) => {
       const r = (window._importRowsAtual || []).find(x => x.linha === linha);
       if(r) r.gid = novoGid;
+      // Junta com qualquer outra linha que já apontasse pra essa mesma corretora
+      window._importRowsAtual = consolidarLinhasDuplicadas(window._importRowsAtual || []);
       renderModalConfirmacaoImportacao();
     };
 
@@ -6158,8 +6203,9 @@
     const apelidosAtuais = Array.isArray(GROUPS[gid].apelidos) ? GROUPS[gid].apelidos : [];
     const jaTemApelido = apelidosAtuais.some(a => a.toLowerCase() === nomeBruto.toLowerCase());
 
-    // Vincula a linha imediatamente na tela, mesmo antes de salvar o apelido no banco
+    // Vincula a linha e junta com qualquer outra linha que já apontasse pra essa mesma corretora
     row.gid = gid;
+    window._importRowsAtual = consolidarLinhasDuplicadas(window._importRowsAtual || []);
     renderModalConfirmacaoImportacao();
 
     if(!jaTemApelido && nomeBruto){
