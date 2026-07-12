@@ -6024,13 +6024,17 @@
   function renderModalConfirmacaoImportacao(){
     const rows = window._importRowsAtual || [];
     const { seguradora, competencia } = window._importContexto || {};
-    const identificadas = rows.filter(r => r.gid);
+    // Regra: valores negativos NUNCA entram no total nem são importados,
+    // mesmo que a corretora já esteja identificada — tratamos como dado inválido.
+    const identificadas = rows.filter(r => r.gid && r.valor >= 0);
+    const negativas = rows.filter(r => r.gid && r.valor < 0);
     const naoIdentificadas = rows.filter(r => !r.gid);
     const totalGeral = identificadas.reduce((s, r) => s + (r.valor || 0), 0);
 
     document.getElementById('conf-import-subtitulo').innerHTML =
       `${seguradora} · ${labelCompetencia(competencia)} · ${rows.length} linha(s) na planilha` +
-      (naoIdentificadas.length ? ` · <span style="color:#b45309;font-weight:700;">${naoIdentificadas.length} corretora(s) não cadastrada(s)</span>` : '');
+      (naoIdentificadas.length ? ` · <span style="color:#b45309;font-weight:700;">${naoIdentificadas.length} corretora(s) não cadastrada(s)</span>` : '') +
+      (negativas.length ? ` · <span style="color:#dc2626;font-weight:700;">${negativas.length} valor(es) negativo(s) — não serão importados</span>` : '');
 
     document.getElementById('conf-import-thead').innerHTML =
       '<tr><th>Corretora</th><th style="text-align:right;">Valor (Mês Atual)</th><th style="width:200px;text-align:left;">Ações</th></tr>';
@@ -6040,9 +6044,11 @@
       .sort((a,b) => (GROUPS[a].name||'').localeCompare(GROUPS[b].name||'', 'pt-BR'));
 
     document.getElementById('conf-import-tbody').innerHTML = rows.map(r => {
+      const ehNegativa = r.gid && r.valor < 0;
       const fmt = 'R$\u00a0' + (r.valor||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
       const nomeCol = r.gid
-        ? `<span>${GROUPS[r.gid]?.name || r.gid}</span>`
+        ? `<span style="${ehNegativa ? 'color:var(--gray-400);' : ''}">${GROUPS[r.gid]?.name || r.gid}</span>` +
+          (ehNegativa ? `<br><span style="font-size:10.5px;color:#dc2626;font-weight:600;">valor negativo — não será importado</span>` : '')
         : `<span style="color:#b45309;">${r.nomeBruto || '(vazio)'}</span><br><span style="font-size:10.5px;color:var(--gray-400);font-weight:600;">não cadastrada no sistema</span>`;
       const acaoExtra = r.gid
         ? ''
@@ -6051,9 +6057,10 @@
              <option value="">Vincular a existente…</option>
              ${corretorasOrdenadas.map(gid => `<option value="${gid}">${GROUPS[gid].name}</option>`).join('')}
            </select>`;
-      return `<tr style="${r.gid ? '' : 'background:#fffbeb;'}">
+      const corPainel = ehNegativa ? 'background:#fef2f2;' : (r.gid ? '' : 'background:#fffbeb;');
+      return `<tr style="${corPainel}">
         <td>${nomeCol}</td>
-        <td style="text-align:right;font-weight:700;">${fmt}</td>
+        <td style="text-align:right;font-weight:700;${ehNegativa ? 'color:#dc2626;' : ''}">${fmt}</td>
         <td style="vertical-align:top;padding-top:10px;">
           ${acaoExtra}
           <button onclick="removerLinhaImportacao(${r.linha})" style="width:100%;box-sizing:border-box;background:none;border:1.4px solid #fecaca;border-radius:8px;cursor:pointer;color:#dc2626;padding:5px 6px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px;">
@@ -6066,7 +6073,8 @@
 
     document.getElementById('conf-import-total').innerHTML =
       `Total a importar (${identificadas.length} corretora${identificadas.length!==1?'s':''}): <span style="color:var(--black);">R$\u00a0${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>` +
-      (naoIdentificadas.length ? `<div style="font-weight:400;font-size:11.5px;color:#b45309;margin-top:4px;">${naoIdentificadas.length} linha(s) ficarão de fora até você cadastrar a corretora ou removê-las.</div>` : '');
+      (naoIdentificadas.length ? `<div style="font-weight:400;font-size:11.5px;color:#b45309;margin-top:4px;">${naoIdentificadas.length} linha(s) ficarão de fora até você cadastrar a corretora ou removê-las.</div>` : '') +
+      (negativas.length ? `<div style="font-weight:400;font-size:11.5px;color:#dc2626;margin-top:4px;">${negativas.length} linha(s) com valor negativo ficarão de fora automaticamente (não contam no total nem serão importadas).</div>` : '');
 
     const btnConf = document.getElementById('conf-import-btn-confirmar');
     btnConf.disabled = identificadas.length === 0;
@@ -6105,7 +6113,8 @@
             </div>`;
         } else {
           resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${sucesso} linha(s) importada(s) com sucesso para ${seguradora}, ${labelCompetencia(competencia)}.</p>` +
-            (naoIdentificadas.length ? `<p class="hint" style="color:#b45309;">${naoIdentificadas.length} linha(s) não foram importadas (corretora não cadastrada ou removida manualmente).</p>` : '');
+            (naoIdentificadas.length ? `<p class="hint" style="color:#b45309;">${naoIdentificadas.length} linha(s) não foram importadas (corretora não cadastrada ou removida manualmente).</p>` : '') +
+            (negativas.length ? `<p class="hint" style="color:#dc2626;">${negativas.length} linha(s) com valor negativo foram ignoradas automaticamente.</p>` : '');
         }
       }
 
