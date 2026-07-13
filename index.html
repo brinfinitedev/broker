@@ -1716,6 +1716,7 @@
           <div style="display:none;">
             <input type="month" id="producao-competencia">
             <select id="producao-filtro-corretora"><option value="todas">Todas</option></select>
+            <select id="producao-filtro-filial"><option value="">Todas</option></select>
             <input id="producao-filtro-seguradora">
             <datalist id="producao-seguradoras-datalist"></datalist>
             <select id="producao-filtro-produto">
@@ -1847,6 +1848,10 @@
                 <div class="f-field" style="margin:0;" id="relatorio-campo-corretora">
                   <label>Corretora</label>
                   <select id="relatorio-filtro-corretora" onchange="renderRelatorioBody()" style="width:100%;"><option value="">Todas</option></select>
+                </div>
+                <div class="f-field" style="margin:0;" id="relatorio-campo-filial">
+                  <label>Filial</label>
+                  <select id="relatorio-filtro-filial" onchange="renderRelatorioBody()" style="width:100%;"><option value="">Todas</option></select>
                 </div>
                 <div class="f-field" style="margin:0;" id="relatorio-campo-seguradora">
                   <label>Seguradora</label>
@@ -2153,6 +2158,13 @@
         <option value="admin">Super Administrador</option>
       </select>
     </div>
+    <div class="f-field" id="user-filial-field">
+      <label>Filial</label>
+      <select id="user-filial">
+        <option value="">Nenhuma (vê todas as filiais)</option>
+      </select>
+      <p class="hint" style="margin-top:6px;margin-bottom:0;">Administradores só enxergam a produção da filial selecionada aqui. Super Administradores sempre veem tudo, independente desse campo.</p>
+    </div>
     <p id="user-permissoes-hint" class="hint hidden" style="margin-top:-8px;">Gestores podem ter o acesso a abas específicas bloqueado pelo Super Administrador.</p>
 
     <div id="user-error" class="login-error hidden" style="margin-top:6px;"></div>
@@ -2358,9 +2370,12 @@
       <div id="team-rows"></div>
       <button class="add-card-btn" onclick="addTeamRow()">+ Adicionar colaborador</button>
     </div>
-    <div class="modal-actions">
-      <button class="btn-outline" onclick="closeModal('modal-corretora')">Cancelar</button>
-      <button class="btn-dark" onclick="saveCorretoraForm()">Salvar cadastro</button>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button class="btn-outline hidden" id="btn-excluir-corretora" onclick="excluirCorretoraCadastrada()" style="color:#dc2626;border-color:#fecaca;">Excluir corretora</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-outline" onclick="closeModal('modal-corretora')">Cancelar</button>
+        <button class="btn-dark" onclick="saveCorretoraForm()">Salvar cadastro</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2558,6 +2573,12 @@
       </select>
     </div>
     <div class="f-field">
+      <label>Filial</label>
+      <select id="filtros-producao-filial" style="width:100%;border:1.4px solid var(--border);border-radius:11px;padding:12px 14px;outline:none;font-size:13.5px;font-family:inherit;">
+        <option value="">Todas as filiais</option>
+      </select>
+    </div>
+    <div class="f-field">
       <label>Seguradora</label>
       <select id="filtros-producao-seguradora" style="width:100%;border:1.4px solid var(--border);border-radius:11px;padding:12px 14px;outline:none;font-size:13.5px;font-family:inherit;">
         <option value="">Todas as seguradoras</option>
@@ -2585,7 +2606,7 @@
 <div class="modal-overlay" id="modal-historico-producao" onclick="if(event.target===this) closeModal('modal-historico-producao')">
   <div class="modal-box modal-box-lg">
     <h3>Histórico de importações</h3>
-    <p class="hint">Importações de produção registradas. Super administradores podem excluir qualquer importação — os dados voltam ao estado anterior.</p>
+    <p class="hint">Toda importação feita a partir de agora fica registrada aqui. Super administradores podem excluir qualquer uma — os dados voltam ao estado anterior. Importações feitas antes desta tela existir não aparecem, pois não haviam sido registradas ainda.</p>
     <div class="list-panel">
       <table>
         <thead><tr><th>Seguradora</th><th>Competência</th><th>Tipo</th><th>Qtd</th><th>Quando</th><th style="width:90px;text-align:center;">Ações</th></tr></thead>
@@ -2729,6 +2750,7 @@
   const BOTTOM_MAIN_COUNT = 4;
 
   let currentRole = 'admin';
+  let currentUserFilial = null; // filial do usuário logado — se preenchida e não for super admin, restringe a visão de produção só a essa filial
 
   function isSuperAdmin(){
     return ['admin','super_admin','superadmin','administrador'].includes((currentRole||'').toLowerCase());
@@ -4512,6 +4534,10 @@
     editingCorretoraGid = gid;
     const g = gid ? GROUPS[gid] : null;
 
+    // Botão de excluir só aparece editando uma corretora existente, e só para super admin
+    const btnExcluir = document.getElementById('btn-excluir-corretora');
+    if(btnExcluir) btnExcluir.classList.toggle('hidden', !(gid && isSuperAdmin()));
+
     const fieldMap = {
       'corretora-razao-social': g ? g.name : '',
       'corretora-filial': g ? (g.filial || '') : '',
@@ -4614,6 +4640,23 @@
   function refreshCorretoraSelects(){
     const cardSel = document.getElementById('card-corretora');
     if(cardSel) cardSel.innerHTML = Object.keys(GROUPS).map(gid => `<option>${GROUPS[gid].name}</option>`).join('');
+  }
+
+  async function excluirCorretoraCadastrada(){
+    if(!isSuperAdmin()){ alert('Apenas o super administrador pode excluir corretoras.'); return; }
+    if(!editingCorretoraGid) return;
+    const g = GROUPS[editingCorretoraGid];
+    if(!g) return;
+    if(!confirm(`Excluir a corretora "${g.name}"?\n\nEssa ação não pode ser desfeita. Os lançamentos de produção já registrados para ela permanecem no histórico, mas ela deixará de aparecer nas listas e filtros do sistema.`)) return;
+
+    const { error } = await supabase.from('corretoras').delete().eq('id', editingCorretoraGid);
+    if(error){ alert('Erro ao excluir corretora: ' + error.message); return; }
+
+    delete GROUPS[editingCorretoraGid];
+    registrarLog('Excluiu corretora', g.name);
+    closeModal('modal-corretora');
+    refreshCorretoraSelects();
+    renderCorretorasList();
   }
 
   async function saveCorretoraForm(){
@@ -4882,23 +4925,31 @@
     // Populate selects from current hidden fields
     const selCor = document.getElementById('filtros-producao-corretora');
     const selSeg = document.getElementById('filtros-producao-seguradora');
+    const selFil = document.getElementById('filtros-producao-filial');
     // Fill corretoras
     selCor.innerHTML = '<option value="todas">Todas as corretoras</option>' +
       Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${g.name}</option>`).join('');
     // Fill seguradoras
     selSeg.innerHTML = '<option value="">Todas as seguradoras</option>' +
       Object.values(SEGURADORAS).map(s => `<option value="${s.nome}">${s.nome}</option>`).join('');
+    // Fill filiais (valores únicos de filial entre as corretoras cadastradas)
+    const filiaisUnicas = [...new Set(Object.values(GROUPS).map(g => g.filial).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    selFil.innerHTML = '<option value="">Todas as filiais</option>' +
+      filiaisUnicas.map(f => `<option value="${f}">${f}</option>`).join('');
     // Sync current values
     const curComp = document.getElementById('producao-competencia')?.value || '';
     const curCor = document.getElementById('producao-filtro-corretora')?.value || 'todas';
+    const curFil = document.getElementById('producao-filtro-filial')?.value || '';
     const curSeg = (document.getElementById('producao-filtro-seguradora')?.value || '').trim();
     const curProd = document.getElementById('producao-filtro-produto')?.value || '';
     const fComp = document.getElementById('filtros-producao-competencia');
     const fCor = document.getElementById('filtros-producao-corretora');
+    const fFil = document.getElementById('filtros-producao-filial');
     const fSeg = document.getElementById('filtros-producao-seguradora');
     const fProd = document.getElementById('filtros-producao-produto');
     if(fComp) fComp.value = curComp;
     if(fCor) fCor.value = curCor;
+    if(fFil) fFil.value = curFil;
     if(fSeg) fSeg.value = curSeg;
     if(fProd) fProd.value = curProd;
     // Link the comp picker
@@ -4913,21 +4964,25 @@
   function aplicarFiltrosProducao(){
     const comp = document.getElementById('filtros-producao-competencia')?.value || '';
     const cor = document.getElementById('filtros-producao-corretora')?.value || 'todas';
+    const fil = document.getElementById('filtros-producao-filial')?.value || '';
     const seg = document.getElementById('filtros-producao-seguradora')?.value || '';
     const prod = document.getElementById('filtros-producao-produto')?.value || '';
     // Apply to hidden fields
     const hComp = document.getElementById('producao-competencia');
     const hCor = document.getElementById('producao-filtro-corretora');
+    const hFil = document.getElementById('producao-filtro-filial');
     const hSeg = document.getElementById('producao-filtro-seguradora');
     const hProd = document.getElementById('producao-filtro-produto');
     if(hComp) hComp.value = comp;
     if(hCor) hCor.value = cor;
+    if(hFil) hFil.value = fil;
     if(hSeg) hSeg.value = seg;
     if(hProd) hProd.value = prod;
     // Update active filters badge
     const partes = [];
     if(comp){ partes.push(labelCompetencia(comp)); }
     if(cor && cor !== 'todas'){ partes.push(GROUPS[cor]?.name || cor); }
+    if(fil){ partes.push('Filial: ' + fil); }
     if(seg){ partes.push(seg); }
     if(prod){ partes.push(prod); }
     const badge = document.getElementById('producao-filtros-badge');
@@ -5076,21 +5131,34 @@
 
   // registra, por seguradora + competência, quando foi a última atualização de produção
   async function registrarHistoricoProducao({ seguradora, competencia, tipo, quantidade, snapshot_dados }){
-    // Tenta inserir com atualizado_em; se a coluna não existir, tenta sem ela (created_at é automático no Supabase)
-    const payload = { seguradora, competencia, tipo, quantidade,
+    const payloadCompleto = { seguradora, competencia, tipo, quantidade,
       snapshot_dados: snapshot_dados ? JSON.stringify(snapshot_dados) : null,
       atualizado_em: new Date().toISOString(),
     };
-    const r1 = await supabase.from('producao_historico').insert(payload);
-    if(r1.error && r1.error.message && r1.error.message.includes('atualizado_em')){
-      // coluna atualizado_em não existe — tenta sem ela
-      const { atualizado_em: _, ...payloadSemTs } = payload;
-      const r2 = await supabase.from('producao_historico').insert(payloadSemTs);
-      if(r2.error) console.error('Erro ao registrar histórico:', r2.error.message);
-      return r2;
+
+    // Tenta salvar removendo, um a um, qualquer coluna que o Supabase reclamar não existir —
+    // assim funciona independente de quais colunas a tabela producao_historico realmente tem.
+    let payload = { ...payloadCompleto };
+    let result = await supabase.from('producao_historico').insert(payload);
+
+    while(result.error && result.error.message){
+      const match = result.error.message.match(/'([^']+)' column of|column "([^"]+)" of|Could not find the '([^']+)'/i);
+      const colunaFaltante = match ? (match[1] || match[2] || match[3]) : null;
+      if(!colunaFaltante || !payload.hasOwnProperty(colunaFaltante)) break; // não sabe mais o que tirar, para de tentar
+      delete payload[colunaFaltante];
+      result = await supabase.from('producao_historico').insert(payload);
     }
-    if(r1.error) console.error('Erro ao registrar histórico:', r1.error.message);
-    return r1;
+
+    if(result.error){
+      console.error('Erro ao registrar histórico de importação:', result.error.message);
+      // Avisa visivelmente — sem isso, o usuário achava que tinha funcionado
+      const resultBox = document.getElementById((window._importContexto||{}).resultBoxId || 'importar-resultado');
+      if(resultBox){
+        resultBox.insertAdjacentHTML('beforeend',
+          `<p class="hint" style="color:#dc2626;margin-top:8px;">⚠ A produção foi salva, mas o registro no <b>Histórico de importações</b> falhou: ${result.error.message}</p>`);
+      }
+    }
+    return result;
   }
 
   // ---------- LOGS (auditoria — só o Super Administrador acessa) ----------
@@ -5370,11 +5438,13 @@
     // Configurar título e campos visíveis conforme modelo
     const tituloEl = document.getElementById('relatorio-modelo-titulo');
     const campoCor = document.getElementById('relatorio-campo-corretora');
+    const campoFil = document.getElementById('relatorio-campo-filial');
     const campoSeg = document.getElementById('relatorio-campo-seguradora');
     const campoProd = document.getElementById('relatorio-campo-produto');
 
     // mostrar tudo por padrão
     if(campoCor) campoCor.style.display='';
+    if(campoFil) campoFil.style.display='';
     if(campoSeg) campoSeg.style.display='';
     if(campoProd) campoProd.style.display='';
 
@@ -5403,6 +5473,8 @@
       const cEl = document.getElementById('relatorio-competencia');
       if(cEl) cEl.value = comp;
       if(campoCor) campoCor.style.display='none';
+      // Filial não se aplica aqui: linhas de produto não têm corretora vinculada
+      if(campoFil) campoFil.style.display='none';
       if(campoSeg) campoSeg.style.display='none';
     } else if(modelo === 'mensal'){
       if(tituloEl) tituloEl.textContent = 'Produção Mensal';
@@ -5426,9 +5498,11 @@
     limparFiltrosRelatorio();
     // restaurar campos
     const campoCor = document.getElementById('relatorio-campo-corretora');
+    const campoFil = document.getElementById('relatorio-campo-filial');
     const campoSeg = document.getElementById('relatorio-campo-seguradora');
     const campoProd = document.getElementById('relatorio-campo-produto');
     if(campoCor) campoCor.style.display='';
+    if(campoFil) campoFil.style.display='';
     if(campoSeg) campoSeg.style.display='';
     if(campoProd) campoProd.style.display='';
   }
@@ -5437,6 +5511,11 @@
     const selCorretora = document.getElementById('relatorio-filtro-corretora');
     if(selCorretora && selCorretora.options.length <= 1){
       selCorretora.innerHTML = `<option value="">Todas</option>` + Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${g.name}</option>`).join('');
+    }
+    const selFil = document.getElementById('relatorio-filtro-filial');
+    if(selFil && selFil.options.length <= 1){
+      const filiaisUnicas = [...new Set(Object.values(GROUPS).map(g => g.filial).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+      selFil.innerHTML = `<option value="">Todas</option>` + filiaisUnicas.map(f => `<option value="${f}">${f}</option>`).join('');
     }
     const selSeg = document.getElementById('relatorio-filtro-seguradora');
     if(selSeg && selSeg.options.length <= 1){
@@ -5450,6 +5529,7 @@
     document.getElementById('relatorio-filtro-data-ini').value = '';
     document.getElementById('relatorio-filtro-data-fim').value = '';
     document.getElementById('relatorio-filtro-corretora').value = '';
+    const rf = document.getElementById('relatorio-filtro-filial'); if(rf) rf.value='';
     document.getElementById('relatorio-filtro-seguradora').value = '';
     const rp = document.getElementById('relatorio-filtro-produto'); if(rp) rp.value='';
     document.getElementById('relatorio-tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray-600);padding:40px 20px;">Defina os filtros acima e clique em <b>Pesquisar</b>.</td></tr>`;
@@ -5463,6 +5543,11 @@
     const dataIni = document.getElementById('relatorio-filtro-data-ini').value;
     const dataFim = document.getElementById('relatorio-filtro-data-fim').value;
     const corretoraId = document.getElementById('relatorio-filtro-corretora').value;
+    let filialNome = document.getElementById('relatorio-filtro-filial')?.value || '';
+    // Administradores (não super) com filial definida SÓ enxergam a produção da própria filial
+    if(!isSuperAdmin() && currentUserFilial){
+      filialNome = currentUserFilial;
+    }
     const seguradoraNome = document.getElementById('relatorio-filtro-seguradora').value;
     const produtoNome = document.getElementById('relatorio-filtro-produto')?.value || '';
 
@@ -5484,6 +5569,7 @@
     } else if(!produtoNome){
       linhas = linhas.filter(l => l.corretora_id !== null);
     }
+    if(filialNome) linhas = linhas.filter(l => (GROUPS[l.corretora_id]?.filial||'') === filialNome);
     if(dataIni) linhas = linhas.filter(l => new Date(l.atualizado_em) >= new Date(dataIni + 'T00:00:00'));
     if(dataFim) linhas = linhas.filter(l => new Date(l.atualizado_em) <= new Date(dataFim + 'T23:59:59'));
     if(RELATORIO_MODELO_ATIVO === 'produto'){
@@ -5495,6 +5581,7 @@
     const resumoFiltros = [
       competencia ? `Competência: ${labelCompetencia(competencia)}` : 'Todas as competências',
       `Corretora: ${corretoraId ? (GROUPS[corretoraId]?.name||'—') : 'Todas'}`,
+      filialNome ? `Filial: ${filialNome}` : null,
       `Seguradora: ${seguradoraNome || 'Todas'}`,
       `Produto: ${produtoNome || 'Todos'}`,
       (dataIni || dataFim) ? `Atualizado entre ${dataIni||'—'} e ${dataFim||'—'}` : '',
@@ -5511,10 +5598,11 @@
     const dataIni = document.getElementById('relatorio-filtro-data-ini').value;
     const dataFim = document.getElementById('relatorio-filtro-data-fim').value;
     const corretoraId = document.getElementById('relatorio-filtro-corretora').value;
+    const filialNome = document.getElementById('relatorio-filtro-filial')?.value || '';
     const seguradoraNome = document.getElementById('relatorio-filtro-seguradora').value;
     const produtoNome = document.getElementById('relatorio-filtro-produto')?.value || '';
 
-    const algumFiltro = !!(competencia || dataIni || dataFim || corretoraId || seguradoraNome || produtoNome);
+    const algumFiltro = !!(competencia || dataIni || dataFim || corretoraId || filialNome || seguradoraNome || produtoNome);
     if(!algumFiltro){
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray-600);padding:40px 20px;">Defina os filtros acima e clique em <b>Pesquisar</b>.</td></tr>`;
       document.getElementById('relatorio-kpis').style.display='none';
@@ -5650,11 +5738,18 @@
 
     const seguradoraFiltro = (document.getElementById('producao-filtro-seguradora')?.value||'').trim().toLowerCase();
     const produtoFiltro = (document.getElementById('producao-filtro-produto')?.value||'').trim().toLowerCase();
+    let filialFiltro = (document.getElementById('producao-filtro-filial')?.value||'').trim();
+    // Administradores (não super) com filial definida SÓ enxergam a produção da própria filial —
+    // essa restrição vale mesmo que tentem mexer no filtro (o valor é sempre forçado aqui).
+    if(!isSuperAdmin() && currentUserFilial){
+      filialFiltro = currentUserFilial;
+    }
     let linhas = data || [];
     // Linhas importadas "por produto" (sem corretora vinculada) são um cálculo à parte —
     // servem só para o Ranking de Produtos, e NÃO entram no total geral nem nas
     // demais métricas desta tela (que são sempre por corretora).
     linhas = linhas.filter(l => l.corretora_id !== null);
+    if(filialFiltro) linhas = linhas.filter(l => (GROUPS[l.corretora_id]?.filial||'') === filialFiltro);
     if(seguradoraFiltro) linhas = linhas.filter(l => (l.seguradora||'').toLowerCase().includes(seguradoraFiltro));
     if(produtoFiltro)    linhas = linhas.filter(l => (l.produto||'').toLowerCase().includes(produtoFiltro));
 
@@ -5676,6 +5771,7 @@
   function limparFiltrosProducao(){
     ['producao-competencia','filtros-producao-competencia'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     ['producao-filtro-corretora','filtros-producao-corretora'].forEach(id => { const el = document.getElementById(id); if(el) el.value='todas'; });
+    ['producao-filtro-filial','filtros-producao-filial'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     ['producao-filtro-seguradora','filtros-producao-seguradora'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     ['producao-filtro-produto','filtros-producao-produto'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     const badge = document.getElementById('producao-filtros-ativos');
@@ -6097,6 +6193,7 @@
       // cada linha separadamente e a ÚLTIMA sobrescreveria a anterior no banco — podendo
       // zerar um valor real por engano. Por isso somamos aqui todas as linhas que já
       // apontam para a MESMA corretora antes de sequer mostrar a tela de confirmação.
+      const totalLinhasBrutas = window._importRowsAtual.length;
       window._importRowsAtual = consolidarLinhasDuplicadas(window._importRowsAtual);
 
       if(!window._importRowsAtual.length){
@@ -6109,7 +6206,7 @@
         return;
       }
 
-      window._importContexto = { seguradora, competencia, resultBoxId: 'importar-resultado' };
+      window._importContexto = { seguradora, competencia, resultBoxId: 'importar-resultado', totalLinhasBrutas };
 
       esconderSplashOp();
       renderModalConfirmacaoImportacao();
@@ -6144,16 +6241,21 @@
 
   function renderModalConfirmacaoImportacao(){
     const rows = window._importRowsAtual || [];
-    const { seguradora, competencia } = window._importContexto || {};
+    const { seguradora, competencia, totalLinhasBrutas } = window._importContexto || {};
     // Valores negativos AGORA entram no total normalmente (reduzem o total, como soma comum)
     // e SÃO salvos individualmente no banco com o próprio valor negativo.
     const identificadas = rows.filter(r => r.gid);
     const negativasCount = identificadas.filter(r => r.valor < 0).length;
     const naoIdentificadas = rows.filter(r => !r.gid);
     const totalGeral = identificadas.reduce((s, r) => s + (r.valor || 0), 0);
+    const qtdConsolidadas = rows.filter(r => r.linhasOriginais && r.linhasOriginais.length > 1).length;
+
+    const infoLinhas = (totalLinhasBrutas && totalLinhasBrutas !== rows.length)
+      ? `${totalLinhasBrutas} linha(s) na planilha, consolidadas em ${rows.length} corretora(s) (${qtdConsolidadas} corretora(s) apareciam mais de uma vez)`
+      : `${rows.length} linha(s) na planilha`;
 
     document.getElementById('conf-import-subtitulo').innerHTML =
-      `${seguradora} · ${labelCompetencia(competencia)} · ${rows.length} linha(s) na planilha` +
+      `${seguradora} · ${labelCompetencia(competencia)} · ${infoLinhas}` +
       (naoIdentificadas.length ? ` · <span style="color:#b45309;font-weight:700;">${naoIdentificadas.length} corretora(s) não cadastrada(s)</span>` : '') +
       (negativasCount ? ` · <span style="color:#dc2626;font-weight:700;">${negativasCount} valor(es) negativo(s) — descontam do total</span>` : '');
 
@@ -6492,6 +6594,8 @@
   function onUserRoleChange(){
     const role = document.getElementById('user-role').value;
     document.getElementById('user-permissoes-hint').classList.toggle('hidden', role === 'admin');
+    const filialField = document.getElementById('user-filial-field');
+    if(filialField) filialField.classList.toggle('hidden', role === 'admin');
   }
 
   let LOGS_TAB = 'sistema';
@@ -6685,6 +6789,16 @@
     document.getElementById('user-telefone').value = u ? (u.telefone || '') : '';
 
     document.getElementById('user-role').value = u ? (u.role || 'gestor') : 'gestor';
+
+    // Popula o select de filial a partir da tabela filiais cadastrada
+    const selFilial = document.getElementById('user-filial');
+    if(selFilial){
+      const { data: filiaisData } = await supabase.from('filiais').select('*').order('nome');
+      selFilial.innerHTML = '<option value="">Nenhuma (vê todas as filiais)</option>' +
+        (filiaisData || []).map(f => `<option value="${f.nome}">${f.nome}</option>`).join('');
+      selFilial.value = u ? (u.filial || '') : '';
+    }
+
     onUserRoleChange();
 
     document.getElementById('user-error').classList.add('hidden');
@@ -6700,6 +6814,7 @@
     const email = document.getElementById('user-email').value.trim().toLowerCase();
     const senha = document.getElementById('user-senha').value;
     const role = document.getElementById('user-role').value;
+    const filial = role === 'admin' ? null : (document.getElementById('user-filial')?.value || null);
     const nascimento = document.getElementById('user-nascimento').value || null;
     const telefone = document.getElementById('user-telefone').value.replace(/\D/g,'');
     const errorBox = document.getElementById('user-error');
@@ -6720,9 +6835,12 @@
     saveBtn.disabled = true; saveBtn.textContent = editingUserId ? 'Salvando...' : 'Criando...';
 
     if(editingUserId){
-      const { error: updError } = await supabase.from('profiles').update({
-        nome, role, nascimento, telefone,
+      let { error: updError } = await supabase.from('profiles').update({
+        nome, role, nascimento, telefone, filial,
       }).eq('id', editingUserId);
+      if(updError && updError.message && updError.message.includes('filial')){
+        ({ error: updError } = await supabase.from('profiles').update({ nome, role, nascimento, telefone }).eq('id', editingUserId));
+      }
       saveBtn.disabled = false;
       if(updError){
         errorBox.textContent = 'Erro ao salvar: ' + updError.message;
@@ -6772,11 +6890,18 @@
         saveBtn.textContent = 'Criar usuário';
         return;
       }
-      const { error: profileError } = await supabase.from('profiles').upsert({
-        id: signUpData.user.id, nome, email, role, nascimento, telefone,
+      let { error: profileError } = await supabase.from('profiles').upsert({
+        id: signUpData.user.id, nome, email, role, nascimento, telefone, filial,
         status:'ativo',
         abas_bloqueadas: [],
       }, { onConflict: 'id' });
+      if(profileError && profileError.message && profileError.message.includes('filial')){
+        ({ error: profileError } = await supabase.from('profiles').upsert({
+          id: signUpData.user.id, nome, email, role, nascimento, telefone,
+          status:'ativo',
+          abas_bloqueadas: [],
+        }, { onConflict: 'id' }));
+      }
       if(profileError){
         errorBox.textContent = 'Usuário criado no login, mas houve erro ao salvar o perfil: ' + profileError.message;
         errorBox.classList.remove('hidden');
@@ -6932,6 +7057,7 @@
 
     currentUserId = profile.id;
     currentRole = profile.role;
+    currentUserFilial = profile.filial || null;
     LOGGED_USER_ABAS_BLOQUEADAS = Array.isArray(profile.abas_bloqueadas) ? profile.abas_bloqueadas : [];
     currentUserFirstName = profile.nome.split(' ')[0];
     currentUserFullName = profile.nome;
@@ -7349,6 +7475,7 @@
         if(profile && profile.status === 'ativo'){
           currentUserId = session.user.id;
           currentRole = profile.role || 'gestor';
+          currentUserFilial = profile.filial || null;
           currentUserFirstName = (profile.nome||'').split(' ')[0];
           currentUserFullName = profile.nome || '';
           editingCorretoraGid = null;
