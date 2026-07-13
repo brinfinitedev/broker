@@ -1033,6 +1033,41 @@
 
     /* ── CARDS de aniversariantes ── */
     .bday-row .bday-actions{ flex-direction:column; gap:4px; }
+
+    /* ── CORRETORAS: esconde coluna Cidade, mantém status clicável e compacto ── */
+    .col-cidade{ display:none !important; }
+    #corretoras-tbody td, #corretoras-tbody th{ padding:9px 10px; font-size:12px; }
+    #corretoras-tbody .chip{ padding:4px 9px; font-size:10.5px; }
+
+    /* ── SEGURADORAS: esconde coluna Cor e botão Excluir ── */
+    .col-cor, .col-excluir{ display:none !important; }
+
+    /* ── USUÁRIOS: esconde e-mail, ações em grade 2x2 compacta ── */
+    .col-email{ display:none !important; }
+    #usuarios-tbody td, #usuarios-tbody th{ padding:9px 10px; font-size:12px; }
+    .usuarios-actions-cell{
+      display:flex !important; flex-wrap:wrap; gap:5px; padding:8px 10px !important;
+    }
+    .usuarios-actions-cell .access-btn{
+      flex:1; min-width:calc(50% - 3px); font-size:10.5px; padding:6px 4px;
+      justify-content:center; text-align:center; white-space:nowrap;
+    }
+
+    /* ── RELATÓRIOS: espremer mais ── */
+    .relatorio-header-bar{ padding:10px 12px !important; }
+    .relatorio-header-bar #relatorio-modelo-titulo{ font-size:13px !important; }
+    .relatorio-export-btns button{ font-size:10.5px !important; padding:7px 4px !important; }
+    .relatorio-filtros-grid .log-field label,
+    #relatorio-consulta-area .card label{ font-size:10.5px; }
+    #relatorio-consulta-area .card{ padding:12px !important; }
+    .relatorio-kpis-grid{ gap:6px !important; }
+    .kpi-mini{ padding:9px !important; }
+    .kpi-mini .v{ font-size:14px !important; }
+    .kpi-mini .l{ font-size:9.5px !important; }
+    #relatorio-tbody td, #relatorio-tbody th{ padding:8px 9px; font-size:11.5px; }
+    #relatorio-tbody { }
+    #relatorio-consulta-area table thead th{ padding:8px 9px; font-size:10px; }
+    .relatorio-modelos-grid .card{ padding:12px !important; }
   }
 
   /* ── iPhone SE / very narrow ≤ 375 px ── */
@@ -1091,9 +1126,26 @@
   @media(max-width:760px){
     .log-table thead{display:none;}
     .log-table,.log-table tbody,.log-table tr,.log-table td{display:block;width:100%;}
-    .log-table tr{margin-bottom:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
-    .log-table td{border-bottom:1px solid var(--border);padding:8px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:right;}
-    .log-table td::before{content:attr(data-label);font-size:10.5px;font-weight:800;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;text-align:left;}
+    .log-table tr{margin-bottom:8px;border:1px solid var(--border);border-radius:10px;overflow:hidden;padding:2px 0;}
+    .log-table td{border-bottom:none;padding:3px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:right;}
+    .log-table td::before{content:attr(data-label);font-size:9.5px;font-weight:800;color:var(--gray-500);text-transform:uppercase;letter-spacing:.3px;text-align:left;flex-shrink:0;}
+    /* Compacta: Data/Hora + Usuário ficam lado a lado numa única linha; Papel some; Ação/Detalhes ficam embaixo, discretos */
+    .log-table td[data-label="Data/Hora"]{
+      display:inline-flex; width:auto; font-size:10.5px; color:var(--gray-500); padding:6px 8px 2px 12px;
+    }
+    .log-table td[data-label="Usuário"]{
+      display:inline-flex; width:auto; font-size:11.5px; padding:6px 12px 2px 4px; flex:1; justify-content:flex-end;
+    }
+    .log-table td[data-label="Papel"]{ display:none; }
+    .log-table td[data-label="Ação"]{
+      padding:2px 12px 7px; font-size:12px; font-weight:600;
+    }
+    .log-table td[data-label="Detalhes"], .log-table td[data-label="IP"]{
+      padding:0 12px 7px; font-size:10.5px; color:var(--gray-400);
+    }
+    .log-table td[data-label="Ação"]::before, .log-table td[data-label="Detalhes"]::before, .log-table td[data-label="IP"]::before{
+      display:none;
+    }
   }
   @media(max-width:760px){.log-field-grid{grid-template-columns:1fr!important;}}
 </style>
@@ -1332,7 +1384,7 @@
               <button class="btn-outline" onclick="filtrarCorretoras('')">Limpar</button>
             </div>
             <table>
-              <thead><tr><th>Corretora</th><th>Filial</th><th>CNPJ</th><th>Cidade</th><th>Status</th><th></th></tr></thead>
+              <thead><tr><th>Corretora</th><th>Filial</th><th>CNPJ</th><th class="col-cidade">Cidade</th><th>Status</th><th></th></tr></thead>
               <tbody id="corretoras-tbody"></tbody>
             </table>
           </div>
@@ -1350,7 +1402,7 @@
               <div class="search-bar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input placeholder="Buscar seguradora"></div>
             </div>
             <table>
-              <thead><tr><th>Seguradora</th><th>Comercial responsável</th><th>Cor</th><th></th></tr></thead>
+              <thead><tr><th>Seguradora</th><th>Comercial responsável</th><th class="col-cor">Cor</th><th class="col-excluir"></th></tr></thead>
               <tbody id="seguradoras-tbody"></tbody>
             </table>
           </div>
@@ -1864,7 +1916,7 @@
           </div>
           <div class="list-panel">
             <table>
-              <thead><tr><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Status</th><th></th></tr></thead>
+              <thead><tr><th>Usuário</th><th class="col-email">E-mail</th><th>Perfil</th><th>Status</th><th></th></tr></thead>
               <tbody id="usuarios-tbody"></tbody>
             </table>
           </div>
@@ -1905,7 +1957,7 @@
 
           <!-- filtros -->
           <div class="card" style="padding:18px;margin-bottom:16px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:10px;">
+            <div class="log-field-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:10px;">
               <div class="log-field">
                 <label>Filtrar por usuário</label>
                 <select id="logs-filtro-usuario" onchange="renderLogsBody()"><option value="">Todos os usuários</option></select>
@@ -4424,15 +4476,15 @@
       const iniciais = initials(g.name);
       const status = g.status || 'ativa';
       const statusBadge = status === 'ativa'
-        ? `<span class="chip on" style="font-size:11px;">Ativa</span>`
-        : `<span class="chip" style="font-size:11px;color:var(--gray-400);">Inativa</span>`;
+        ? `<span class="chip on" style="font-size:11px;cursor:pointer;" onclick="event.stopPropagation(); toggleCorretoraStatus('${gid}')" title="Clique para desativar">Ativa</span>`
+        : `<span class="chip" style="font-size:11px;color:var(--gray-400);cursor:pointer;" onclick="event.stopPropagation(); toggleCorretoraStatus('${gid}')" title="Clique para ativar">Inativa</span>`;
       return `
       <tr style="${status === 'inativa' ? 'opacity:.55;' : ''}">
         <td onclick="openCorretoraForm('${gid}')"><div class="row-avatar"><div class="av">${iniciais}</div><div><div class="cell-strong">${g.name}</div></div></div></td>
         <td onclick="openCorretoraForm('${gid}')">${g.filial || '—'}</td>
         <td onclick="openCorretoraForm('${gid}')">${g.cnpj || 'A preencher'}</td>
-        <td onclick="openCorretoraForm('${gid}')">${g.cidade || 'A preencher'}</td>
-        <td onclick="openCorretoraForm('${gid}')">${statusBadge}</td>
+        <td class="col-cidade" onclick="openCorretoraForm('${gid}')">${g.cidade || 'A preencher'}</td>
+        <td>${statusBadge}</td>
         <td><button class="access-btn" onclick="openCorretoraForm('${gid}')">Editar</button></td>
       </tr>`;
     }).join('');
@@ -4445,6 +4497,16 @@
       const sel = document.getElementById('corretoras-filter-status');
       if(sel) sel.value = '';
     }
+    renderCorretorasList();
+  }
+
+  async function toggleCorretoraStatus(gid){
+    const g = GROUPS[gid];
+    if(!g) return;
+    const novoStatus = (g.status || 'ativa') === 'ativa' ? 'inativa' : 'ativa';
+    const { error } = await supabase.from('corretoras').update({ status: novoStatus }).eq('id', gid);
+    if(error){ alert('Erro ao atualizar status: ' + error.message); return; }
+    g.status = novoStatus;
     renderCorretorasList();
   }
 
@@ -5414,6 +5476,10 @@
     const { data } = await query;
 
     let linhas = data || [];
+    // Linhas importadas "por produto" (sem corretora vinculada) são um cálculo à parte.
+    // Só aparecem aqui se o usuário estiver explicitamente filtrando por produto —
+    // caso contrário, ficam de fora para não duplicar o total já contado por corretora.
+    if(!produtoNome) linhas = linhas.filter(l => l.corretora_id !== null);
     if(dataIni) linhas = linhas.filter(l => new Date(l.atualizado_em) >= new Date(dataIni + 'T00:00:00'));
     if(dataFim) linhas = linhas.filter(l => new Date(l.atualizado_em) <= new Date(dataFim + 'T23:59:59'));
     linhas.sort((a,b) => (GROUPS[a.corretora_id]?.name||'').localeCompare(GROUPS[b.corretora_id]?.name||''));
@@ -6316,10 +6382,10 @@
     tbody.innerHTML = data.length ? data.map(u => `
       <tr>
         <td><div class="row-avatar"><div class="av">${initials(u.nome)}</div><div class="cell-strong">${u.nome}</div></div></td>
-        <td>${u.email}</td>
+        <td class="col-email">${u.email}</td>
         <td>${ROLE_LABELS[u.role] || 'Administrador'}</td>
         <td><span class="chip ${u.status==='ativo'?'on':''}">${u.status==='ativo' ? 'Ativo' : 'Suspenso'}</span></td>
-        <td>
+        <td class="usuarios-actions-cell">
           <button class="access-btn" title="Permissões de acesso" onclick="openPermissoesModal('${u.id}')" style="display:inline-flex;align-items:center;gap:5px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
             Permissões
@@ -7007,8 +7073,8 @@
       <tr>
         <td onclick="openSeguradoraForm('${id}')"><div class="row-avatar">${s.logo ? `<div style="width:80px;height:32px;border-radius:8px;background:#fff;border:1px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><img src="${s.logo}" style="width:100%;height:100%;object-fit:contain;padding:2px;"></div>` : `<div class="av" style="${s.cor ? 'background:'+s.cor+'; color:#fff;' : ''}">${initials(s.nome)}</div>`}<div class="cell-strong">${s.nome}</div></div></td>
         <td onclick="openSeguradoraForm('${id}')">${s.comercial || 'A preencher'}</td>
-        <td onclick="openSeguradoraForm('${id}')"><span style="display:inline-block; width:16px; height:16px; border-radius:5px; background:${s.cor || '#132728'}; vertical-align:-3px; margin-right:8px; border:1px solid var(--border);"></span>${s.cor || '—'}</td>
-        <td><button class="access-btn" onclick="deleteSeguradora('${id}')">Excluir</button></td>
+        <td class="col-cor" onclick="openSeguradoraForm('${id}')"><span style="display:inline-block; width:16px; height:16px; border-radius:5px; background:${s.cor || '#132728'}; vertical-align:-3px; margin-right:8px; border:1px solid var(--border);"></span>${s.cor || '—'}</td>
+        <td class="col-excluir"><button class="access-btn" onclick="deleteSeguradora('${id}')">Excluir</button></td>
       </tr>`).join('') : `<tr><td colspan="4" style="text-align:center; color:var(--gray-600);">Nenhuma seguradora cadastrada ainda.</td></tr>`;
   }
 
