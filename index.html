@@ -2607,6 +2607,7 @@
   <div class="modal-box modal-box-lg">
     <h3>Histórico de importações</h3>
     <p class="hint">Toda importação feita a partir de agora fica registrada aqui. Super administradores podem excluir qualquer uma — os dados voltam ao estado anterior. Importações feitas antes desta tela existir não aparecem, pois não haviam sido registradas ainda.</p>
+    <p class="hint" id="historico-diagnostico-perfil" style="display:none;color:#b45309;"></p>
     <div class="list-panel">
       <table>
         <thead><tr><th>Seguradora</th><th>Competência</th><th>Tipo</th><th>Qtd</th><th>Quando</th><th style="width:90px;text-align:center;">Ações</th></tr></thead>
@@ -2753,7 +2754,8 @@
   let currentUserFilial = null; // filial do usuário logado — se preenchida e não for super admin, restringe a visão de produção só a essa filial
 
   function isSuperAdmin(){
-    return ['admin','super_admin','superadmin','administrador'].includes((currentRole||'').toLowerCase());
+    const r = (currentRole||'').toLowerCase().trim();
+    return ['admin','super_admin','superadmin','super admin','administrador','super-admin'].includes(r);
   }
   // Retorna true se o usuário pode importar ou disparar para a seguradora
   function canActOnSeguradora(segId){
@@ -4918,6 +4920,16 @@
 
   async function abrirHistoricoProducao(){
     await renderHistoricoProducao();
+    // Diagnóstico visível: se o botão de excluir não aparecer, mostra aqui o perfil detectado
+    const diagEl = document.getElementById('historico-diagnostico-perfil');
+    if(diagEl){
+      if(!isSuperAdmin()){
+        diagEl.style.display = 'block';
+        diagEl.textContent = `O botão "Excluir" só aparece para o Super Administrador. Seu perfil atual detectado é: "${currentRole || '(vazio)'}".`;
+      } else {
+        diagEl.style.display = 'none';
+      }
+    }
     openModal('modal-historico-producao');
   }
 
@@ -5039,13 +5051,15 @@
         <td><span class="chip">${h.tipo === 'importacao' ? 'Importação' : 'Manual'}</span></td>
         <td style="font-size:12px;color:var(--gray-600);">${h.quantidade || '—'} linhas</td>
         <td style="font-size:12px;color:var(--gray-600);">${quando}</td>
-        <td style="text-align:center;">
-          <div style="display:flex;gap:4px;justify-content:center;align-items:center;">
-            ${h.snapshot_dados ? `<button onclick="verDetalheHistorico('${h.id}')" style="background:none;border:none;cursor:pointer;color:var(--gray-500);padding:4px;" title="Ver detalhes">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <td style="text-align:center;white-space:nowrap;">
+          <div style="display:flex;gap:6px;justify-content:center;align-items:center;">
+            ${h.snapshot_dados ? `<button onclick="verDetalheHistorico('${h.id}')" class="access-btn" style="display:inline-flex;align-items:center;gap:5px;" title="Ver detalhes">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              Ver
             </button>` : ''}
-            ${podeExcluir ? `<button onclick="excluirHistorico('${h.id}','${h.seguradora}','${h.competencia}','${h.tipo}')" style="background:none;border:none;cursor:pointer;color:#dc2626;padding:4px;" title="Apagar esta importação">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            ${podeExcluir ? `<button onclick="excluirHistorico('${h.id}','${h.seguradora}','${h.competencia}','${h.tipo}')" class="access-btn" style="display:inline-flex;align-items:center;gap:5px;color:#dc2626;border-color:#fecaca;background:#fef2f2;" title="Apagar esta importação">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              Excluir
             </button>` : ''}
           </div>
         </td>
