@@ -5356,7 +5356,10 @@
      RELATÓRIOS — mesma base de dados da Produção, mas com exportação
      (Produção é só dashboard; exportar só existe aqui)
   ========================================================== */
+  let RELATORIO_MODELO_ATIVO = null;
+
   function aplicarModeloRelatorio(modelo) {
+    RELATORIO_MODELO_ATIVO = modelo;
     // Mostrar área de consulta, ocultar painel de modelos
     document.getElementById('relatorio-painel-modelos').style.display = 'none';
     document.getElementById('relatorio-consulta-area').style.display = 'block';
@@ -5417,6 +5420,7 @@
   }
 
   function voltarModelosRelatorio(){
+    RELATORIO_MODELO_ATIVO = null;
     document.getElementById('relatorio-painel-modelos').style.display = 'block';
     document.getElementById('relatorio-consulta-area').style.display = 'none';
     limparFiltrosRelatorio();
@@ -5471,12 +5475,22 @@
 
     let linhas = data || [];
     // Linhas importadas "por produto" (sem corretora vinculada) são um cálculo à parte.
-    // Só aparecem aqui se o usuário estiver explicitamente filtrando por produto —
-    // caso contrário, ficam de fora para não duplicar o total já contado por corretora.
-    if(!produtoNome) linhas = linhas.filter(l => l.corretora_id !== null);
+    // No modelo "Produção por Produto", mostramos SEMPRE só essas linhas (mesmo sem
+    // digitar um produto específico no filtro). Nos demais modelos, elas só aparecem
+    // se o usuário explicitamente filtrar por um produto — caso contrário ficam de
+    // fora para não duplicar o total já contado por corretora.
+    if(RELATORIO_MODELO_ATIVO === 'produto'){
+      linhas = linhas.filter(l => l.corretora_id === null);
+    } else if(!produtoNome){
+      linhas = linhas.filter(l => l.corretora_id !== null);
+    }
     if(dataIni) linhas = linhas.filter(l => new Date(l.atualizado_em) >= new Date(dataIni + 'T00:00:00'));
     if(dataFim) linhas = linhas.filter(l => new Date(l.atualizado_em) <= new Date(dataFim + 'T23:59:59'));
-    linhas.sort((a,b) => (GROUPS[a.corretora_id]?.name||'').localeCompare(GROUPS[b.corretora_id]?.name||''));
+    if(RELATORIO_MODELO_ATIVO === 'produto'){
+      linhas.sort((a,b) => (a.produto||'').localeCompare(b.produto||''));
+    } else {
+      linhas.sort((a,b) => (GROUPS[a.corretora_id]?.name||'').localeCompare(GROUPS[b.corretora_id]?.name||''));
+    }
 
     const resumoFiltros = [
       competencia ? `Competência: ${labelCompetencia(competencia)}` : 'Todas as competências',
@@ -5517,7 +5531,7 @@
     kpiGrid.style.display = linhas.length ? 'grid' : 'none';
     const setK=(id,v)=>{ const e=document.getElementById(id); if(e)e.textContent=v; };
     setK('kpi-relatorio-total','R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}));
-    setK('kpi-relatorio-corretoras', new Set(linhas.map(l=>l.corretora_id)).size);
+    setK('kpi-relatorio-corretoras', new Set(linhas.filter(l=>l.corretora_id!==null).map(l=>l.corretora_id)).size);
     setK('kpi-relatorio-seguradoras', new Set(linhas.map(l=>l.seguradora)).size);
     setK('kpi-relatorio-lancamentos', linhas.length);
     const countLabel = document.getElementById('relatorio-count-label');
@@ -5525,14 +5539,19 @@
     const resumoEl = document.getElementById('relatorio-resumo-filtros');
     if(resumoEl) resumoEl.textContent = resumoFiltros;
 
-    tbody.innerHTML = linhas.length ? linhas.map(l => `
+    tbody.innerHTML = linhas.length ? linhas.map(l => {
+      const nomeCorretora = l.corretora_id === null
+        ? '—'
+        : (GROUPS[l.corretora_id] ? GROUPS[l.corretora_id].name : 'Corretora removida');
+      return `
       <tr>
-        <td class="cell-strong">${GROUPS[l.corretora_id] ? GROUPS[l.corretora_id].name : 'Corretora removida'}</td>
+        <td class="cell-strong">${nomeCorretora}</td>
         <td>${l.seguradora}</td>
         <td>${l.produto || '—'}</td>
         <td>R$ ${Number(l.valor||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
         <td>${new Date(l.atualizado_em).toLocaleString('pt-BR')}</td>
-      </tr>`).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--gray-600);padding:30px;">Nenhuma produção encontrada para esse filtro.</td></tr>`;
+      </tr>`;
+    }).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--gray-600);padding:30px;">Nenhuma produção encontrada para esse filtro.</td></tr>`;
   }
 
   function mostrarSplashOp(msg){
@@ -5552,7 +5571,7 @@
     if(typeof XLSX === 'undefined'){ alert('Leitor de planilhas indisponível.'); return; }
 
     const dados = linhas.map(l => ({
-      Corretora: GROUPS[l.corretora_id] ? GROUPS[l.corretora_id].name : 'Corretora removida',
+      Corretora: l.corretora_id === null ? '—' : (GROUPS[l.corretora_id] ? GROUPS[l.corretora_id].name : 'Corretora removida'),
       Seguradora: l.seguradora,
       Produto: l.produto || '',
       Valor: Number(l.valor||0),
@@ -5593,10 +5612,11 @@
 
     doc.autoTable({
       startY: 42,
-      head: [['Corretora', 'Seguradora', 'Valor', 'Atualizado em']],
+      head: [['Corretora', 'Seguradora', 'Produto', 'Valor', 'Atualizado em']],
       body: linhas.map(l => [
-        GROUPS[l.corretora_id] ? GROUPS[l.corretora_id].name : 'Corretora removida',
+        l.corretora_id === null ? '—' : (GROUPS[l.corretora_id] ? GROUPS[l.corretora_id].name : 'Corretora removida'),
         l.seguradora,
+        l.produto || '—',
         'R$ ' + Number(l.valor||0).toLocaleString('pt-BR', {minimumFractionDigits:2}),
         new Date(l.atualizado_em).toLocaleString('pt-BR'),
       ]),
