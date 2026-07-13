@@ -2997,7 +2997,12 @@
     if(labelEl) labelEl.textContent = 'Produção do mês atual';
 
     const { data } = await supabase.from('producao_mensal').select('*');
-    let lista = (data || []).filter(l => l.competencia === mesFiltro);
+    const todas = (data || []).filter(l => l.competencia === mesFiltro);
+    // Ranking de Corretoras e Seguradoras usa só linhas COM corretora vinculada.
+    // Linhas "por produto" (corretora_id nulo) são um cálculo à parte — só alimentam
+    // o Ranking de Produtos, não entram em mais nada aqui.
+    const lista = todas.filter(l => l.corretora_id !== null);
+    const listaProduto = todas.filter(l => l.corretora_id === null);
 
     function buildRank(map){ return Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,7); }
 
@@ -3043,9 +3048,9 @@
     lista.forEach(l => { const k=l.seguradora||'Outras'; segMap[k]=(segMap[k]||0)+(l.valor||0); });
     fillBarChart('rank-seguradora-list', buildRank(segMap));
 
-    // Ranking por produto
+    // Ranking por produto (cálculo à parte, só com linhas importadas por produto)
     const prodMapR = {};
-    lista.forEach(l => { const k=l.produto||'Não informado'; prodMapR[k]=(prodMapR[k]||0)+(l.valor||0); });
+    listaProduto.forEach(l => { const k=l.produto||'Não informado'; prodMapR[k]=(prodMapR[k]||0)+(l.valor||0); });
     fillBarChart('rank-produto-list', buildRank(prodMapR));
   }
 
@@ -5173,7 +5178,9 @@
         const raw = celulas[idxValor];
         if(raw === null || raw === undefined || raw === '') return false;
         const val = parseFloat(String(raw).replace(',','.'));
-        return !isNaN(val) && val !== 0;
+        // Valores negativos são ignorados aqui — na planilha de PRODUTO eles não
+        // devem descontar do total do produto (diferente da planilha de corretora).
+        return !isNaN(val) && val > 0;
       });
 
       if(!dataRows.length){
@@ -5564,6 +5571,10 @@
     const seguradoraFiltro = (document.getElementById('producao-filtro-seguradora')?.value||'').trim().toLowerCase();
     const produtoFiltro = (document.getElementById('producao-filtro-produto')?.value||'').trim().toLowerCase();
     let linhas = data || [];
+    // Linhas importadas "por produto" (sem corretora vinculada) são um cálculo à parte —
+    // servem só para o Ranking de Produtos, e NÃO entram no total geral nem nas
+    // demais métricas desta tela (que são sempre por corretora).
+    linhas = linhas.filter(l => l.corretora_id !== null);
     if(seguradoraFiltro) linhas = linhas.filter(l => (l.seguradora||'').toLowerCase().includes(seguradoraFiltro));
     if(produtoFiltro)    linhas = linhas.filter(l => (l.produto||'').toLowerCase().includes(produtoFiltro));
 
