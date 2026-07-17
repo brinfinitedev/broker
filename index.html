@@ -2369,6 +2369,11 @@
       <div class="f-field"><label>Telefone</label><input id="user-telefone" placeholder="Ex: 11988887777"></div>
     </div>
     <p class="hint" style="margin-top:-8px;">Usados para o usuário aparecer em Aniversariantes e para contato direto.</p>
+    <div class="f-field full">
+      <label>Mensagem de aniversário <span style="font-weight:400;color:var(--gray-600);">(opcional)</span></label>
+      <textarea id="user-mensagem-aniversario" rows="3" placeholder="Deixe em branco para usar a mensagem padrão do sistema" style="width:100%;border:1.4px solid var(--border);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+      <p class="hint" style="margin-top:6px;margin-bottom:0;">Use <code>{nome}</code> onde quiser que o primeiro nome do usuário apareça.</p>
+    </div>
     <div class="f-field"><label>Perfil</label>
       <select id="user-role" onchange="onUserRoleChange()">
         <option value="gestor">Administrador</option>
@@ -2431,6 +2436,11 @@
       <div class="f-field"><label>Telefone / WhatsApp</label><input id="perfil-telefone" placeholder="(00) 00000-0000"></div>
     </div>
     <div class="f-field"><label>Data de nascimento</label><input id="perfil-nascimento" type="date" style="max-width:200px;"></div>
+    <div class="f-field">
+      <label>Mensagem de aniversário <span style="font-weight:400;color:var(--gray-600);">(opcional)</span></label>
+      <textarea id="perfil-mensagem-aniversario" rows="3" placeholder="Deixe em branco para usar a mensagem padrão do sistema" style="width:100%;border:1.4px solid var(--border);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+      <p class="hint" style="margin-top:6px;margin-bottom:0;">Use <code>{nome}</code> onde quiser que seu primeiro nome apareça.</p>
+    </div>
     <div class="f-field" style="margin-top:8px;">
       <label>Nova senha <span style="font-weight:400;color:var(--gray-600);">(deixe em branco para não alterar)</span></label>
       <input id="perfil-senha" type="password" placeholder="••••••••">
@@ -3364,7 +3374,7 @@
     // 3) usuários do sistema
     const { data: perfis } = await supabase.from('profiles').select('*');
     (perfis || []).filter(p => p.nascimento).forEach(p => {
-      lista.push({ nome: p.nome, origem: 'Equipe interna', whatsapp: p.telefone || '', nascimento: p.nascimento });
+      lista.push({ nome: p.nome, origem: 'Equipe interna', whatsapp: p.telefone || '', nascimento: p.nascimento, mensagem: p.mensagem_aniversario || '' });
     });
 
     return lista
@@ -3376,7 +3386,7 @@
   function bdayRowHTML(p){
     const [, mes, dia] = p.nascimento.split('-').map(Number);
     const dataFmt = `${String(dia).padStart(2,'0')}/${String(mes).padStart(2,'0')}`;
-    const msg = MENSAGEM_PADRAO_ANIVERSARIO.replace('{nome}', p.nome.split(' ')[0]);
+    const msg = (p.mensagem && p.mensagem.trim() ? p.mensagem : MENSAGEM_PADRAO_ANIVERSARIO).replace('{nome}', p.nome.split(' ')[0]);
     return `<div class="bday-row">
       <div class="av">${initials(p.nome)}</div>
       <div class="info"><div class="n">${p.nome}</div><div class="d">${p.origem}</div></div>
@@ -3570,6 +3580,7 @@
       document.getElementById('perfil-email').value = p.email || '';
       document.getElementById('perfil-telefone').value = p.telefone || '';
       document.getElementById('perfil-nascimento').value = p.nascimento || '';
+      document.getElementById('perfil-mensagem-aniversario').value = p.mensagem_aniversario || '';
     }
     document.getElementById('perfil-senha').value = '';
     document.getElementById('perfil-error').classList.add('hidden');
@@ -3581,11 +3592,12 @@
     const email = document.getElementById('perfil-email').value.trim();
     const telefone = document.getElementById('perfil-telefone').value.trim();
     const nascimento = document.getElementById('perfil-nascimento').value || null;
+    const mensagem_aniversario = document.getElementById('perfil-mensagem-aniversario').value.trim() || null;
     const senha = document.getElementById('perfil-senha').value;
     const errEl = document.getElementById('perfil-error');
     if(!nome){ errEl.textContent='Nome obrigatório.'; errEl.classList.remove('hidden'); return; }
 
-    const updatePayload = { nome, email, telefone, nascimento };
+    const updatePayload = { nome, email, telefone, nascimento, mensagem_aniversario };
     const { error: profErr } = await supabase.from('profiles').update(updatePayload).eq('id', currentUserId);
     if(profErr){ errEl.textContent='Erro ao salvar: '+profErr.message; errEl.classList.remove('hidden'); return; }
 
@@ -8119,6 +8131,7 @@
     document.getElementById('user-senha-edit-hint').classList.add('hidden');
     document.getElementById('user-nascimento').value = u ? (u.nascimento || '') : '';
     document.getElementById('user-telefone').value = u ? (u.telefone || '') : '';
+    document.getElementById('user-mensagem-aniversario').value = u ? (u.mensagem_aniversario || '') : '';
 
     document.getElementById('user-role').value = u ? (u.role || 'gestor') : 'gestor';
 
@@ -8149,6 +8162,7 @@
     const filial = role === 'admin' ? null : (document.getElementById('user-filial')?.value || null);
     const nascimento = document.getElementById('user-nascimento').value || null;
     const telefone = document.getElementById('user-telefone').value.replace(/\D/g,'');
+    const mensagem_aniversario = document.getElementById('user-mensagem-aniversario').value.trim() || null;
     const errorBox = document.getElementById('user-error');
 
     if(!nome || !email || (!editingUserId && !senha)){
@@ -8168,10 +8182,10 @@
 
     if(editingUserId){
       let { error: updError } = await supabase.from('profiles').update({
-        nome, role, nascimento, telefone, filial,
+        nome, role, nascimento, telefone, filial, mensagem_aniversario,
       }).eq('id', editingUserId);
       if(updError && updError.message && updError.message.includes('filial')){
-        ({ error: updError } = await supabase.from('profiles').update({ nome, role, nascimento, telefone }).eq('id', editingUserId));
+        ({ error: updError } = await supabase.from('profiles').update({ nome, role, nascimento, telefone, mensagem_aniversario }).eq('id', editingUserId));
       }
       saveBtn.disabled = false;
       if(updError){
@@ -8223,13 +8237,13 @@
         return;
       }
       let { error: profileError } = await supabase.from('profiles').upsert({
-        id: signUpData.user.id, nome, email, role, nascimento, telefone, filial,
+        id: signUpData.user.id, nome, email, role, nascimento, telefone, filial, mensagem_aniversario,
         status:'ativo',
         abas_bloqueadas: [],
       }, { onConflict: 'id' });
       if(profileError && profileError.message && profileError.message.includes('filial')){
         ({ error: profileError } = await supabase.from('profiles').upsert({
-          id: signUpData.user.id, nome, email, role, nascimento, telefone,
+          id: signUpData.user.id, nome, email, role, nascimento, telefone, mensagem_aniversario,
           status:'ativo',
           abas_bloqueadas: [],
         }, { onConflict: 'id' }));
