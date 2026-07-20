@@ -6133,6 +6133,21 @@
       colunaValor: 'GWP',
       ignorarZeros: true,
     },
+    'allianz': {
+      tipo: 'corretora',
+      aliases: ['allianz seguros', 'allianz'],
+      // Planilha "Performance" da Allianz — aba "TODOS":
+      // tem 2 linhas de cabeçalho (linha 1 = grupos mesclados como "AUTOMÓVEL",
+      // "VIDA", "Total"; linha 2 = subtítulos de cada grupo). Por isso usamos
+      // posição fixa de coluna (ignora nome de cabeçalho) e pulamos a linha 2
+      // como se fosse dado.
+      // Col A (idx 0): Corretor - Susep Pai  ← corretora
+      // Col O (idx 14): valor por corretora — confirmado com o usuário
+      idxCorretorFixo: 0,
+      idxValorFixo: 14,
+      pularPrimeiraLinhaDados: true,
+      descartarColunaA: false,
+    },
   };
 
   // Templates que suportam importação "por produto"
