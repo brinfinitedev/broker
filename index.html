@@ -1317,7 +1317,7 @@
           <div class="who" style="display:flex; align-items:center; gap:8px; flex:1;">
             <div style="flex:1; min-width:0; cursor:pointer;" onclick="abrirPerfilUsuario()" title="Editar perfil">
               <div class="n" id="user-name" style="text-decoration:underline dotted;text-underline-offset:3px;">Marina Gouveia</div>
-              <div class="r" id="user-role">Administrador</div>
+              <div class="r" id="sidebar-user-role">Administrador</div>
             </div>
             <button class="icon-btn" onclick="logout()" title="Sair" style="flex-shrink:0;">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:18px; height:18px;"><path d="M15 17l5-5-5-5M20 12H8M12 19H6a2 2 0 01-2-2V7a2 2 0 012-2h6"/></svg>
@@ -3211,7 +3211,7 @@
       const roles = el.getAttribute('data-role').split(/\s+/);
       el.classList.toggle('hidden', !roles.includes(currentRole));
     });
-    document.getElementById('user-role').textContent = ROLE_LABELS[currentRole] || 'Administrador';
+    document.getElementById('sidebar-user-role').textContent = ROLE_LABELS[currentRole] || 'Administrador';
     renderAniversariantes();
   }
 
