@@ -6136,7 +6136,9 @@
     'allianz': {
       tipo: 'corretora',
       aliases: ['allianz seguros', 'allianz'],
-      // Planilha "Performance" da Allianz — aba "TODOS":
+      // Planilha "Performance" da Allianz tem várias abas — os dados por
+      // corretora estão na aba "TODOS" (não é a primeira aba do arquivo!).
+      abaAlvo: 'TODOS',
       // tem 2 linhas de cabeçalho (linha 1 = grupos mesclados como "AUTOMÓVEL",
       // "VIDA", "Total"; linha 2 = subtítulos de cada grupo). Por isso usamos
       // posição fixa de coluna (ignora nome de cabeçalho) e pulamos a linha 2
@@ -7434,10 +7436,17 @@
     const reader = new FileReader();
     reader.onload = async (e) => {
       if(window._importSessionId !== meuSessionId){ esconderSplashOp(); return; }
+      const template = encontrarTemplate(seguradora);
       let linhas;
       try {
         const wb = XLSX.read(e.target.result, { type:'array' });
-        const primeiraAba = wb.Sheets[wb.SheetNames[0]];
+        // Algumas seguradoras (ex: Allianz) mandam o arquivo com várias abas — a aba
+        // com os dados que a gente quer nem sempre é a primeira. Se o template
+        // indicar qual aba usar (abaAlvo), usamos ela; senão, pega a primeira mesmo.
+        const nomeAba = (template?.abaAlvo && wb.SheetNames.includes(template.abaAlvo))
+          ? template.abaAlvo
+          : wb.SheetNames[0];
+        const primeiraAba = wb.Sheets[nomeAba];
         linhas = XLSX.utils.sheet_to_json(primeiraAba, { header:1, defval:'' });
       } catch(err){
         resultBox.innerHTML = `<p class="hint">Não foi possível ler este arquivo (${err.message}). Verifique se é um .xlsx, .xls ou .csv válido.</p>`;
@@ -7466,7 +7475,6 @@
         });
       }
 
-      const template = encontrarTemplate(seguradora);
       let idxCorretor = -1, idxValor = -1;
       let headerRowFinal = headerRow;
 
