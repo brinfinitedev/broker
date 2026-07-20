@@ -8194,7 +8194,7 @@
       let { error: updError } = await supabase.from('profiles').update({
         nome, role, nascimento, telefone, filial, mensagem_aniversario,
       }).eq('id', editingUserId);
-      if(updError && updError.message && updError.message.includes('filial')){
+      if(updError && updError.code === '42703'){
         ({ error: updError } = await supabase.from('profiles').update({ nome, role, nascimento, telefone, mensagem_aniversario }).eq('id', editingUserId));
       }
       saveBtn.disabled = false;
@@ -8251,7 +8251,7 @@
         status:'ativo',
         abas_bloqueadas: [],
       }, { onConflict: 'id' });
-      if(profileError && profileError.message && profileError.message.includes('filial')){
+      if(profileError && profileError.code === '42703'){
         ({ error: profileError } = await supabase.from('profiles').upsert({
           id: signUpData.user.id, nome, email, role, nascimento, telefone, mensagem_aniversario,
           status:'ativo',
