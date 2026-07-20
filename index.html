@@ -6450,8 +6450,25 @@
     return _cachedIP;
   }
 
+  let _cachedLocalizacao = null;
+  // Localização aproximada a partir do IP (cidade/estado/país) — não é a localização
+  // exata do dispositivo (isso exigiria pedir permissão de geolocalização ao usuário),
+  // mas dá uma noção boa de onde o acesso está partindo.
+  async function getClientLocation(){
+    if(_cachedLocalizacao) return _cachedLocalizacao;
+    try{
+      const r = await fetch('https://ipapi.co/json/');
+      const j = await r.json();
+      if(!_cachedIP) _cachedIP = j.ip || '—';
+      const partes = [j.city, j.region, j.country_name].filter(Boolean);
+      _cachedLocalizacao = partes.length ? partes.join(' - ') : '—';
+    } catch(e){ _cachedLocalizacao = '—'; }
+    return _cachedLocalizacao;
+  }
+
   async function registrarLog(action, details){
     try {
+      const localizacao = await getClientLocation();
       const ip = await getClientIP();
       await supabase.from('system_logs').insert({
         user_id: currentUserId || null,
@@ -6459,6 +6476,7 @@
         role: currentRole,
         corretora_nome: (editingCorretoraGid && GROUPS[editingCorretoraGid]) ? GROUPS[editingCorretoraGid].name : '',
         ip_address: ip,
+        localizacao,
         action, details: details || '',
         created_at: new Date().toISOString(),
       });
@@ -8050,14 +8068,14 @@
           <td data-label="Detalhes" style="color:var(--gray-600);font-size:12px;">${esc(l.details) || '—'}</td>
         </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--gray-600);">Nenhum registro encontrado para esse filtro.</td></tr>`;
     } else {
-      thead.innerHTML = `<tr><th>Data/Hora</th><th>Usuário</th><th>Papel</th><th>IP</th><th>Ação</th></tr>`;
+      thead.innerHTML = `<tr><th>Data/Hora</th><th>Usuário</th><th>Papel</th><th>IP</th><th>Localização</th></tr>`;
       tbody.innerHTML = pagina.length ? pagina.map(l => `
         <tr>
           <td data-label="Data/Hora" style="white-space:nowrap;">${new Date(l.created_at).toLocaleString('pt-BR')}</td>
           <td data-label="Usuário"><b>${esc(l.user_name) || '—'}</b></td>
           <td data-label="Papel"><span class="log-role-badge ${roleClass(l.role)}">${ROLE_LABELS[l.role] || esc(l.role) || '—'}</span></td>
           <td data-label="IP" style="font-family:monospace;font-size:12px;">${esc(l.ip_address) || '—'}</td>
-          <td data-label="Ação">${esc(l.action)}</td>
+          <td data-label="Localização">${esc(l.localizacao) || '—'}</td>
         </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--gray-600);">Nenhum acesso registrado para esse filtro.</td></tr>`;
     }
 
