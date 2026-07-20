@@ -3226,12 +3226,12 @@
     const valStr = c.validade ? ` · válido até ${new Date(c.validade+'T00:00:00').toLocaleDateString('pt-BR')}` : '';
     return `<div style="padding:12px 14px;border:1.4px solid var(--border);border-radius:12px;background:#fff;margin-bottom:8px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <div class="av" style="width:26px;height:26px;font-size:10px;">${initials(autorNome)}</div>
-        <span style="font-size:12px;font-weight:700;">${autorNome}</span>
-        <span style="font-size:11px;color:var(--gray-600);margin-left:auto;">${dt}${valStr}</span>
+        <div class="av" style="width:26px;height:26px;font-size:10px;">${esc(initials(autorNome))}</div>
+        <span style="font-size:12px;font-weight:700;">${esc(autorNome)}</span>
+        <span style="font-size:11px;color:var(--gray-600);margin-left:auto;">${esc(dt)}${esc(valStr)}</span>
         ${showDelete ? `<button onclick="deleteComunicado('${c.id}')" style="background:none;border:none;color:var(--gray-600);cursor:pointer;font-size:12px;padding:0 4px;" title="Excluir">✕</button>` : ''}
       </div>
-      <div style="font-size:13px;line-height:1.55;">${c.mensagem}</div>
+      <div style="font-size:13px;line-height:1.55;">${esc(c.mensagem)}</div>
     </div>`;
   }
 
@@ -3305,13 +3305,13 @@
       const expirado = c.validade && new Date(c.validade+'T23:59:59') < new Date();
       return `<div style="padding:12px 14px;border:1.4px solid var(--border);border-radius:12px;background:${expirado?'#fafafa':'#fff'};margin-bottom:8px;${expirado?'opacity:.65;':''}">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-          <div class="av" style="width:26px;height:26px;font-size:10px;">${initials(autor?autor.nome:'?')}</div>
-          <span style="font-size:12px;font-weight:700;">${autor?autor.nome:'?'}</span>
+          <div class="av" style="width:26px;height:26px;font-size:10px;">${esc(initials(autor?autor.nome:'?'))}</div>
+          <span style="font-size:12px;font-weight:700;">${esc(autor?autor.nome:'?')}</span>
           <span style="font-size:11px;color:var(--gray-600);margin-left:auto;">${new Date(c.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
           ${c.validade?`<span style="font-size:10.5px;padding:2px 8px;border-radius:99px;background:${expirado?'var(--surface-2)':'#e8f5e9'};color:${expirado?'var(--gray-600)':'green'};font-weight:700;">${expirado?'Expirado':'Válido até '+new Date(c.validade+'T00:00:00').toLocaleDateString('pt-BR')}</span>`:''}
           <button onclick="deleteComunicado('${c.id}')" style="background:none;border:none;color:var(--gray-600);cursor:pointer;font-size:13px;padding:0 4px;" title="Excluir">✕</button>
         </div>
-        <div style="font-size:13px;line-height:1.55;">${c.mensagem}</div>
+        <div style="font-size:13px;line-height:1.55;">${esc(c.mensagem)}</div>
       </div>`;
     }).join('') : `<p class="hint">Nenhum comunicado publicado ainda.</p>`;
   }
@@ -3388,11 +3388,11 @@
     const dataFmt = `${String(dia).padStart(2,'0')}/${String(mes).padStart(2,'0')}`;
     const msg = (p.mensagem && p.mensagem.trim() ? p.mensagem : MENSAGEM_PADRAO_ANIVERSARIO).replace('{nome}', p.nome.split(' ')[0]);
     return `<div class="bday-row">
-      <div class="av">${initials(p.nome)}</div>
-      <div class="info"><div class="n">${p.nome}</div><div class="d">${p.origem}</div></div>
+      <div class="av">${esc(initials(p.nome))}</div>
+      <div class="info"><div class="n">${esc(p.nome)}</div><div class="d">${esc(p.origem)}</div></div>
       <div class="bday-actions">
-        <span class="tag">${p.dias === 0 ? 'Hoje' : dataFmt}</span>
-        ${p.whatsapp ? `<button class="bday-wa-btn" title="Mandar parabéns no WhatsApp" onclick="openWhats('${p.whatsapp}', '${msg.replace(/'/g,"\\'")}')">
+        <span class="tag">${p.dias === 0 ? 'Hoje' : esc(dataFmt)}</span>
+        ${p.whatsapp ? `<button class="bday-wa-btn" title="Mandar parabéns no WhatsApp" data-whats="${esc(p.whatsapp)}" data-msg="${esc(msg)}" onclick="openWhats(this.dataset.whats, this.dataset.msg)">
           <svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1112 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8 1-.1.1-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.4c.1-.1.2-.3.2-.4.1-.1 0-.3 0-.4l-.7-1.7c-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.4.5.2.9.4 1.3.5.5.2 1 .1 1.3.1.4 0 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>
         </button>` : ''}
       </div>
@@ -3840,7 +3840,7 @@
     if(!sel) return;
     const atual = sel.value;
     sel.innerHTML = '<option value="">— Selecione uma seguradora —</option>' +
-      Object.entries(SEGURADORAS).map(([id, s]) => `<option value="${id}" ${atual===id?'selected':''}>${s.nome}</option>`).join('');
+      Object.entries(SEGURADORAS).map(([id, s]) => `<option value="${id}" ${atual===id?'selected':''}>${esc(s.nome)}</option>`).join('');
     onWhatsSeguradoraChange();
   }
 
@@ -3950,11 +3950,11 @@
     const comentarios = c.comentarios || [];
     return `
       <div class="kcard" draggable="true" data-id="${c.id}" ondragstart="dragCard(event)" onclick="openEditCard('${c.id}')">
-        <div class="t">${c.titulo}</div>
-        ${c.campo_livre ? `<div class="m">${c.campo_livre}</div>` : ''}
-        <div class="attach-list">${anexos.map(a=>`<span>📎 ${a}</span>`).join('')}</div>
+        <div class="t">${esc(c.titulo)}</div>
+        ${c.campo_livre ? `<div class="m">${esc(c.campo_livre)}</div>` : ''}
+        <div class="attach-list">${anexos.map(a=>`<span>📎 ${esc(a)}</span>`).join('')}</div>
         ${comentarios.length ? `<div style="font-size:11px;color:var(--gray-600);margin-top:4px;">💬 ${comentarios.length} comentário${comentarios.length>1?'s':''}</div>` : ''}
-        ${membros.length ? `<div class="kcard-membros">${membros.map(m => `<span class="kcard-avatar" title="${m.nome}">${initials(m.nome)}</span>`).join('')}</div>` : ''}
+        ${membros.length ? `<div class="kcard-membros">${membros.map(m => `<span class="kcard-avatar" title="${esc(m.nome)}">${esc(initials(m.nome))}</span>`).join('')}</div>` : ''}
       </div>`;
   }
 
@@ -4041,9 +4041,9 @@
         const corretoraNome = r.corretora_id ? (GROUPS[r.corretora_id]?.name || r.corretora_nome || '—') : (r.corretora_nome || '—');
         const corDias = dias === null ? 'var(--gray-600)' : (dias <= 30 ? '#dc2626' : (dias <= 60 ? '#b45309' : 'var(--gray-600)'));
         return `<div class="kcard" draggable="true" data-id="${r.id}" ondragstart="dragFunilCard(event)" onclick="openFunilCard('${r.id}')">
-          <div class="t">${r.cliente}</div>
-          <div class="m">${corretoraNome}</div>
-          <div class="m">${r.produto || '—'} · ${r.seguradora || '—'}</div>
+          <div class="t">${esc(r.cliente)}</div>
+          <div class="m">${esc(corretoraNome)}</div>
+          <div class="m">${esc(r.produto) || '—'} · ${esc(r.seguradora) || '—'}</div>
           <div class="tags"><span style="color:${corDias};">${labelDiasVigencia(dias)}</span></div>
         </div>`;
       }).join('');
@@ -4350,13 +4350,13 @@
       return `
         <div class="campanha-card" onclick="abrirDetalheCampanha('${c.id}')">
           <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:10px;">
-            <div style="font-size:14.5px;font-weight:800;">${c.nome}</div>
+            <div style="font-size:14.5px;font-weight:800;">${esc(c.nome)}</div>
             <span class="campanha-status-chip ${status}">${CAMPANHA_STATUS_LABEL[status]}</span>
           </div>
           <div style="font-size:11.5px;color:var(--gray-600);margin-bottom:12px;">
             ${new Date(c.data_inicio+'T00:00:00').toLocaleDateString('pt-BR')} — ${new Date(c.data_fim+'T00:00:00').toLocaleDateString('pt-BR')}
           </div>
-          ${segs.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${segs.map(s=>`<span class="chip" style="font-size:10px;">${s}</span>`).join('')}</div>` : ''}
+          ${segs.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">${segs.map(s=>`<span class="chip" style="font-size:10px;">${esc(s)}</span>`).join('')}</div>` : ''}
           ${c.meta_geral ? `
             <div class="progress-track"><div class="progress-fill ${progressBarClasse(pct)}" style="width:${Math.min(100,pct)}%;"></div></div>
             <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11.5px;">
@@ -4371,11 +4371,11 @@
   function popularSelectsCampanha(){
     const nomes = Object.values(SEGURADORAS).map(s=>s.nome).sort((a,b)=>a.localeCompare(b));
     const selSeg = document.getElementById('campanha-nova-meta-seg-nome');
-    selSeg.innerHTML = `<option value="">Selecione a seguradora...</option>` + nomes.map(n=>`<option value="${n}">${n}</option>`).join('');
+    selSeg.innerHTML = `<option value="">Selecione a seguradora...</option>` + nomes.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
 
     const corretorasOrdenadas = Object.entries(GROUPS).sort((a,b)=>a[1].name.localeCompare(b[1].name));
     const selCor = document.getElementById('campanha-nova-meta-cor-nome');
-    selCor.innerHTML = `<option value="">Selecione a corretora...</option>` + corretorasOrdenadas.map(([gid,g])=>`<option value="${gid}">${g.name}</option>`).join('');
+    selCor.innerHTML = `<option value="">Selecione a corretora...</option>` + corretorasOrdenadas.map(([gid,g])=>`<option value="${gid}">${esc(g.name)}</option>`).join('');
   }
 
   function renderMetasSegCampanhaList(){
@@ -4384,7 +4384,7 @@
     wrap.innerHTML = PENDING_METAS_SEG_CAMPANHA.length
       ? PENDING_METAS_SEG_CAMPANHA.map((m,i)=>`
         <div class="meta-row" style="border:none;padding:6px 0;">
-          <span class="nome" title="${m.seguradora}">${m.seguradora}</span>
+          <span class="nome" title="${esc(m.seguradora)}">${esc(m.seguradora)}</span>
           <span style="flex:1;font-size:12px;color:var(--gray-600);">${fmtMetaCampanha(m.meta, tipo)}</span>
           <button onclick="removeMetaSeguradoraCampanha(${i})" style="color:#dc2626;font-weight:800;background:none;border:none;cursor:pointer;">✕</button>
         </div>`).join('')
@@ -4621,7 +4621,7 @@
           const total = totalCampanhaSeguradora(c.id, c.tipo_meta, m.seguradora);
           const pct = m.meta ? Math.round((total/m.meta)*100) : 0;
           return `<div class="meta-row">
-            <span class="nome" title="${m.seguradora}">${m.seguradora}</span>
+            <span class="nome" title="${esc(m.seguradora)}">${esc(m.seguradora)}</span>
             <div class="bar"><div class="progress-track"><div class="progress-fill ${progressBarClasse(pct)}" style="width:${Math.min(100,pct)}%;"></div></div></div>
             <span class="pct">${pct}%</span>
           </div>`;
@@ -4636,7 +4636,7 @@
           const pct = m.meta ? Math.round((total/m.meta)*100) : 0;
           const nome = GROUPS[m.corretora_id]?.name || 'Corretora removida';
           return `<div class="meta-row">
-            <span class="nome" title="${nome}">${nome}</span>
+            <span class="nome" title="${esc(nome)}">${esc(nome)}</span>
             <div class="bar"><div class="progress-track"><div class="progress-fill ${progressBarClasse(pct)}" style="width:${Math.min(100,pct)}%;"></div></div></div>
             <span class="pct">${pct}%</span>
           </div>`;
@@ -4653,10 +4653,10 @@
       ? lancamentos.map(l => `
         <tr>
           <td>${l.data ? new Date(l.data+'T00:00:00').toLocaleDateString('pt-BR') : '—'}</td>
-          <td>${l.corretora_id ? (GROUPS[l.corretora_id]?.name || '—') : '—'}</td>
-          <td>${l.seguradora || '—'}</td>
+          <td>${l.corretora_id ? esc(GROUPS[l.corretora_id]?.name) || '—' : '—'}</td>
+          <td>${esc(l.seguradora) || '—'}</td>
           <td>${fmtMetaCampanha(valorLancamentoCampanha(l, c.tipo_meta), c.tipo_meta)}</td>
-          <td>${l.observacao || '—'}</td>
+          <td>${esc(l.observacao) || '—'}</td>
           <td><button onclick="excluirLancamentoCampanha('${l.id}')" style="color:#dc2626;font-weight:800;background:none;border:none;cursor:pointer;">✕</button></td>
         </tr>`).join('')
       : `<tr><td colspan="6" style="text-align:center;color:var(--gray-600);padding:30px;">Nenhum lançamento registrado ainda.</td></tr>`;
@@ -4675,12 +4675,12 @@
     const corretorasDaCampanha = (c.metas_corretoras||[]).map(m=>m.corretora_id);
     const listaCor = (corretorasDaCampanha.length ? corretorasDaCampanha.map(gid=>[gid, GROUPS[gid]]) : Object.entries(GROUPS))
       .filter(([,g])=>g).sort((a,b)=>a[1].name.localeCompare(b[1].name));
-    selCor.innerHTML = `<option value="">— Não atribuir —</option>` + listaCor.map(([gid,g])=>`<option value="${gid}">${g.name}</option>`).join('');
+    selCor.innerHTML = `<option value="">— Não atribuir —</option>` + listaCor.map(([gid,g])=>`<option value="${gid}">${esc(g.name)}</option>`).join('');
 
     const selSeg = document.getElementById('lancamento-seguradora');
     const segsCampanha = (c.metas_seguradoras||[]).map(m=>m.seguradora);
     const listaSeg = (segsCampanha.length ? segsCampanha : Object.values(SEGURADORAS).map(s=>s.nome)).sort((a,b)=>a.localeCompare(b));
-    selSeg.innerHTML = `<option value="">— Não atribuir —</option>` + listaSeg.map(n=>`<option value="${n}">${n}</option>`).join('');
+    selSeg.innerHTML = `<option value="">— Não atribuir —</option>` + listaSeg.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
 
     openModal('modal-lancamento-campanha');
   }
@@ -4815,7 +4815,7 @@
   function renderAttachChips(){
     const wrap = document.getElementById('card-anexo-list');
     wrap.innerHTML = pendingAttachments.map((name,i) => `
-      <span class="chip-file"><span>📎 ${name}</span><button onclick="removeAttachment(${i})">✕</button></span>
+      <span class="chip-file"><span>📎 ${esc(name)}</span><button onclick="removeAttachment(${i})">✕</button></span>
     `).join('');
   }
 
@@ -4828,7 +4828,7 @@
     wrap.innerHTML = pendingHistorico.map((h,i) => `
       <div class="history-item">
         <div class="dot-col"><div class="dot"></div>${i < pendingHistorico.length-1 ? '<div class="line"></div>' : ''}</div>
-        <div class="txt">${h.text}<span class="when">${h.when}</span></div>
+        <div class="txt">${esc(h.text)}<span class="when">${esc(h.when)}</span></div>
       </div>
     `).join('');
   }
@@ -4841,12 +4841,12 @@
       return;
     }
     wrap.innerHTML = pendingComentarios.map(cm => {
-      const foto = cm.foto ? `<img src="${cm.foto}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : initials(cm.autor||'?');
+      const foto = cm.foto ? `<img src="${esc(cm.foto)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : esc(initials(cm.autor||'?'));
       return `<div style="display:flex;gap:10px;align-items:flex-start;">
         <div class="av" style="width:32px;height:32px;font-size:11px;flex-shrink:0;">${foto}</div>
         <div style="flex:1;background:var(--surface-2);border-radius:12px;padding:10px 14px;">
-          <div style="font-weight:700;font-size:12.5px;">${cm.autor||'Usuário'} <span style="font-weight:500;color:var(--gray-600);font-size:11px;">${cm.quando}</span></div>
-          <div style="margin-top:4px;font-size:13px;line-height:1.5;">${cm.texto}</div>
+          <div style="font-weight:700;font-size:12.5px;">${esc(cm.autor||'Usuário')} <span style="font-weight:500;color:var(--gray-600);font-size:11px;">${esc(cm.quando)}</span></div>
+          <div style="margin-top:4px;font-size:13px;line-height:1.5;">${esc(cm.texto)}</div>
         </div>
       </div>`;
     }).join('');
@@ -4873,8 +4873,8 @@
     wrap.innerHTML = users.length ? users.map(u => `
       <label class="chk-item" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
         <input type="checkbox" value="${u.id}" ${selecionados.includes(u.id) ? 'checked' : ''} onchange="atualizarMembrosDisplay()" style="accent-color:var(--black);width:15px;height:15px;cursor:pointer;">
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--black);color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">${initials(u.nome)}</span>
-        <span style="font-size:13px;font-weight:600;">${u.nome}</span>
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--black);color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">${esc(initials(u.nome))}</span>
+        <span style="font-size:13px;font-weight:600;">${esc(u.nome)}</span>
       </label>
     `).join('') : `<p style="font-size:12.5px;color:var(--gray-600);margin:8px 0;">Nenhum usuário cadastrado ainda.</p>`;
     atualizarMembrosDisplay();
@@ -4988,8 +4988,8 @@
       return `
         <div class="material-seguradora-block">
           <div class="material-seguradora-head">
-            <div class="logo" style="background:${cor};">${s.logo ? `<img src="${s.logo}">` : initials(s.nome)}</div>
-            <h3>${s.nome}</h3>
+            <div class="logo" style="background:${cor};">${s.logo ? `<img src="${esc(s.logo)}">` : esc(initials(s.nome))}</div>
+            <h3>${esc(s.nome)}</h3>
             <span class="count">${materiaisDaSeguradora.length} material(is)</span>
           </div>
           <div class="files-grid">
@@ -4997,9 +4997,9 @@
               const data2 = new Date(m.created_at).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
               return `<div class="file-card">
                 <span class="del-file" onclick="deleteMaterial('${m.id}')" title="Excluir">✕</span>
-                <div class="ext" style="background:${cor};">${m.extensao || 'DOC'}</div>
-                <div class="name">${m.nome}</div>
-                ${m.produto ? `<span style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:99px;background:var(--surface-2);border:1px solid var(--border);font-size:10.5px;font-weight:700;">${m.produto}</span>` : (m.tipo==='institucional'?`<span style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:99px;background:#e8f5e9;font-size:10.5px;font-weight:700;color:green;">Institucional</span>`:'') }
+                <div class="ext" style="background:${cor};">${esc(m.extensao) || 'DOC'}</div>
+                <div class="name">${esc(m.nome)}</div>
+                ${m.produto ? `<span style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:99px;background:var(--surface-2);border:1px solid var(--border);font-size:10.5px;font-weight:700;">${esc(m.produto)}</span>` : (m.tipo==='institucional'?`<span style="display:inline-block;margin-top:4px;padding:2px 8px;border-radius:99px;background:#e8f5e9;font-size:10.5px;font-weight:700;color:green;">Institucional</span>`:'') }
                 <div class="meta">Atualizado ${data2}</div>
               </div>`;
             }).join('') : `<p class="hint" style="grid-column:1/-1;">Nenhum material desta seguradora ainda.</p>`}
@@ -5094,7 +5094,7 @@
   function chipSeguradora(nome, cor){
     if(!nome) return '';
     const bg = cor || '#132728';
-    return `<span style="display:inline-block; padding:3px 9px; border-radius:999px; background:${bg}; color:#fff; font-size:11px; font-weight:700; margin-right:6px;">${nome}</span>`;
+    return `<span style="display:inline-block; padding:3px 9px; border-radius:999px; background:${esc(bg)}; color:#fff; font-size:11px; font-weight:700; margin-right:6px;">${esc(nome)}</span>`;
   }
 
   const CONTATOS_PAGE_SIZE = 30;
@@ -5111,11 +5111,11 @@
     // popula selects de filtro (uma vez)
     const selCorretora = document.getElementById('contatos-filtro-corretora');
     if(selCorretora && selCorretora.options.length <= 1){
-      selCorretora.innerHTML = `<option value="">Todas</option>` + Object.entries(GROUPS).map(([gid, g]) => `<option value="${g.name}">${g.name}</option>`).join('');
+      selCorretora.innerHTML = `<option value="">Todas</option>` + Object.entries(GROUPS).map(([gid, g]) => `<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
     }
     const selSeguradora = document.getElementById('contatos-filtro-seguradora');
     if(selSeguradora && selSeguradora.options.length <= 1){
-      selSeguradora.innerHTML = `<option value="">Todas</option>` + Object.entries(SEGURADORAS).map(([, s]) => `<option value="${s.nome}">${s.nome}</option>`).join('');
+      selSeguradora.innerHTML = `<option value="">Todas</option>` + Object.entries(SEGURADORAS).map(([, s]) => `<option value="${esc(s.nome)}">${esc(s.nome)}</option>`).join('');
     }
     // filial filter — built from GROUPS
     const selFilial = document.getElementById('contatos-filtro-filial');
@@ -5156,27 +5156,23 @@
 
     tbody.innerHTML = pagina.length ? pagina.map(c => {
       const chip = c.seguradoraNome ? chipSeguradora(c.seguradoraNome, c.seguradoraCor) : '';
-      const corretoraInline = c.corretoraNome ? `<div class="hint" style="margin:2px 0 0;">${c.corretoraNome}</div>` : '';
+      const corretoraInline = c.corretoraNome ? `<div class="hint" style="margin:2px 0 0;">${esc(c.corretoraNome)}</div>` : '';
       const textoCopiaTudo = [c.nome, c.whatsapp, c.email].filter(Boolean).join(' | ');
-      const escapedNome = (c.nome||'').replace(/'/g,"\'").replace(/"/g,'&quot;');
-      const escapedWa = (c.whatsapp||'').replace(/'/g,"\'");
-      const escapedEmail = (c.email||'').replace(/'/g,"\'");
-      const escapedTudo = textoCopiaTudo.replace(/'/g,"\'");
       return `
       <tr>
-        <td><div class="cell-strong">${chip}${c.nome}</div>${corretoraInline}</td>
-        <td>${c.whatsapp || '—'}</td>
-        <td>${c.email || '—'}</td>
-        <td style="font-size:12px;color:var(--gray-600);">${c.filial||'—'}</td>
-        <td><span class="chip">${labelOrigem(c.origem)}</span></td>
+        <td><div class="cell-strong">${chip}${esc(c.nome)}</div>${corretoraInline}</td>
+        <td>${esc(c.whatsapp) || '—'}</td>
+        <td>${esc(c.email) || '—'}</td>
+        <td style="font-size:12px;color:var(--gray-600);">${esc(c.filial) || '—'}</td>
+        <td><span class="chip">${esc(labelOrigem(c.origem))}</span></td>
         <td style="white-space:nowrap;">
           <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
             <button class="btn-sm" onclick="abrirEditarContato('${c.id}','${c.origem}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-            ${c.nome ? `<button class="btn-sm" onclick="copiarTexto('${escapedNome}',this)" title="Copiar nome">Nome</button>` : ''}
-            ${c.whatsapp ? `<button class="btn-sm" onclick="copiarTexto('${escapedWa}',this)" title="Copiar número">Nº</button>` : ''}
-            ${c.email ? `<button class="btn-sm" onclick="copiarTexto('${escapedEmail}',this)" title="Copiar e-mail">E-mail</button>` : ''}
-            <button class="btn-sm" onclick="copiarTexto('${escapedTudo}',this)" title="Copiar tudo">Tudo</button>
-            ${c.whatsapp ? `<button class="access-btn" onclick="abrirWhatsappContato('${escapedWa}')" title="WhatsApp"><svg viewBox="0 0 24 24" fill="#25D366" style="width:13px;height:13px;"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm4.4 13.1c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8 1-.1.1-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.4.2-.4c.1-.1 0-.3 0-.4l-.7-1.7c-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.4.5.2.9.4 1.3.5.5.2 1 .1 1.3.1.4 0 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1z"/></svg></button>` : ''}
+            ${c.nome ? `<button class="btn-sm" data-copiar="${esc(c.nome)}" onclick="copiarTexto(this.dataset.copiar,this)" title="Copiar nome">Nome</button>` : ''}
+            ${c.whatsapp ? `<button class="btn-sm" data-copiar="${esc(c.whatsapp)}" onclick="copiarTexto(this.dataset.copiar,this)" title="Copiar número">Nº</button>` : ''}
+            ${c.email ? `<button class="btn-sm" data-copiar="${esc(c.email)}" onclick="copiarTexto(this.dataset.copiar,this)" title="Copiar e-mail">E-mail</button>` : ''}
+            <button class="btn-sm" data-copiar="${esc(textoCopiaTudo)}" onclick="copiarTexto(this.dataset.copiar,this)" title="Copiar tudo">Tudo</button>
+            ${c.whatsapp ? `<button class="access-btn" data-whats="${esc(c.whatsapp)}" onclick="abrirWhatsappContato(this.dataset.whats)" title="WhatsApp"><svg viewBox="0 0 24 24" fill="#25D366" style="width:13px;height:13px;"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm4.4 13.1c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8 1-.1.1-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.4.2-.4c.1-.1 0-.3 0-.4l-.7-1.7c-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.4.5.2.9.4 1.3.5.5.2 1 .1 1.3.1.4 0 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1z"/></svg></button>` : ''}
             ${c.editavel ? `<button class="access-btn" onclick="deleteContato('${c.id}')">Excluir</button>` : ''}
           </div>
         </td>
@@ -5397,11 +5393,11 @@
     Object.values(SEGURADORAS).forEach(s => segs.add(s.nome));
     Object.values(GROUPS).forEach(g => (g.seguradoras||[]).forEach(s => segs.add(s)));
     const selSeg = document.getElementById('seletor-filtro-seguradora');
-    selSeg.innerHTML = '<option value="">Todas</option>' + [...segs].sort().map(s=>`<option value="${s}">${s}</option>`).join('');
+    selSeg.innerHTML = '<option value="">Todas</option>' + [...segs].sort().map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
 
     // populate corretora with all initially
     const selCorr = document.getElementById('seletor-filtro-corretora');
-    selCorr.innerHTML = '<option value="">Todas</option>' + Object.values(GROUPS).map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+    selCorr.innerHTML = '<option value="">Todas</option>' + Object.values(GROUPS).map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
 
     document.getElementById('seletor-filtro-texto').value = '';
     selSeg.value = '';
@@ -5420,11 +5416,11 @@
       // Show only corretoras linked to this seguradora
       const corrsFiltradas = Object.values(GROUPS).filter(g => (g.seguradoras||[]).includes(segFiltro));
       selCorr.innerHTML = '<option value="">Todas as vinculadas</option>' +
-        corrsFiltradas.map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+        corrsFiltradas.map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
     } else {
       // Reset to all corretoras
       selCorr.innerHTML = '<option value="">Todas</option>' +
-        Object.values(GROUPS).map(g=>`<option value="${g.name}">${g.name}</option>`).join('');
+        Object.values(GROUPS).map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
     }
     selCorr.value = '';
     filtrarSeletor();
@@ -5455,8 +5451,8 @@
     wrap.innerHTML = lista.length ? lista.map(c => {
       const corrNome = (c.corretora_id && GROUPS[c.corretora_id]) ? GROUPS[c.corretora_id].name : '';
       return `<label class="perm-row">
-        <span class="perm-row-label">${c.nome}${corrNome?` <span style="font-size:11px;color:var(--gray-600);">· ${corrNome}</span>`:''}<br><span class="hint" style="margin:0;">${c.whatsapp}</span></span>
-        <input type="checkbox" value="${c.id}" data-nome="${c.nome}" data-whats="${c.whatsapp}"
+        <span class="perm-row-label">${esc(c.nome)}${corrNome?` <span style="font-size:11px;color:var(--gray-600);">· ${esc(corrNome)}</span>`:''}<br><span class="hint" style="margin:0;">${esc(c.whatsapp)}</span></span>
+        <input type="checkbox" value="${c.id}" data-nome="${esc(c.nome)}" data-whats="${esc(c.whatsapp)}"
           ${WHATS_SELECIONADOS.some(s => s.id === c.id) ? 'checked' : ''} onchange="onSeletorContatoChange(this)">
       </label>`;
     }).join('') : `<p class="hint" style="margin:12px;">Nenhum contato encontrado para este filtro.</p>`;
@@ -5560,9 +5556,9 @@
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
           <span style="padding:3px 10px;border-radius:99px;background:${corTipo};color:#fff;font-size:11px;font-weight:700;">${tipo}</span>
           <span style="font-size:12px;color:var(--gray-600);">${dt}</span>
-          <span style="font-size:12px;color:var(--gray-600);margin-left:auto;">Por <b>${d._autorNome}</b> · ${qtd} contato(s)</span>
+          <span style="font-size:12px;color:var(--gray-600);margin-left:auto;">Por <b>${esc(d._autorNome)}</b> · ${qtd} contato(s)</span>
         </div>
-        <div style="font-size:13px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--black);">${d.mensagem}</div>
+        <div style="font-size:13px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--black);">${esc(d.mensagem)}</div>
       </div>`;
     }).join('');
   }
@@ -5580,18 +5576,18 @@
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
           <div>
             <h3 style="margin:0;">Detalhe do disparo</h3>
-            <p class="hint" style="margin:4px 0 0;">${tipo} · ${dt} · Por ${d._autorNome}</p>
+            <p class="hint" style="margin:4px 0 0;">${tipo} · ${dt} · Por ${esc(d._autorNome)}</p>
           </div>
           <button onclick="document.getElementById('modal-detalhe-disparo-wrap').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-600);">✕</button>
         </div>
         <div style="margin-bottom:16px;">
           <label style="font-size:11px;font-weight:800;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Mensagem enviada</label>
-          <div style="margin-top:6px;padding:14px;background:var(--surface-2);border-radius:12px;font-size:13.5px;line-height:1.6;white-space:pre-wrap;">${d.mensagem}</div>
+          <div style="margin-top:6px;padding:14px;background:var(--surface-2);border-radius:12px;font-size:13.5px;line-height:1.6;white-space:pre-wrap;">${esc(d.mensagem)}</div>
         </div>
         <div>
           <label style="font-size:11px;font-weight:800;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Confirmação de destinatários (${contatos.length})</label>
           ${contatos.length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;">
-            ${contatos.map(c=>`<span style="padding:5px 12px;border:1.4px solid var(--border);border-radius:99px;font-size:12.5px;font-weight:600;background:#fff;">${c}</span>`).join('')}
+            ${contatos.map(c=>`<span style="padding:5px 12px;border:1.4px solid var(--border);border-radius:99px;font-size:12.5px;font-weight:600;background:#fff;">${esc(c)}</span>`).join('')}
           </div>` : `<p class="hint" style="margin:8px 0 0;">Sem lista de destinatários registrada.</p>`}
         </div>
         <div class="modal-actions" style="margin-top:20px;">
@@ -5660,10 +5656,10 @@
         : `<span class="chip" style="font-size:11px;color:var(--gray-400);cursor:pointer;" onclick="event.stopPropagation(); toggleCorretoraStatus('${gid}')" title="Clique para ativar">Inativa</span>`;
       return `
       <tr style="${status === 'inativa' ? 'opacity:.55;' : ''}">
-        <td onclick="openCorretoraForm('${gid}')"><div class="row-avatar"><div class="av">${iniciais}</div><div><div class="cell-strong">${g.name}</div></div></div></td>
-        <td onclick="openCorretoraForm('${gid}')">${g.filial || '—'}</td>
-        <td onclick="openCorretoraForm('${gid}')">${g.cnpj || 'A preencher'}</td>
-        <td class="col-cidade" onclick="openCorretoraForm('${gid}')">${g.cidade || 'A preencher'}</td>
+        <td onclick="openCorretoraForm('${gid}')"><div class="row-avatar"><div class="av">${esc(iniciais)}</div><div><div class="cell-strong">${esc(g.name)}</div></div></div></td>
+        <td onclick="openCorretoraForm('${gid}')">${esc(g.filial) || '—'}</td>
+        <td onclick="openCorretoraForm('${gid}')">${esc(g.cnpj) || 'A preencher'}</td>
+        <td class="col-cidade" onclick="openCorretoraForm('${gid}')">${esc(g.cidade) || 'A preencher'}</td>
         <td>${statusBadge}</td>
         <td><button class="access-btn" onclick="openCorretoraForm('${gid}')">Editar</button></td>
       </tr>`;
@@ -5748,7 +5744,7 @@
     const wrap = document.getElementById('apelidos-list');
     if(!wrap) return;
     wrap.innerHTML = PENDING_APELIDOS.length
-      ? PENDING_APELIDOS.map((ap, i) => `<span class="tag-chip">${ap}<button onclick="removeApelido(${i})" title="Remover">✕</button></span>`).join('')
+      ? PENDING_APELIDOS.map((ap, i) => `<span class="tag-chip">${esc(ap)}<button onclick="removeApelido(${i})" title="Remover">✕</button></span>`).join('')
       : `<p class="tag-empty-hint">Nenhum apelido cadastrado ainda.</p>`;
   }
 
@@ -5773,10 +5769,26 @@
     wrap.innerHTML = PENDING_ANEXOS_CORRETORA.length
       ? PENDING_ANEXOS_CORRETORA.map((a, i) => `
         <span class="chip-file">
-          <a href="${a.url}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;" title="Abrir anexo">📎 ${a.nome}</a>
+          <a href="#" onclick="event.preventDefault(); abrirAnexoCorretora(${i});" style="color:inherit;text-decoration:none;cursor:pointer;" title="Abrir anexo">📎 ${esc(a.nome)}</a>
           <button onclick="removeAnexoCorretora(${i})" title="Remover anexo">✕</button>
         </span>`).join('')
       : `<p class="tag-empty-hint">Nenhum anexo adicionado ainda.</p>`;
+  }
+
+  // Gera um link temporário (assinado) na hora de abrir — funciona mesmo com o bucket
+  // marcado como privado no Supabase Storage, sem expor um link público permanente.
+  async function abrirAnexoCorretora(i){
+    const anexo = PENDING_ANEXOS_CORRETORA[i];
+    if(!anexo) return;
+    if(!anexo.path){
+      // compatibilidade com anexos antigos que só tinham url pública salva
+      if(anexo.url){ window.open(anexo.url, '_blank', 'noopener'); return; }
+      alert('Não foi possível localizar este anexo.');
+      return;
+    }
+    const { data, error } = await supabase.storage.from(BUCKET_ANEXOS_CORRETORAS).createSignedUrl(anexo.path, 60 * 5);
+    if(error){ alert('Erro ao gerar o link de acesso: ' + error.message); return; }
+    window.open(data.signedUrl, '_blank', 'noopener');
   }
 
   async function handleCorretoraAnexoUpload(e){
@@ -5797,11 +5809,9 @@
         alert(`Erro ao enviar o anexo "${file.name}": ${upErr.message}`);
         continue;
       }
-      const { data: urlData } = supabase.storage.from(BUCKET_ANEXOS_CORRETORAS).getPublicUrl(path);
       PENDING_ANEXOS_CORRETORA.push({
         nome: file.name,
         path,
-        url: urlData ? urlData.publicUrl : '',
         tamanho: file.size,
         adicionado_em: new Date().toISOString(),
       });
@@ -6176,14 +6186,14 @@
     const selFil = document.getElementById('filtros-producao-filial');
     // Fill corretoras
     selCor.innerHTML = '<option value="todas">Todas as corretoras</option>' +
-      Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${g.name}</option>`).join('');
+      Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${esc(g.name)}</option>`).join('');
     // Fill seguradoras
     selSeg.innerHTML = '<option value="">Todas as seguradoras</option>' +
-      Object.values(SEGURADORAS).map(s => `<option value="${s.nome}">${s.nome}</option>`).join('');
+      Object.values(SEGURADORAS).map(s => `<option value="${esc(s.nome)}">${esc(s.nome)}</option>`).join('');
     // Fill filiais (valores únicos de filial entre as corretoras cadastradas)
     const filiaisUnicas = [...new Set(Object.values(GROUPS).map(g => g.filial).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
     selFil.innerHTML = '<option value="">Todas as filiais</option>' +
-      filiaisUnicas.map(f => `<option value="${f}">${f}</option>`).join('');
+      filiaisUnicas.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
     // Sync current values
     const curComp = document.getElementById('producao-competencia')?.value || '';
     const curCor = document.getElementById('producao-filtro-corretora')?.value || 'todas';
@@ -6293,7 +6303,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
               Ver
             </button>` : ''}
-            ${podeExcluir ? `<button onclick="excluirHistorico('${h.id}','${h.seguradora}','${h.competencia}','${h.tipo}')" class="access-btn" style="display:inline-flex;align-items:center;gap:5px;color:#dc2626;border-color:#fecaca;background:#fef2f2;" title="Apagar esta importação">
+            ${podeExcluir ? `<button data-seg="${esc(h.seguradora)}" data-comp="${esc(h.competencia)}" data-tipo="${esc(h.tipo)}" onclick="excluirHistorico('${h.id}',this.dataset.seg,this.dataset.comp,this.dataset.tipo)" class="access-btn" style="display:inline-flex;align-items:center;gap:5px;color:#dc2626;border-color:#fecaca;background:#fef2f2;" title="Apagar esta importação">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
               Excluir
             </button>` : ''}
@@ -6731,10 +6741,10 @@
     tbody.innerHTML = linhas.length
       ? linhas.map(g => `
         <tr>
-          <td>${g.name}</td>
-          <td>${g.filial || '—'}</td>
+          <td>${esc(g.name)}</td>
+          <td>${esc(g.filial) || '—'}</td>
           <td>${(g.status||'ativa')==='ativa' ? '<span class="chip on">Ativa</span>' : '<span class="chip">Inativa</span>'}</td>
-          <td>${(g.seguradoras||[]).join(', ') || '—'}</td>
+          <td>${esc((g.seguradoras||[]).join(', ')) || '—'}</td>
         </tr>`).join('')
       : `<tr><td colspan="4" style="text-align:center;color:var(--gray-600);padding:40px 20px;">Nenhuma corretora encontrada com esse critério.</td></tr>`;
   }
@@ -6846,16 +6856,16 @@
   async function renderRelatorios(){
     const selCorretora = document.getElementById('relatorio-filtro-corretora');
     if(selCorretora && selCorretora.options.length <= 1){
-      selCorretora.innerHTML = `<option value="">Todas</option>` + Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${g.name}</option>`).join('');
+      selCorretora.innerHTML = `<option value="">Todas</option>` + Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${esc(g.name)}</option>`).join('');
     }
     const selFil = document.getElementById('relatorio-filtro-filial');
     if(selFil && selFil.options.length <= 1){
       const filiaisUnicas = [...new Set(Object.values(GROUPS).map(g => g.filial).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
-      selFil.innerHTML = `<option value="">Todas</option>` + filiaisUnicas.map(f => `<option value="${f}">${f}</option>`).join('');
+      selFil.innerHTML = `<option value="">Todas</option>` + filiaisUnicas.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
     }
     const selSeg = document.getElementById('relatorio-filtro-seguradora');
     if(selSeg && selSeg.options.length <= 1){
-      selSeg.innerHTML = `<option value="">Todas</option>` + Object.values(SEGURADORAS).map(s=>`<option value="${s.nome}">${s.nome}</option>`).join('');
+      selSeg.innerHTML = `<option value="">Todas</option>` + Object.values(SEGURADORAS).map(s=>`<option value="${esc(s.nome)}">${esc(s.nome)}</option>`).join('');
     }
     // do NOT auto-render table — wait for user to apply filters
   }
@@ -6969,9 +6979,9 @@
         : (GROUPS[l.corretora_id] ? GROUPS[l.corretora_id].name : 'Corretora removida');
       return `
       <tr>
-        <td class="cell-strong">${nomeCorretora}</td>
-        <td>${l.seguradora}</td>
-        <td>${l.produto || '—'}</td>
+        <td class="cell-strong">${esc(nomeCorretora)}</td>
+        <td>${esc(l.seguradora)}</td>
+        <td>${esc(l.produto) || '—'}</td>
         <td>R$ ${Number(l.valor||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
         <td>${new Date(l.atualizado_em).toLocaleString('pt-BR')}</td>
       </tr>`;
@@ -7181,9 +7191,9 @@
           tituloStatus = 'Importado há mais de 5 dias';
         }
       }
-      return `<button type="button" class="seg-card ${s.nome === selecionada ? 'active' : ''}" style="${borderStyle}" onclick="selecionarSeguradoraImportar('${id}')" title="${tituloStatus}">
-        <div class="seg-card-logo">${s.logo ? `<img src="${s.logo}" alt="${s.nome}">` : initials(s.nome)}</div>
-        <div class="seg-card-name">${s.nome}</div>
+      return `<button type="button" class="seg-card ${s.nome === selecionada ? 'active' : ''}" style="${borderStyle}" onclick="selecionarSeguradoraImportar('${id}')" title="${esc(tituloStatus)}">
+        <div class="seg-card-logo">${s.logo ? `<img src="${esc(s.logo)}" alt="${esc(s.nome)}">` : esc(initials(s.nome))}</div>
+        <div class="seg-card-name">${esc(s.nome)}</div>
       </button>`;
     }).join('');
   }
@@ -7674,9 +7684,9 @@
             <div class="login-error">
               <b>${sucesso} de ${snapCorretora.length} linha(s) foram salvas.</b>
               <p style="margin:6px 0 4px;font-weight:400;">${erros.length} falharam ao gravar no banco. Erro reportado pelo Supabase:</p>
-              <p style="font-family:monospace;font-size:11.5px;background:#fff;padding:8px;border-radius:6px;">${erros[0].msg}</p>
+              <p style="font-family:monospace;font-size:11.5px;background:#fff;padding:8px;border-radius:6px;">${esc(erros[0].msg)}</p>
               <ul style="margin:8px 0 0;padding-left:18px;">
-                ${erros.slice(0,10).map(e => `<li>${e.nome}</li>`).join('')}
+                ${erros.slice(0,10).map(e => `<li>${esc(e.nome)}</li>`).join('')}
                 ${erros.length > 10 ? `<li>...e mais ${erros.length - 10}.</li>` : ''}
               </ul>
             </div>`;
@@ -7790,10 +7800,10 @@
     const lista = _filiaisCache;
     tbody.innerHTML = lista.length ? lista.map(f => `
       <tr>
-        <td><b>${f.nome}</b></td>
-        <td>${f.cidade||''}${f.estado?' – '+f.estado:''}</td>
-        <td>${f.responsavel||'—'}</td>
-        <td>${f.telefone||'—'}</td>
+        <td><b>${esc(f.nome)}</b></td>
+        <td>${esc(f.cidade)||''}${f.estado?' – '+esc(f.estado):''}</td>
+        <td>${esc(f.responsavel)||'—'}</td>
+        <td>${esc(f.telefone)||'—'}</td>
         <td><button class="btn-sm" onclick="excluirFilial('${f.id}')">Excluir</button></td>
       </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--gray-600);">Nenhuma filial cadastrada ainda.</td></tr>`;
   }
@@ -7839,8 +7849,8 @@
     USERS_CACHE = data;
     tbody.innerHTML = data.length ? data.map(u => `
       <tr>
-        <td><div class="row-avatar"><div class="av">${initials(u.nome)}</div><div class="cell-strong">${u.nome}</div></div></td>
-        <td class="col-email">${u.email}</td>
+        <td><div class="row-avatar"><div class="av">${esc(initials(u.nome))}</div><div class="cell-strong">${esc(u.nome)}</div></div></td>
+        <td class="col-email">${esc(u.email)}</td>
         <td>${ROLE_LABELS[u.role] || 'Administrador'}</td>
         <td><span class="chip ${u.status==='ativo'?'on':''}">${u.status==='ativo' ? 'Ativo' : 'Suspenso'}</span></td>
         <td class="usuarios-actions-cell">
@@ -7873,7 +7883,7 @@
       <div class="modal-box modal-box-lg">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
           <div>
-            <h3 style="margin:0;">Permissões — ${u.nome}</h3>
+            <h3 style="margin:0;">Permissões — ${esc(u.nome)}</h3>
             <p class="hint" style="margin:4px 0 0;">${ROLE_LABELS[u.role]||''} · Defina quais abas este usuário pode acessar</p>
           </div>
           <button onclick="fecharPermissoesModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-600);">✕</button>
@@ -7961,10 +7971,10 @@
     const selCorretora = document.getElementById('logs-filtro-corretora');
     if(selUsuario && selUsuario.options.length <= 1){
       const { data: perfis } = await supabase.from('profiles').select('*').order('nome');
-      selUsuario.innerHTML = `<option value="">Todos os usuários</option>` + (perfis||[]).map(u => `<option value="${u.nome}">${u.nome}</option>`).join('');
+      selUsuario.innerHTML = `<option value="">Todos os usuários</option>` + (perfis||[]).map(u => `<option value="${esc(u.nome)}">${esc(u.nome)}</option>`).join('');
     }
     if(selCorretora && selCorretora.options.length <= 1){
-      selCorretora.innerHTML = `<option value="">Todas as corretoras</option>` + Object.values(GROUPS).map(g => `<option value="${g.name}">${g.name}</option>`).join('');
+      selCorretora.innerHTML = `<option value="">Todas as corretoras</option>` + Object.values(GROUPS).map(g => `<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
     }
     LOGS_PAGE = 1;
     renderLogsBody();
@@ -8011,20 +8021,20 @@
       tbody.innerHTML = pagina.length ? pagina.map(l => `
         <tr>
           <td data-label="Data/Hora" style="white-space:nowrap;">${new Date(l.created_at).toLocaleString('pt-BR')}</td>
-          <td data-label="Usuário"><b>${l.user_name || '—'}</b></td>
-          <td data-label="Papel"><span class="log-role-badge ${roleClass(l.role)}">${ROLE_LABELS[l.role] || l.role || '—'}</span></td>
-          <td data-label="Ação">${l.action}</td>
-          <td data-label="Detalhes" style="color:var(--gray-600);font-size:12px;">${l.details || '—'}</td>
+          <td data-label="Usuário"><b>${esc(l.user_name) || '—'}</b></td>
+          <td data-label="Papel"><span class="log-role-badge ${roleClass(l.role)}">${ROLE_LABELS[l.role] || esc(l.role) || '—'}</span></td>
+          <td data-label="Ação">${esc(l.action)}</td>
+          <td data-label="Detalhes" style="color:var(--gray-600);font-size:12px;">${esc(l.details) || '—'}</td>
         </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--gray-600);">Nenhum registro encontrado para esse filtro.</td></tr>`;
     } else {
       thead.innerHTML = `<tr><th>Data/Hora</th><th>Usuário</th><th>Papel</th><th>IP</th><th>Ação</th></tr>`;
       tbody.innerHTML = pagina.length ? pagina.map(l => `
         <tr>
           <td data-label="Data/Hora" style="white-space:nowrap;">${new Date(l.created_at).toLocaleString('pt-BR')}</td>
-          <td data-label="Usuário"><b>${l.user_name || '—'}</b></td>
-          <td data-label="Papel"><span class="log-role-badge ${roleClass(l.role)}">${ROLE_LABELS[l.role] || l.role || '—'}</span></td>
-          <td data-label="IP" style="font-family:monospace;font-size:12px;">${l.ip_address || '—'}</td>
-          <td data-label="Ação">${l.action}</td>
+          <td data-label="Usuário"><b>${esc(l.user_name) || '—'}</b></td>
+          <td data-label="Papel"><span class="log-role-badge ${roleClass(l.role)}">${ROLE_LABELS[l.role] || esc(l.role) || '—'}</span></td>
+          <td data-label="IP" style="font-family:monospace;font-size:12px;">${esc(l.ip_address) || '—'}</td>
+          <td data-label="Ação">${esc(l.action)}</td>
         </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--gray-600);">Nenhum acesso registrado para esse filtro.</td></tr>`;
     }
 
@@ -8048,8 +8058,8 @@
     USERS_CACHE = data;
     wrap.innerHTML = data.map(u => `
       <div class="permissoes-user-row ${PERMISSOES_USUARIO_ATIVO===u.id?'active':''}" onclick="selecionarUsuarioPermissoes('${u.id}')">
-        <div class="av" style="width:30px; height:30px; font-size:11px;">${initials(u.nome)}</div>
-        <div><div style="font-weight:700; font-size:13px;">${u.nome}</div><div class="hint" style="margin:0;">${ROLE_LABELS[u.role] || ''}</div></div>
+        <div class="av" style="width:30px; height:30px; font-size:11px;">${esc(initials(u.nome))}</div>
+        <div><div style="font-weight:700; font-size:13px;">${esc(u.nome)}</div><div class="hint" style="margin:0;">${ROLE_LABELS[u.role] || ''}</div></div>
       </div>
     `).join('');
     if(PERMISSOES_USUARIO_ATIVO && data.some(u => u.id === PERMISSOES_USUARIO_ATIVO)){
@@ -8067,13 +8077,13 @@
     const detail = document.getElementById('permissoes-detail');
     if(!u){ detail.innerHTML = ''; return; }
     if(u.role === 'admin'){
-      detail.innerHTML = `<h3 style="margin-top:0;">${u.nome}</h3><p class="hint">Super Administrador tem acesso a todas as abas do sistema — não é possível restringir.</p>`;
+      detail.innerHTML = `<h3 style="margin-top:0;">${esc(u.nome)}</h3><p class="hint">Super Administrador tem acesso a todas as abas do sistema — não é possível restringir.</p>`;
       return;
     }
     const bloq = u.abas_bloqueadas || [];
     detail.innerHTML = `
-      <h3 style="margin-top:0; margin-bottom:4px;">${u.nome}</h3>
-      <p class="hint" style="margin-top:0;">Marque as abas que ${u.nome.split(' ')[0]} pode acessar. Salva automaticamente.</p>
+      <h3 style="margin-top:0; margin-bottom:4px;">${esc(u.nome)}</h3>
+      <p class="hint" style="margin-top:0;">Marque as abas que ${esc(u.nome.split(' ')[0])} pode acessar. Salva automaticamente.</p>
       <div class="perm-list">
         ${TOGGLEABLE_ABAS.map(a => `
           <label class="perm-row">
@@ -8140,7 +8150,7 @@
     if(selFilial){
       const { data: filiaisData } = await supabase.from('filiais').select('*').order('nome');
       selFilial.innerHTML = '<option value="">Nenhuma (vê todas as filiais)</option>' +
-        (filiaisData || []).map(f => `<option value="${f.nome}">${f.nome}</option>`).join('');
+        (filiaisData || []).map(f => `<option value="${esc(f.nome)}">${esc(f.nome)}</option>`).join('');
       selFilial.value = u ? (u.filial || '') : '';
     }
 
@@ -8434,6 +8444,22 @@
     registrarLog('Login', `${profile.nome} entrou no sistema.`);
   }
 
+  // Escapa texto vindo de qualquer campo digitado pelo usuário antes de
+  // inserir em innerHTML — previne XSS armazenado (ex: alguém digitar
+  // <script> ou <img onerror=...> no nome de uma corretora, comentário,
+  // observação etc., e isso rodar no navegador de outra pessoa depois).
+  // IMPORTANTE: só usar em texto puro. Nunca aplicar em cima de HTML que
+  // o próprio sistema gera (ex: chips, ícones) — só no dado do usuário.
+  function esc(valor){
+    if(valor === null || valor === undefined) return '';
+    return String(valor)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function initials(nome){
     return nome.trim().split(/\s+/).slice(0,2).map(p=>p[0].toUpperCase()).join('');
   }
@@ -8538,7 +8564,7 @@
     if(segChecklist){
       const entradas = Object.values(SEGURADORAS);
       segChecklist.innerHTML = entradas.length
-        ? entradas.map(s => `<label style="--chip-cor:${s.cor || '#132728'};"><input type="checkbox" value="${s.nome}"><span>${s.nome}</span></label>`).join('')
+        ? entradas.map(s => `<label style="--chip-cor:${esc(s.cor) || '#132728'};"><input type="checkbox" value="${esc(s.nome)}"><span>${esc(s.nome)}</span></label>`).join('')
         : `<p class="hint" style="margin:0;">Nenhuma seguradora cadastrada ainda.</p>`;
     }
 
@@ -8557,9 +8583,9 @@
     const linhas = Object.entries(SEGURADORAS);
     tbody.innerHTML = linhas.length ? linhas.map(([id, s]) => `
       <tr>
-        <td onclick="openSeguradoraForm('${id}')"><div class="row-avatar">${s.logo ? `<div style="width:80px;height:32px;border-radius:8px;background:#fff;border:1px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><img src="${s.logo}" style="width:100%;height:100%;object-fit:contain;padding:2px;"></div>` : `<div class="av" style="${s.cor ? 'background:'+s.cor+'; color:#fff;' : ''}">${initials(s.nome)}</div>`}<div class="cell-strong">${s.nome}</div></div></td>
-        <td onclick="openSeguradoraForm('${id}')">${s.comercial || 'A preencher'}</td>
-        <td class="col-cor" onclick="openSeguradoraForm('${id}')"><span style="display:inline-block; width:16px; height:16px; border-radius:5px; background:${s.cor || '#132728'}; vertical-align:-3px; margin-right:8px; border:1px solid var(--border);"></span>${s.cor || '—'}</td>
+        <td onclick="openSeguradoraForm('${id}')"><div class="row-avatar">${s.logo ? `<div style="width:80px;height:32px;border-radius:8px;background:#fff;border:1px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><img src="${esc(s.logo)}" style="width:100%;height:100%;object-fit:contain;padding:2px;"></div>` : `<div class="av" style="${s.cor ? 'background:'+esc(s.cor)+'; color:#fff;' : ''}">${esc(initials(s.nome))}</div>`}<div class="cell-strong">${esc(s.nome)}</div></div></td>
+        <td onclick="openSeguradoraForm('${id}')">${esc(s.comercial) || 'A preencher'}</td>
+        <td class="col-cor" onclick="openSeguradoraForm('${id}')"><span style="display:inline-block; width:16px; height:16px; border-radius:5px; background:${esc(s.cor) || '#132728'}; vertical-align:-3px; margin-right:8px; border:1px solid var(--border);"></span>${esc(s.cor) || '—'}</td>
         <td class="col-excluir"><button class="access-btn" onclick="deleteSeguradora('${id}')">Excluir</button></td>
       </tr>`).join('') : `<tr><td colspan="4" style="text-align:center; color:var(--gray-600);">Nenhuma seguradora cadastrada ainda.</td></tr>`;
   }
@@ -8642,8 +8668,8 @@
     list.innerHTML = users.length ? users.map(u => `
       <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
         <input type="checkbox" value="${u.id}" ${_responsaveisSelecionados.includes(u.id)?'checked':''} onchange="atualizarResponsaveisDisplay()" style="accent-color:var(--black);width:15px;height:15px;cursor:pointer;">
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--black);color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">${initials(u.nome)}</span>
-        <span style="font-size:13px;font-weight:600;">${u.nome}</span>
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--black);color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">${esc(initials(u.nome))}</span>
+        <span style="font-size:13px;font-weight:600;">${esc(u.nome)}</span>
       </label>
     `).join('') : '<p style="font-size:12.5px;color:var(--gray-600);margin:8px 0;">Nenhum usuário cadastrado ainda.</p>';
     atualizarResponsaveisDisplay();
