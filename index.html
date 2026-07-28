@@ -1408,7 +1408,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
                 <input id="corretoras-search" placeholder="Buscar por razão social ou CNPJ" oninput="filtrarCorretoras(this.value)" onkeydown="if(event.key==='Enter') filtrarCorretoras(this.value)">
               </div>
-              <select id="corretoras-filter-status" onchange="renderCorretorasList()" style="border:1.4px solid var(--border);border-radius:999px;padding:9px 14px;font-size:12.5px;font-weight:700;outline:none;background:#fff;cursor:pointer;">
+              <select id="corretoras-filter-status" onchange="CORRETORAS_PAGE=1; renderCorretorasList()" style="border:1.4px solid var(--border);border-radius:999px;padding:9px 14px;font-size:12.5px;font-weight:700;outline:none;background:#fff;cursor:pointer;">
                 <option value="">Todas</option>
                 <option value="ativa">Ativas</option>
                 <option value="inativa">Inativas</option>
@@ -1419,6 +1419,7 @@
               <thead><tr><th>Corretora</th><th>Filial</th><th>CNPJ</th><th class="col-cidade">Cidade</th><th>Status</th><th></th></tr></thead>
               <tbody id="corretoras-tbody"></tbody>
             </table>
+            <div id="corretoras-paginacao" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:14px;"></div>
           </div>
         </section>
 
@@ -3735,6 +3736,7 @@
 
   function showView(id){
     currentView = id;
+    try { localStorage.setItem('ultimaViewAtiva', id); } catch(e){ /* localStorage indisponível — ignora */ }
     document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
     document.getElementById('view-'+id).classList.remove('hidden');
     const crumbEl = document.getElementById('crumb-current');
@@ -5231,7 +5233,7 @@
     return `<span style="display:inline-block; padding:3px 9px; border-radius:999px; background:${esc(bg)}; color:#fff; font-size:11px; font-weight:700; flex-shrink:0; white-space:nowrap;">${esc(nome)}</span>`;
   }
 
-  const CONTATOS_PAGE_SIZE = 30;
+  const CONTATOS_PAGE_SIZE = 50;
   let CONTATOS_PAGE = 1;
   let _todosContatosCache = null;
 
@@ -5785,6 +5787,14 @@
     renderCorretorasList();
   }
 
+  let CORRETORAS_PAGE = 1;
+  const CORRETORAS_PAGE_SIZE = 50;
+
+  function irPaginaCorretoras(p){
+    CORRETORAS_PAGE = p;
+    renderCorretorasList();
+  }
+
   function renderCorretorasList(){
     const tbody = document.getElementById('corretoras-tbody');
     if(!tbody) return;
@@ -5820,9 +5830,18 @@
 
     if(gids.length === 0){
       tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--gray-600);">${query || statusFiltro ? 'Nenhuma corretora encontrada para este filtro.' : 'Nenhuma corretora cadastrada ainda.'}</td></tr>`;
+      const pagBoxVazio = document.getElementById('corretoras-paginacao');
+      if(pagBoxVazio) pagBoxVazio.innerHTML = '';
       return;
     }
-    tbody.innerHTML = gids.map(gid => {
+
+    // pagina — só monta o HTML da página atual, não da lista inteira (evita
+    // travar o navegador com milhares de linhas de uma vez)
+    const totalPaginas = Math.max(1, Math.ceil(gids.length / CORRETORAS_PAGE_SIZE));
+    if(CORRETORAS_PAGE > totalPaginas) CORRETORAS_PAGE = totalPaginas;
+    const gidsPagina = gids.slice((CORRETORAS_PAGE-1)*CORRETORAS_PAGE_SIZE, CORRETORAS_PAGE*CORRETORAS_PAGE_SIZE);
+
+    tbody.innerHTML = gidsPagina.map(gid => {
       const g = GROUPS[gid];
       const iniciais = initials(g.name);
       const status = g.status || 'ativa';
@@ -5839,6 +5858,16 @@
         <td><button class="access-btn" onclick="openCorretoraForm('${gid}')">Editar</button></td>
       </tr>`;
     }).join('');
+
+    const pagBox = document.getElementById('corretoras-paginacao');
+    if(pagBox){
+      pagBox.innerHTML = totalPaginas > 1 ? `
+        <span style="font-size:12.5px;color:var(--gray-600);">${gids.length} corretora(s)</span>
+        <button class="btn-outline" style="padding:6px 12px;font-size:12px;" ${CORRETORAS_PAGE<=1?'disabled':''} onclick="irPaginaCorretoras(${CORRETORAS_PAGE-1})">Anterior</button>
+        <span style="font-size:12px;color:var(--gray-600);">Página ${CORRETORAS_PAGE} de ${totalPaginas}</span>
+        <button class="btn-outline" style="padding:6px 12px;font-size:12px;" ${CORRETORAS_PAGE>=totalPaginas?'disabled':''} onclick="irPaginaCorretoras(${CORRETORAS_PAGE+1})">Próxima</button>
+      ` : `<span style="font-size:12.5px;color:var(--gray-600);">${gids.length} corretora(s)</span>`;
+    }
   }
 
   function filtrarCorretoras(q){
@@ -5848,6 +5877,7 @@
       const sel = document.getElementById('corretoras-filter-status');
       if(sel) sel.value = '';
     }
+    CORRETORAS_PAGE = 1;
     renderCorretorasList();
   }
 
@@ -7069,14 +7099,23 @@
     }, 30);
   }
 
+  let DUPLICATAS_SELECIONADAS = new Set();
+
   function renderResultadoDuplicatas(grupos){
     const box = document.getElementById('duplicatas-resultado');
+    window._duplicatasGrupos = grupos; // guarda pra poder re-renderizar após excluir
     if(!grupos.length){
       box.innerHTML = `<p class="hint">Nenhum grupo de possíveis duplicatas encontrado. 🎉</p>`;
       return;
     }
     box.innerHTML = `
-      <p class="hint" style="margin-bottom:14px;"><b>${grupos.length}</b> grupo(s) de possível duplicata encontrado(s), envolvendo <b>${grupos.reduce((s,g)=>s+g.length,0)}</b> corretoras no total.</p>
+      <div style="position:sticky;top:0;z-index:5;background:#fff;padding:10px 0;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+        <p class="hint" style="margin:0;"><b>${grupos.length}</b> grupo(s) de possível duplicata, envolvendo <b>${grupos.reduce((s,g)=>s+g.length,0)}</b> corretoras.</p>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span id="duplicatas-contador-selecao" style="font-size:12.5px;color:var(--gray-600);font-weight:700;">${DUPLICATAS_SELECIONADAS.size} selecionada(s)</span>
+          <button class="access-btn" onclick="excluirDuplicatasSelecionadas()" style="color:#dc2626;border-color:#fecaca;" ${DUPLICATAS_SELECIONADAS.size ? '' : 'disabled'}>Excluir selecionadas</button>
+        </div>
+      </div>
       ${grupos.map((grupo, i) => `
         <div class="card" style="padding:16px;margin-bottom:12px;">
           <div style="font-size:11.5px;font-weight:800;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;">Grupo ${i+1} · ${grupo.length} corretoras</div>
@@ -7084,15 +7123,60 @@
             const g = GROUPS[gid];
             if(!g) return '';
             return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);">
-              <div>
-                <div style="font-weight:700;font-size:13px;">${esc(g.name)}</div>
-                <div style="font-size:11.5px;color:var(--gray-600);">${esc(g.cnpj) || 'sem CNPJ'} · ${esc(g.cidade) || 'sem cidade'} · ${esc(g.filial) || 'sem filial'}</div>
+              <div style="display:flex;align-items:flex-start;gap:10px;">
+                <input type="checkbox" style="margin-top:4px;" ${DUPLICATAS_SELECIONADAS.has(gid)?'checked':''} onchange="toggleDuplicataSelecionada('${gid}', this.checked)">
+                <div>
+                  <div style="font-weight:700;font-size:13px;">${esc(g.name)}</div>
+                  <div style="font-size:11.5px;color:var(--gray-600);">${esc(g.cnpj) || 'sem CNPJ'} · ${esc(g.cidade) || 'sem cidade'} · ${esc(g.filial) || 'sem filial'}</div>
+                </div>
               </div>
               <button class="access-btn" onclick="openCorretoraForm('${gid}')">Abrir</button>
             </div>`;
           }).join('')}
         </div>`).join('')}
     `;
+  }
+
+  function toggleDuplicataSelecionada(gid, marcado){
+    if(marcado) DUPLICATAS_SELECIONADAS.add(gid); else DUPLICATAS_SELECIONADAS.delete(gid);
+    const contador = document.getElementById('duplicatas-contador-selecao');
+    if(contador) contador.textContent = `${DUPLICATAS_SELECIONADAS.size} selecionada(s)`;
+    const btn = document.querySelector('#duplicatas-resultado button[onclick="excluirDuplicatasSelecionadas()"]');
+    if(btn) btn.disabled = DUPLICATAS_SELECIONADAS.size === 0;
+  }
+
+  async function excluirDuplicatasSelecionadas(){
+    if(!isSuperAdmin()){ alert('Apenas o Super Administrador pode excluir corretoras.'); return; }
+    const gids = [...DUPLICATAS_SELECIONADAS];
+    if(!gids.length) return;
+    const nomes = gids.map(gid => GROUPS[gid]?.name || '(corretora removida)').join('\n- ');
+    if(!confirm(`Excluir ${gids.length} corretora(s)?\n\n- ${nomes}\n\nEssa ação não pode ser desfeita. Os lançamentos de produção já registrados permanecem no histórico, mas elas deixam de aparecer nas listas e filtros do sistema.`)) return;
+
+    mostrarSplashOp('Excluindo...');
+    let excluidas = 0, erros = 0;
+    for(const gid of gids){
+      const g = GROUPS[gid];
+      const { error } = await supabase.from('corretoras').delete().eq('id', gid);
+      if(error){ erros++; console.error('Erro ao excluir corretora', gid, error.message); continue; }
+      const paths = (g?.anexos || []).map(a => a.path).filter(Boolean);
+      if(paths.length){ try { await supabase.storage.from(BUCKET_ANEXOS_CORRETORAS).remove(paths); } catch(e){ /* não bloqueia a exclusão */ } }
+      delete GROUPS[gid];
+      excluidas++;
+    }
+    esconderSplashOp();
+
+    registrarLog('Excluiu corretoras duplicadas em lote', `${excluidas} excluída(s), ${erros} erro(s)`);
+    DUPLICATAS_SELECIONADAS.clear();
+    refreshCorretoraSelects();
+    renderCorretorasList();
+
+    // remove as excluídas dos grupos já calculados e re-renderiza (sem precisar analisar tudo de novo)
+    const gruposAtualizados = (window._duplicatasGrupos || [])
+      .map(grupo => grupo.filter(gid => GROUPS[gid]))
+      .filter(grupo => grupo.length > 1);
+    renderResultadoDuplicatas(gruposAtualizados);
+
+    if(erros) alert(`${excluidas} corretora(s) excluída(s). ${erros} deram erro — veja o console (F12) para detalhes.`);
   }
 
   function relatorioVinculoLinhas(){
@@ -9486,7 +9570,14 @@
     updateHomeGreeting();
 
     applyRoleVisibility();
-    showView('home');
+    let viewParaAbrirLogin = 'home';
+    try {
+      const salva = localStorage.getItem('ultimaViewAtiva');
+      if(salva && document.getElementById('view-'+salva) && !['corretora-form','seguradora-form'].includes(salva)){
+        viewParaAbrirLogin = salva;
+      }
+    } catch(e){ /* localStorage indisponível — mantém 'home' */ }
+    showView(viewParaAbrirLogin);
     registrarLog('Login', `${profile.nome} entrou no sistema.`);
   }
 
@@ -9566,6 +9657,7 @@
         estado: row.estado || '',
         credenciais_seguradoras: row.credenciais_seguradoras || {},
         status: row.status || 'ativa',
+        anexos: row.anexos || [],
       };
     });
     console.log(`✅ ${data.length} corretora(s) carregada(s).`);
@@ -9883,8 +9975,6 @@
   // Show splash on load — check session, then hide
   async function initApp(){
     setSplashMsg('Carregando...');
-    // small delay so video renders
-    await new Promise(r => setTimeout(r, 800));
 
     // check if already logged in
     try {
@@ -9900,8 +9990,10 @@
           currentUserFullName = profile.nome || '';
           editingCorretoraGid = null;
           setSplashMsg('Carregando dados...');
-          await loadCorretorasFromSupabase();
-          await loadSeguradorasFromSupabase();
+          await Promise.all([
+            loadCorretorasFromSupabase(),
+            loadSeguradorasFromSupabase(),
+          ]);
 
           document.getElementById('view-login').style.display = 'none';
           document.getElementById('app').classList.add('active');
@@ -9920,7 +10012,16 @@
           refreshCorretoraSelects();
           renderUsuarios();
           Object.keys(GROUPS).forEach(refreshGroupUI);
-          showView('home');
+          let viewParaAbrir = 'home';
+          try {
+            const salva = localStorage.getItem('ultimaViewAtiva');
+            // só usa a view salva se ela realmente existir na página e não for uma
+            // tela de "edição" que não faz sentido abrir sozinha (ex: cadastro vazio)
+            if(salva && document.getElementById('view-'+salva) && !['corretora-form','seguradora-form'].includes(salva)){
+              viewParaAbrir = salva;
+            }
+          } catch(e){ /* localStorage indisponível — mantém 'home' */ }
+          showView(viewParaAbrir);
           hideSplash(200);
           iniciarTimeoutSessao();
           return;
