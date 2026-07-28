@@ -7606,7 +7606,7 @@
         : `<span style="color:#b45309;font-weight:700;">Não identificada</span>`;
       const acaoExtra = r.gid
         ? `<button onclick="desvincularEquipeImportLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;text-align:center;">Trocar vínculo</button>`
-        : '';
+        : `<button onclick="cadastrarCorretoraDaEquipeLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;text-align:center;background:var(--black);color:#fff;border-color:var(--black);">+ Cadastrar corretora</button>`;
       return `<tr style="${r.gid ? '' : 'background:#fffbeb;'}">
         <td><b>${esc(r.nomeContato)}</b>${r.email ? `<br><span style="font-size:11px;color:var(--gray-600);">${esc(r.email)}</span>` : ''}</td>
         <td style="font-size:12px;">${dataFmt}</td>
@@ -7648,6 +7648,30 @@
   function desvincularEquipeImportLinha(linha){
     const r = (window._importEquipeRows || []).find(x => x.linha === linha);
     if(r) r.gid = null;
+    renderModalConfirmacaoEquipe();
+  }
+
+  // Cadastra uma corretora nova (só com o nome que veio truncado na planilha) a partir
+  // desta linha, e já vincula automaticamente qualquer outra linha ainda não identificada
+  // que tenha o EXATO mesmo texto de corretora — é comum várias pessoas serem da mesma
+  // corretora, então evita ficar cadastrando a mesma empresa várias vezes.
+  async function cadastrarCorretoraDaEquipeLinha(linha){
+    const r = (window._importEquipeRows || []).find(x => x.linha === linha);
+    if(!r) return;
+    const payload = { razao_social: r.corretoraTexto };
+    const { data, error } = await supabase.from('corretoras').insert(payload).select().single();
+    if(error){ alert('Erro ao cadastrar corretora: ' + error.message); return; }
+    GROUPS[data.id] = { name: r.corretoraTexto, seguradoras: [], apelidos: [] };
+
+    const textoAlvo = r.corretoraTexto.trim().toLowerCase();
+    (window._importEquipeRows || []).forEach(x => {
+      if(!x.gid && x.corretoraTexto.trim().toLowerCase() === textoAlvo){
+        x.gid = data.id;
+      }
+    });
+
+    refreshCorretoraSelects();
+    renderCorretorasList();
     renderModalConfirmacaoEquipe();
   }
 
@@ -7835,7 +7859,8 @@
         : `<span style="color:#b45309;font-weight:700;">+ Vai cadastrar nova</span>`;
       const acaoExtra = r.gid
         ? `<button onclick="desvincularCorretoraImportLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;text-align:center;">Desvincular (cadastrar nova)</button>`
-        : `<select onchange="vincularCorretoraImportLinha(${r.linha}, this.value)" style="font-size:11px;padding:5px 6px;border:1.4px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;">
+        : `<button onclick="cadastrarCorretoraImportLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;text-align:center;background:var(--black);color:#fff;border-color:var(--black);">+ Cadastrar agora</button>
+           <select onchange="vincularCorretoraImportLinha(${r.linha}, this.value)" style="font-size:11px;padding:5px 6px;border:1.4px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;">
              <option value="">Ou vincular a existente…</option>
              ${corretorasOrdenadas.map(gid => `<option value="${gid}">${esc(GROUPS[gid].name)}</option>`).join('')}
            </select>`;
@@ -7869,6 +7894,24 @@
     if(!gid) return;
     const r = (window._importCorretorasRows || []).find(x => x.linha === linha);
     if(r) r.gid = gid;
+    renderModalConfirmacaoCorretoras();
+  }
+
+  // Cadastra a corretora dessa linha imediatamente (sem esperar o "Confirmar e importar"
+  // geral) — útil pra resolver uma linha específica na hora, igual já funciona na
+  // confirmação de importação de produção.
+  async function cadastrarCorretoraImportLinha(linha){
+    const r = (window._importCorretorasRows || []).find(x => x.linha === linha);
+    if(!r) return;
+    const { data, error } = await supabase.from('corretoras').insert(r.payload).select().single();
+    if(error){ alert('Erro ao cadastrar corretora: ' + error.message); return; }
+    GROUPS[data.id] = { name: r.payload.razao_social, seguradoras: r.payload.seguradoras_permitidas, apelidos: r.payload.apelidos,
+      cnpj: r.payload.cnpj, susep: r.payload.susep, email: r.payload.email,
+      telefone: r.payload.telefone, cidade: r.payload.cidade, estado: r.payload.estado, endereco: r.payload.endereco };
+    // já foi criada agora — remove da lista de pendências (não há mais nada a fazer com ela)
+    window._importCorretorasRows = (window._importCorretorasRows || []).filter(x => x.linha !== linha);
+    refreshCorretoraSelects();
+    renderCorretorasList();
     renderModalConfirmacaoCorretoras();
   }
 
