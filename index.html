@@ -4283,6 +4283,34 @@
   let PENDING_METAS_SEG_CAMPANHA = [];
   let PENDING_METAS_COR_CAMPANHA = [];
 
+  // Converte valores de planilha pra número, aceitando tanto células já numéricas
+  // quanto texto formatado como moeda (ex: "R$13.245,89", "1.234,56", "1234.56",
+  // e até "1,234.56" no padrão americano). Decide o separador decimal olhando
+  // qual símbolo (vírgula ou ponto) aparece por último no texto.
+  function parseValorMonetario(raw){
+    if(raw === null || raw === undefined) return 0;
+    if(typeof raw === 'number') return isNaN(raw) ? 0 : raw;
+    let s = String(raw).trim();
+    if(!s) return 0;
+    s = s.replace(/[^\d,.\-]/g, ''); // remove "R$", espaços, etc.
+    if(!s) return 0;
+    const lastComma = s.lastIndexOf(',');
+    const lastDot = s.lastIndexOf('.');
+    if(lastComma !== -1 && lastDot !== -1){
+      if(lastComma > lastDot){
+        // vírgula depois do ponto → formato BR (ponto = milhar, vírgula = decimal)
+        s = s.replace(/\./g, '').replace(',', '.');
+      } else {
+        // ponto depois da vírgula → formato US (vírgula = milhar, ponto = decimal)
+        s = s.replace(/,/g, '');
+      }
+    } else if(lastComma !== -1){
+      s = s.replace(',', '.');
+    }
+    const n = Number(s);
+    return isNaN(n) ? 0 : n;
+  }
+
   function fmtBRL(v){
     return 'R$ ' + Number(v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
   }
@@ -6150,6 +6178,18 @@
       pularPrimeiraLinhaDados: true,
       descartarColunaA: false,
     },
+    'youse': {
+      tipo: 'corretora',
+      aliases: ['youse seguros', 'youse'],
+      // Planilha da Youse vem com 3 abas — os dados por corretora estão na
+      // 2ª aba ("apólices looker"), com cabeçalho simples numa linha só.
+      abaAlvo: 'apólices looker',
+      // Col B (idx 1): Nome da Corretora
+      // Col F (idx 5): Prêmio Líquido — vem como texto "R$13.245,89"
+      idxCorretorFixo: 1,
+      idxValorFixo: 5,
+      descartarColunaA: false,
+    },
   };
 
   // Templates que suportam importação "por produto"
@@ -7530,8 +7570,8 @@
 
         if(template.ignorarZeros){
           dataRows = dataRows.filter(({ celulas }) => {
-            const v = Number(String(celulas[idxValor] ?? '').replace(',','.'));
-            return !isNaN(v) && v !== 0;
+            const v = parseValorMonetario(celulas[idxValor]);
+            return v !== 0;
           });
           DIAG.push(`Após ignorarZeros: ${dataRows.length}`);
         }
@@ -7564,12 +7604,12 @@
             gid = null;
           }
           const bruto = template ? celulas[idxValor] : extrairValorDaLinha(headerParaExtracao, celulas);
-          const num = Number(String(bruto ?? '0').replace(',','.'));
+          const num = parseValorMonetario(bruto);
           return {
             linha: numeroLinha,
             nomeBruto: String(nomeBruto || '').trim(),
             gid,
-            valor: isNaN(num) ? 0 : num,
+            valor: num,
           };
         });
       } catch(errBuild){
