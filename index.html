@@ -7171,11 +7171,94 @@
                   <div style="font-size:11.5px;color:var(--gray-600);">${esc(g.cnpj) || 'sem CNPJ'} · ${esc(g.cidade) || 'sem cidade'} · ${esc(g.filial) || 'sem filial'}</div>
                 </div>
               </div>
+              <button class="access-btn" onclick="mesclarDuplicatasNesta('${gid}', ${i})" title="Mantém esta e transfere os dados das outras do grupo pra ela, virando apelido">Mesclar nesta</button>
               <button class="access-btn" onclick="openCorretoraForm('${gid}')">Abrir</button>
             </div>`;
           }).join('')}
         </div>`).join('')}
     `;
+  }
+
+  async function mesclarDuplicatasNesta(gidMantido, grupoIndex){
+    if(!isSuperAdmin()){ alert('Apenas o Super Administrador pode mesclar corretoras.'); return; }
+    const grupo = (window._duplicatasGrupos || [])[grupoIndex];
+    if(!grupo) return;
+    const gidsParaMesclar = grupo.filter(gid => gid !== gidMantido && GROUPS[gid]);
+    if(!gidsParaMesclar.length){ alert('Não há outras corretoras nesse grupo pra mesclar.'); return; }
+
+    const mantida = GROUPS[gidMantido];
+    const nomesQueViramApelido = gidsParaMesclar.map(gid => GROUPS[gid].name);
+    if(!confirm(`Mesclar em "${mantida.name}"?\n\nAs corretoras abaixo serão excluídas, viram apelido dela, e toda produção/renovação/equipe/campanha delas passa a pertencer a "${mantida.name}":\n\n- ${nomesQueViramApelido.join('\n- ')}\n\nEssa ação não pode ser desfeita.`)) return;
+
+    mostrarSplashOp('Mesclando...');
+    try {
+      // 1) monta os novos apelidos, seguradoras, anexos e campos complementares
+      let apelidos = Array.isArray(mantida.apelidos) ? [...mantida.apelidos] : [];
+      let seguradoras = Array.isArray(mantida.seguradoras) ? [...mantida.seguradoras] : [];
+      let anexos = Array.isArray(mantida.anexos) ? [...mantida.anexos] : [];
+      const camposComplementares = ['cnpj','susep','email','telefone','endereco','rua','numero','bairro','complemento','cidade','estado','filial'];
+      const preenchimentos = {};
+
+      for(const gid of gidsParaMesclar){
+        const g = GROUPS[gid];
+        if(!apelidos.some(a => a.toLowerCase() === g.name.toLowerCase())) apelidos.push(g.name);
+        (g.apelidos || []).forEach(a => { if(!apelidos.some(x => x.toLowerCase() === a.toLowerCase())) apelidos.push(a); });
+        (g.seguradoras || []).forEach(s => { if(!seguradoras.includes(s)) seguradoras.push(s); });
+        (g.anexos || []).forEach(a => anexos.push(a));
+        camposComplementares.forEach(campo => {
+          if(!mantida[campo] && !preenchimentos[campo] && g[campo]) preenchimentos[campo] = g[campo];
+        });
+      }
+
+      // 2) transfere os registros dependentes (FK direto) pra corretora mantida
+      for(const gid of gidsParaMesclar){
+        await supabase.from('producao_mensal').update({ corretora_id: gidMantido }).eq('corretora_id', gid);
+        await supabase.from('renovacoes').update({ corretora_id: gidMantido }).eq('corretora_id', gid);
+        await supabase.from('marketing_contatos').update({ corretora_id: gidMantido }).eq('corretora_id', gid);
+        await supabase.from('campanha_lancamentos').update({ corretora_id: gidMantido }).eq('corretora_id', gid);
+      }
+
+      // 2.1) campanhas guardam metas por corretora dentro de uma coluna jsonb — corrige manualmente
+      const { data: campanhasComMeta } = await fetchAllRows((from,to) => supabase.from('campanhas').select('id, metas_corretoras').range(from,to));
+      for(const camp of (campanhasComMeta || [])){
+        const metas = Array.isArray(camp.metas_corretoras) ? camp.metas_corretoras : [];
+        let mudou = false;
+        const novasMetas = metas.map(m => {
+          if(gidsParaMesclar.includes(m.corretora_id)){ mudou = true; return { ...m, corretora_id: gidMantido }; }
+          return m;
+        });
+        if(mudou) await supabase.from('campanhas').update({ metas_corretoras: novasMetas }).eq('id', camp.id);
+      }
+
+      // 3) atualiza a corretora mantida com apelidos + seguradoras + anexos + campos que faltavam
+      const payloadUpdate = { apelidos, seguradoras_permitidas: seguradoras, anexos, ...preenchimentos };
+      const { error: errUpdate } = await supabase.from('corretoras').update(payloadUpdate).eq('id', gidMantido);
+      if(errUpdate) throw new Error('Erro ao atualizar a corretora mantida: ' + errUpdate.message);
+
+      // 4) exclui as duplicatas
+      for(const gid of gidsParaMesclar){
+        await supabase.from('corretoras').delete().eq('id', gid);
+        delete GROUPS[gid];
+        DUPLICATAS_SELECIONADAS.delete(gid);
+      }
+
+      GROUPS[gidMantido] = { ...GROUPS[gidMantido], apelidos, seguradoras, anexos, ...preenchimentos };
+
+      registrarLog('Mesclou corretoras duplicadas', `Mantida: ${mantida.name} · Mescladas: ${nomesQueViramApelido.join(', ')}`);
+      refreshCorretoraSelects();
+      renderCorretorasList();
+
+      const gruposAtualizados = (window._duplicatasGrupos || [])
+        .map(g => g.filter(gid => GROUPS[gid]))
+        .filter(g => g.length > 1);
+      renderResultadoDuplicatas(gruposAtualizados);
+
+      alert(`Mesclagem concluída. "${mantida.name}" agora tem ${gidsParaMesclar.length} apelido(s) a mais, e a produção/renovação/equipe/campanhas das excluídas foi transferida pra ela.`);
+    } catch(err){
+      alert('Erro ao mesclar: ' + err.message);
+    } finally {
+      esconderSplashOp();
+    }
   }
 
   function toggleDuplicataSelecionada(gid, marcado){
@@ -8826,6 +8909,18 @@
       mostrarSplashOp('Importando...');
       const snapCorretora = identificadas.map(r => ({ corretora_id: r.gid, produto: null, valor: r.valor }));
 
+      // Vincula automaticamente a seguradora desta importação em quem ainda não
+      // tiver esse vínculo — assim quem sobe a planilha não precisa ir corretora
+      // por corretora marcar a seguradora manualmente depois.
+      const corretorasParaVincular = [...new Set(snapCorretora.map(item => item.corretora_id))]
+        .filter(gid => GROUPS[gid] && !(GROUPS[gid].seguradoras || []).includes(seguradora));
+      for(const gid of corretorasParaVincular){
+        const novasSegs = [...(GROUPS[gid].seguradoras || []), seguradora];
+        const { error: errVinculo } = await supabase.from('corretoras').update({ seguradoras_permitidas: novasSegs }).eq('id', gid);
+        if(!errVinculo) GROUPS[gid].seguradoras = novasSegs;
+        else console.error('Erro ao vincular seguradora automaticamente:', errVinculo.message);
+      }
+
       let sucesso = 0;
       const erros = [];
       for(const item of snapCorretora){
@@ -8855,6 +8950,7 @@
             </div>`;
         } else {
           resultBox.innerHTML = `<p class="hint" style="font-weight:700;">✓ ${sucesso} linha(s) importada(s) com sucesso para ${seguradora}, ${labelCompetencia(competencia)}.</p>` +
+            (corretorasParaVincular.length ? `<p class="hint" style="color:#15803d;">${corretorasParaVincular.length} corretora(s) foram vinculadas automaticamente a ${seguradora}.</p>` : '') +
             (naoIdentificadas.length ? `<p class="hint" style="color:#b45309;">${naoIdentificadas.length} linha(s) não foram importadas (corretora não cadastrada ou removida manualmente).</p>` : '') +
             (negativasCount ? `<p class="hint" style="color:#dc2626;">${negativasCount} linha(s) com valor negativo foram importadas normalmente (descontando do total).</p>` : '');
         }
