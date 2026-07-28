@@ -9336,24 +9336,30 @@
 
     if(LOGS_TAB === 'sistema'){
       thead.innerHTML = `<tr><th>Data/Hora</th><th>Usuário</th><th>Papel</th><th>Ação</th><th>Detalhes</th></tr>`;
-      tbody.innerHTML = pagina.length ? pagina.map(l => `
-        <tr>
+      tbody.innerHTML = pagina.length ? pagina.map(l => {
+        const falhou = l.action === 'Tentativa de login falhou';
+        return `
+        <tr style="${falhou ? 'background:#fef2f2;' : ''}">
           <td data-label="Data/Hora" style="white-space:nowrap;">${new Date(l.created_at).toLocaleString('pt-BR')}</td>
           <td data-label="Usuário"><b>${esc(l.user_name) || '—'}</b></td>
           <td data-label="Papel"><span class="log-role-badge ${roleClass(l.role)}">${ROLE_LABELS[l.role] || esc(l.role) || '—'}</span></td>
-          <td data-label="Ação">${esc(l.action)}</td>
+          <td data-label="Ação">${falhou ? `<span style="color:#dc2626;font-weight:700;">⚠️ ${esc(l.action)}</span>` : esc(l.action)}</td>
           <td data-label="Detalhes" style="color:var(--gray-600);font-size:12px;">${esc(l.details) || '—'}</td>
-        </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--gray-600);">Nenhum registro encontrado para esse filtro.</td></tr>`;
+        </tr>`;
+      }).join('') : `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--gray-600);">Nenhum registro encontrado para esse filtro.</td></tr>`;
     } else {
       thead.innerHTML = `<tr><th>Data/Hora</th><th>Usuário</th><th>Papel</th><th>IP</th><th>Localização</th></tr>`;
-      tbody.innerHTML = pagina.length ? pagina.map(l => `
-        <tr>
+      tbody.innerHTML = pagina.length ? pagina.map(l => {
+        const falhou = l.action === 'Tentativa de login falhou';
+        return `
+        <tr style="${falhou ? 'background:#fef2f2;' : ''}">
           <td data-label="Data/Hora" style="white-space:nowrap;">${new Date(l.created_at).toLocaleString('pt-BR')}</td>
-          <td data-label="Usuário"><b>${esc(l.user_name) || '—'}</b></td>
+          <td data-label="Usuário"><b>${falhou ? `⚠️ ${esc(l.user_name) || '—'} <span style="color:#dc2626;font-weight:700;font-size:11px;">(login falhou)</span>` : (esc(l.user_name) || '—')}</b></td>
           <td data-label="Papel"><span class="log-role-badge ${roleClass(l.role)}">${ROLE_LABELS[l.role] || esc(l.role) || '—'}</span></td>
           <td data-label="IP" style="font-family:monospace;font-size:12px;">${esc(l.ip_address) || '—'}</td>
           <td data-label="Localização">${esc(l.localizacao) || '—'}</td>
-        </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--gray-600);">Nenhum acesso registrado para esse filtro.</td></tr>`;
+        </tr>`;
+      }).join('') : `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--gray-600);">Nenhum acesso registrado para esse filtro.</td></tr>`;
     }
 
     const pagBox = document.getElementById('logs-paginacao');
@@ -9699,6 +9705,10 @@
     if(error){
       if(error.message.includes('Invalid login') || error.message.includes('invalid_credentials')){
         errorBox.textContent = 'E-mail ou senha incorretos.';
+        try {
+          const [ip, localizacao] = await Promise.all([getClientIP(), getClientLocation()]);
+          await supabase.rpc('log_failed_login', { p_email: email, p_ip: ip, p_localizacao: localizacao });
+        } catch(e){ /* nunca deixa o registro do log atrapalhar a tela de erro pro usuário */ }
       } else if(error.message.includes('Email not confirmed')){
         errorBox.textContent = 'Confirme seu e-mail antes de entrar (verifique a caixa de entrada).';
       } else {
