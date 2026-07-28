@@ -1388,6 +1388,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
                 Importar
               </button>
+              <button class="btn-outline" onclick="openImportarEquipeModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                Importar equipe
+              </button>
               <button class="btn-dark" onclick="openCorretoraForm(null)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
                 Nova corretora
@@ -2837,6 +2841,42 @@
     <div class="modal-actions">
       <button class="btn-outline" onclick="closeModal('modal-importar-corretoras')">Cancelar</button>
       <button class="btn-dark" onclick="processarPlanilhaCorretoras()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 16V4M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
+        Processar arquivo
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------- MODAL: IMPORTAR EQUIPE/ANIVERSARIANTES EM LOTE ---------------- -->
+<div class="modal-overlay" id="modal-importar-equipe" onclick="if(event.target===this) closeModal('modal-importar-equipe')">
+  <div class="modal-box modal-box-lg">
+    <h3>Importar equipe / aniversariantes</h3>
+    <p class="hint" style="margin-bottom:14px;">
+      Importe os colaboradores de cada corretora (nome, aniversário, e-mail, telefone) de uma vez.
+      Depois de processar, você confirma linha por linha a qual corretora cada um pertence — igual na importação de corretoras.
+    </p>
+
+    <div style="background:var(--surface-2);border:1.4px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px;font-size:12.5px;">
+      <b style="display:block;margin-bottom:6px;">Colunas aceitas na planilha (nomes flexíveis):</b>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;color:var(--gray-600);">
+        <span>• Corretora <span style="color:var(--black);font-weight:700;">(obrigatório)</span></span>
+        <span>• Contato / Nome <span style="color:var(--black);font-weight:700;">(obrigatório)</span></span>
+        <span>• Aniversário (dd/mm ou dd/mm/aaaa)</span>
+        <span>• E-mail</span>
+        <span>• Telefone</span>
+        <span>• Status (linhas "INATIVO" são ignoradas)</span>
+      </div>
+      <p style="margin:8px 0 0;color:var(--gray-600);">Se o nome da corretora vier cortado/abreviado na planilha, sem problema — na tela seguinte você confirma ou corrige o vínculo de cada linha.</p>
+    </div>
+
+    <div class="f-field"><label>Arquivo (.xlsx, .xls ou .csv)</label>
+      <input type="file" id="equipe-arquivo-input" accept=".xlsx,.xls,.csv">
+    </div>
+    <div id="equipe-import-resultado" style="margin-top:10px;"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('modal-importar-equipe')">Cancelar</button>
+      <button class="btn-dark" onclick="processarPlanilhaEquipe()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 16V4M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
         Processar arquivo
       </button>
@@ -7410,6 +7450,249 @@
     XLSX.writeFile(wb, 'modelo_importacao_corretoras.xlsx');
   }
 
+  function openImportarEquipeModal(){
+    document.getElementById('equipe-arquivo-input').value = '';
+    document.getElementById('equipe-import-resultado').innerHTML = '';
+    openModal('modal-importar-equipe');
+  }
+
+  // Converte "dd/mm", "dd/mm/aaaa" ou Date do SheetJS para 'YYYY-MM-DD'.
+  // Quando não vem ano (aniversário puro), usa um ano-placeholder (2000, ano bissexto,
+  // pra aceitar até 29/02) — o dia e mês são o que importa pro recurso de aniversariantes.
+  function normalizarAniversario(valor){
+    if(valor === null || valor === undefined || valor === '') return null;
+    if(valor instanceof Date && !isNaN(valor)){
+      const d = String(valor.getDate()).padStart(2,'0');
+      const m = String(valor.getMonth()+1).padStart(2,'0');
+      return `2000-${m}-${d}`;
+    }
+    const texto = String(valor).trim();
+    let m = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); // dd/mm/aaaa
+    if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+    m = texto.match(/^(\d{1,2})\/(\d{1,2})$/); // dd/mm
+    if(m) return `2000-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+    return null;
+  }
+
+  // Acha uma corretora cujo nome (ou apelido) comece com o texto informado, ou o contenha —
+  // necessário porque planilhas antigas costumam vir com o nome da corretora cortado
+  // (ex: só os primeiros 20 caracteres).
+  function identificarCorretoraParcial(texto){
+    if(!texto) return null;
+    const alvo = String(texto).trim().toLowerCase();
+    if(!alvo) return null;
+    // 1) tentativa exata (nome ou apelido) — reaproveita a função já existente
+    const exata = identificarCorretoraPorNome(alvo);
+    if(exata) return exata;
+    // 2) tentativa por prefixo (nome cadastrado começa com o texto truncado, ou vice-versa)
+    for(const gid of Object.keys(GROUPS)){
+      const g = GROUPS[gid];
+      if(!g) continue;
+      const nome = String(g.name||'').toLowerCase();
+      if(nome && (nome.startsWith(alvo) || alvo.startsWith(nome))) return gid;
+      const apelidos = Array.isArray(g.apelidos) ? g.apelidos : [];
+      for(const ap of apelidos){
+        const apLower = String(ap||'').toLowerCase();
+        if(apLower && (apLower.startsWith(alvo) || alvo.startsWith(apLower))) return gid;
+      }
+    }
+    return null;
+  }
+
+  function processarPlanilhaEquipe(){
+    const file = document.getElementById('equipe-arquivo-input').files[0];
+    const resultBox = document.getElementById('equipe-import-resultado');
+    if(!file){ resultBox.innerHTML = `<p class="hint" style="color:var(--black);font-weight:700;">Selecione um arquivo.</p>`; return; }
+    if(typeof XLSX === 'undefined'){ resultBox.innerHTML = `<p class="hint">Não foi possível carregar o leitor de planilhas.</p>`; return; }
+
+    resultBox.innerHTML = `<p class="hint">Lendo arquivo...</p>`;
+    const isCsv = file.name.toLowerCase().endsWith('.csv');
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      let rows;
+      try {
+        if(isCsv){
+          const text = e.target.result;
+          const lines = text.split(/\r?\n/).filter(l => l.trim());
+          if(lines.length < 2){ resultBox.innerHTML = `<p class="hint">CSV vazio ou sem dados.</p>`; return; }
+          const parseCsvLine = line => {
+            const result = [];
+            let cur = '', inQ = false;
+            for(let i=0;i<line.length;i++){
+              const ch = line[i];
+              if(ch==='"'){ inQ=!inQ; } else if(ch===','&&!inQ){ result.push(cur.trim()); cur=''; } else { cur+=ch; }
+            }
+            result.push(cur.trim());
+            return result;
+          };
+          const headers = parseCsvLine(lines[0]);
+          rows = lines.slice(1).filter(l=>l.trim()).map(line => {
+            const vals = parseCsvLine(line);
+            const obj = {};
+            headers.forEach((h,i) => { obj[h] = vals[i] || ''; });
+            return obj;
+          });
+        } else {
+          const wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
+        }
+      } catch(err){
+        resultBox.innerHTML = `<p class="hint">Não foi possível ler o arquivo (${err.message}).</p>`;
+        return;
+      }
+      if(!rows.length){ resultBox.innerHTML = `<p class="hint">Planilha vazia ou sem dados.</p>`; return; }
+
+      const norm = s => String(s).trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_');
+
+      let erros = 0, ignoradosInativo = 0;
+      const linhas = [];
+      rows.forEach((row, i) => {
+        const rowNorm = {};
+        Object.entries(row).forEach(([k,v]) => rowNorm[norm(k)] = v);
+
+        const status = String(rowNorm['status']||'').trim().toUpperCase();
+        if(status === 'INATIVO' || status === 'CANCELADO'){ ignoradosInativo++; return; }
+
+        const corretoraTexto = String(rowNorm['corretoras']||rowNorm['corretora']||'').trim();
+        const nomeContato = String(rowNorm['contato']||rowNorm['nome']||'').trim();
+        if(!corretoraTexto || !nomeContato){ erros++; return; }
+
+        const email = String(rowNorm['e-mail']||rowNorm['email']||'').trim();
+        const telefone = String(rowNorm['telefone']||'').trim().replace(/\D/g,'');
+        const nascimento = normalizarAniversario(rowNorm['aniversario']||rowNorm['aniversário']||rowNorm['nascimento']);
+
+        const gid = identificarCorretoraParcial(corretoraTexto);
+
+        linhas.push({ linha: i+2, corretoraTexto, nomeContato, email, telefone, nascimento, gid });
+      });
+
+      if(!linhas.length){
+        resultBox.innerHTML = `<p class="hint" style="color:#dc2626;font-weight:700;">Nenhuma linha válida encontrada (verifique as colunas "Corretora" e "Contato").</p>`;
+        return;
+      }
+
+      window._importEquipeRows = linhas;
+      window._importEquipeErros = erros;
+      window._importEquipeIgnoradosInativo = ignoradosInativo;
+      renderModalConfirmacaoEquipe();
+      openModal('modal-confirmar-importacao');
+    };
+    if(isCsv){ reader.readAsText(file, "UTF-8"); } else { reader.readAsArrayBuffer(file); }
+  }
+
+  function renderModalConfirmacaoEquipe(){
+    const rows = window._importEquipeRows || [];
+    const identificadas = rows.filter(r => r.gid);
+    const naoIdentificadas = rows.filter(r => !r.gid);
+
+    document.getElementById('conf-import-subtitulo').innerHTML =
+      `${rows.length} pessoa(s) na planilha` +
+      (window._importEquipeIgnoradosInativo ? ` · ${window._importEquipeIgnoradosInativo} inativa(s) ignorada(s)` : '') +
+      (window._importEquipeErros ? ` · <span style="color:#dc2626;font-weight:700;">${window._importEquipeErros} linha(s) sem corretora/nome</span>` : '') +
+      (naoIdentificadas.length ? ` · <span style="color:#b45309;font-weight:700;">${naoIdentificadas.length} sem corretora identificada</span>` : '');
+
+    document.getElementById('conf-import-thead').innerHTML =
+      '<tr><th>Nome</th><th>Aniversário</th><th>Corretora (planilha)</th><th style="width:230px;">Vínculo</th></tr>';
+
+    const corretorasOrdenadas = Object.keys(GROUPS)
+      .sort((a,b) => (GROUPS[a].name||'').localeCompare(GROUPS[b].name||'', 'pt-BR'));
+
+    document.getElementById('conf-import-tbody').innerHTML = rows.map(r => {
+      const dataFmt = r.nascimento ? new Date(r.nascimento+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '—';
+      const vinculoTxt = r.gid
+        ? `<span style="color:#15803d;font-weight:700;">✓ ${esc(GROUPS[r.gid]?.name || '—')}</span>`
+        : `<span style="color:#b45309;font-weight:700;">Não identificada</span>`;
+      const acaoExtra = r.gid
+        ? `<button onclick="desvincularEquipeImportLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;text-align:center;">Trocar vínculo</button>`
+        : '';
+      return `<tr style="${r.gid ? '' : 'background:#fffbeb;'}">
+        <td><b>${esc(r.nomeContato)}</b>${r.email ? `<br><span style="font-size:11px;color:var(--gray-600);">${esc(r.email)}</span>` : ''}</td>
+        <td style="font-size:12px;">${dataFmt}</td>
+        <td style="font-size:12px;">${esc(r.corretoraTexto)}</td>
+        <td style="vertical-align:top;padding-top:10px;">
+          <div style="font-size:11.5px;margin-bottom:6px;">${vinculoTxt}</div>
+          ${acaoExtra}
+          <select onchange="vincularEquipeImportLinha(${r.linha}, this.value)" style="font-size:11px;padding:5px 6px;border:1.4px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;">
+            <option value="">${r.gid ? 'Vincular a outra…' : 'Vincular a…'}</option>
+            ${corretorasOrdenadas.map(gid => `<option value="${gid}">${esc(GROUPS[gid].name)}</option>`).join('')}
+          </select>
+          <button onclick="removerLinhaImportacaoEquipe(${r.linha})" style="width:100%;box-sizing:border-box;background:none;border:1.4px solid #fecaca;border-radius:8px;cursor:pointer;color:#dc2626;padding:5px 6px;font-size:11px;font-weight:700;">Remover linha</button>
+        </td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--gray-500);">Nenhuma linha restante.</td></tr>`;
+
+    document.getElementById('conf-import-total').innerHTML =
+      `<b>${identificadas.length}</b> serão importada(s)` +
+      (naoIdentificadas.length ? ` · <b>${naoIdentificadas.length}</b> sem corretora identificada (vincule manualmente ou remova a linha)` : '');
+
+    const btnConf = document.getElementById('conf-import-btn-confirmar');
+    btnConf.disabled = identificadas.length === 0;
+    btnConf.textContent = `Confirmar e importar (${identificadas.length})`;
+    btnConf.onclick = confirmarImportacaoEquipe;
+  }
+
+  function removerLinhaImportacaoEquipe(linha){
+    window._importEquipeRows = (window._importEquipeRows || []).filter(r => r.linha !== linha);
+    renderModalConfirmacaoEquipe();
+  }
+
+  function vincularEquipeImportLinha(linha, gid){
+    if(!gid) return;
+    const r = (window._importEquipeRows || []).find(x => x.linha === linha);
+    if(r) r.gid = gid;
+    renderModalConfirmacaoEquipe();
+  }
+
+  function desvincularEquipeImportLinha(linha){
+    const r = (window._importEquipeRows || []).find(x => x.linha === linha);
+    if(r) r.gid = null;
+    renderModalConfirmacaoEquipe();
+  }
+
+  async function confirmarImportacaoEquipe(){
+    const rows = (window._importEquipeRows || []).filter(r => r.gid);
+    const btnConf = document.getElementById('conf-import-btn-confirmar');
+    btnConf.disabled = true; btnConf.textContent = 'Importando...';
+    mostrarSplashOp('Importando...');
+
+    const payload = rows.map(r => ({
+      nome: r.nomeContato,
+      whatsapp: r.telefone || null,
+      email: r.email || null,
+      nascimento: r.nascimento,
+      corretora_id: r.gid,
+      origem: 'equipe',
+    }));
+
+    let sucesso = 0, erros = 0;
+    const CHUNK = 200; // insere em lotes pra não estourar o tamanho da requisição
+    for(let i=0; i<payload.length; i += CHUNK){
+      const lote = payload.slice(i, i+CHUNK);
+      const { error } = await supabase.from('marketing_contatos').insert(lote);
+      if(error) erros += lote.length; else sucesso += lote.length;
+    }
+
+    esconderSplashOp();
+    registrarLog('Importou equipe/aniversariantes', `${sucesso} contato(s), ${erros} erro(s)`);
+    closeModal('modal-confirmar-importacao');
+    window._importEquipeRows = null;
+    renderAniversariantes();
+
+    const resultBox = document.getElementById('equipe-import-resultado');
+    if(resultBox){
+      resultBox.innerHTML = `
+        <div style="padding:14px;background:var(--surface-2);border-radius:10px;border:1.4px solid var(--border);margin-top:8px;">
+          <div style="font-weight:800;margin-bottom:8px;">Importação concluída</div>
+          <div style="display:flex;gap:18px;font-size:13px;flex-wrap:wrap;">
+            <span style="color:green;">✓ ${sucesso} contato(s) importado(s)</span>
+            ${erros ? `<span style="color:red;">✗ ${erros} com erro</span>` : ''}
+          </div>
+        </div>`;
+    }
+  }
+
   function processarPlanilhaCorretoras(){
     const file = document.getElementById('corretoras-arquivo-input').files[0];
     const resultBox = document.getElementById('corretoras-import-resultado');
@@ -7458,21 +7741,32 @@
       // normalize header keys (case insensitive, remove accents)
       const norm = s => String(s).trim().toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_');
+      const normalizarCnpj = v => String(v||'').replace(/\D/g,'');
 
-      let inseridos=0, atualizados=0, erros=0;
-      for(const row of rows){
+      // Mapa CNPJ (só dígitos) -> gid, das corretoras já cadastradas — casamento
+      // por CNPJ é bem mais confiável que por nome (nomes variam demais entre planilhas).
+      const gidPorCnpj = {};
+      Object.entries(GROUPS).forEach(([gid, g]) => {
+        const c = normalizarCnpj(g.cnpj);
+        if(c) gidPorCnpj[c] = gid;
+      });
+
+      let erros = 0;
+      const linhas = [];
+      rows.forEach((row, i) => {
         const rowNorm = {};
         Object.entries(row).forEach(([k,v]) => rowNorm[norm(k)] = String(v).trim());
 
         const razao = rowNorm['razao_social'] || rowNorm['razao'] || rowNorm['nome'] || '';
-        if(!razao){ erros++; continue; }
+        if(!razao){ erros++; return; }
 
         const apelidos = rowNorm['apelidos'] ? rowNorm['apelidos'].split(',').map(s=>s.trim()).filter(Boolean) : [];
         const seguradoras = rowNorm['seguradoras'] ? rowNorm['seguradoras'].split(',').map(s=>s.trim()).filter(Boolean) : [];
+        const cnpj = rowNorm['cnpj'] || '';
 
         const payload = {
           razao_social: razao,
-          cnpj: rowNorm['cnpj']||'',
+          cnpj,
           susep: rowNorm['susep']||'',
           email: rowNorm['e-mail']||rowNorm['email']||'',
           telefone: rowNorm['telefone']||'',
@@ -7485,52 +7779,159 @@
           seguradoras_permitidas: seguradoras,
         };
 
-        // check if already exists by razao social (case-insensitive)
-        const existeId = Object.keys(GROUPS).find(k =>
-          GROUPS[k].name.toLowerCase() === razao.toLowerCase()
-        );
-        if(existeId){
-          // Se já existe: adicionar a razão social da planilha como apelido (se ainda não estiver)
-          const corretoraAtual = GROUPS[existeId];
-          const apelidosAtuais = Array.isArray(corretoraAtual.apelidos) ? corretoraAtual.apelidos : [];
-          const novoApelido = razao.trim();
-          const apelidosMerged = apelidosAtuais.includes(novoApelido)
-            ? apelidosAtuais
-            : [...apelidosAtuais, novoApelido];
-          const payloadUpdate = { ...payload, apelidos: apelidosMerged };
-          const { error } = await supabase.from('corretoras').update(payloadUpdate).eq('id', existeId);
-          if(!error){
-            GROUPS[existeId] = { ...GROUPS[existeId], name: corretoraAtual.name, seguradoras, apelidos: apelidosMerged,
-              cnpj: payload.cnpj, susep: payload.susep, email: payload.email,
-              telefone: payload.telefone, cidade: payload.cidade, estado: payload.estado,
-              endereco: payload.endereco };
-            atualizados++;
-          } else erros++;
-        } else {
-          const { data, error } = await supabase.from('corretoras').insert(payload).select().single();
-          if(!error && data){
-            GROUPS[data.id] = { name: razao, seguradoras, apelidos,
-              cnpj: payload.cnpj, susep: payload.susep, email: payload.email,
-              telefone: payload.telefone, cidade: payload.cidade, estado: payload.estado,
-              endereco: payload.endereco };
-            inseridos++;
-          } else erros++;
+        // 1) tenta casar por CNPJ; 2) por nome OU apelido já cadastrado (razão social da
+        // planilha); 3) por nome OU apelido já cadastrado usando os apelidos da própria
+        // planilha (ex: nome curto/fantasia que pode bater com o que já está no sistema)
+        const cnpjNorm = normalizarCnpj(cnpj);
+        let gid = cnpjNorm ? (gidPorCnpj[cnpjNorm] || null) : null;
+        if(!gid){
+          gid = identificarCorretoraPorNome(razao);
         }
+        if(!gid){
+          for(const ap of apelidos){
+            gid = identificarCorretoraPorNome(ap);
+            if(gid) break;
+          }
+        }
+
+        linhas.push({ linha: i + 2, payload, gid, nomeBruto: razao });
+      });
+
+      if(!linhas.length){
+        resultBox.innerHTML = `<p class="hint" style="color:#dc2626;font-weight:700;">Nenhuma linha válida encontrada (verifique se a coluna "Razão Social" está preenchida).</p>`;
+        return;
       }
-      refreshCorretoraSelects();
-      renderCorretorasList();
-      registrarLog('Importou corretoras', `${inseridos} novas, ${atualizados} atualizadas, ${erros} com erro`);
+
+      window._importCorretorasRows = linhas;
+      window._importCorretorasErros = erros;
+      window._importCorretorasResultBoxId = 'corretoras-import-resultado';
+      renderModalConfirmacaoCorretoras();
+      openModal('modal-confirmar-importacao');
+    };
+    if(isCsv){ reader.readAsText(file, "UTF-8"); } else { reader.readAsArrayBuffer(file); }
+  }
+
+  // Tela de confirmação da importação de corretoras — mesma ideia da confirmação
+  // de produção: cada linha mostra se vai VINCULAR (atualizar) uma corretora já
+  // cadastrada ou CADASTRAR uma nova, e dá pra corrigir manualmente antes de confirmar.
+  function renderModalConfirmacaoCorretoras(){
+    const rows = window._importCorretorasRows || [];
+    const matched = rows.filter(r => r.gid);
+    const novos = rows.filter(r => !r.gid);
+
+    document.getElementById('conf-import-subtitulo').innerHTML =
+      `${rows.length} linha(s) na planilha` +
+      (window._importCorretorasErros ? ` · <span style="color:#dc2626;font-weight:700;">${window._importCorretorasErros} linha(s) ignorada(s) por falta de Razão Social</span>` : '');
+
+    document.getElementById('conf-import-thead').innerHTML =
+      '<tr><th>Corretora (planilha)</th><th>CNPJ</th><th>Cidade</th><th style="width:230px;">Ação</th></tr>';
+
+    const corretorasOrdenadas = Object.keys(GROUPS)
+      .sort((a,b) => (GROUPS[a].name||'').localeCompare(GROUPS[b].name||'', 'pt-BR'));
+
+    document.getElementById('conf-import-tbody').innerHTML = rows.map(r => {
+      const statusTxt = r.gid
+        ? `<span style="color:#15803d;font-weight:700;">↺ Vai atualizar:</span> ${esc(GROUPS[r.gid]?.name || '—')}`
+        : `<span style="color:#b45309;font-weight:700;">+ Vai cadastrar nova</span>`;
+      const acaoExtra = r.gid
+        ? `<button onclick="desvincularCorretoraImportLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;text-align:center;">Desvincular (cadastrar nova)</button>`
+        : `<select onchange="vincularCorretoraImportLinha(${r.linha}, this.value)" style="font-size:11px;padding:5px 6px;border:1.4px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;">
+             <option value="">Ou vincular a existente…</option>
+             ${corretorasOrdenadas.map(gid => `<option value="${gid}">${esc(GROUPS[gid].name)}</option>`).join('')}
+           </select>`;
+      return `<tr style="${r.gid ? '' : 'background:#fffbeb;'}">
+        <td><b>${esc(r.nomeBruto)}</b></td>
+        <td style="font-size:12px;">${esc(r.payload.cnpj) || '—'}</td>
+        <td style="font-size:12px;">${esc(r.payload.cidade) || '—'}</td>
+        <td style="vertical-align:top;padding-top:10px;">
+          <div style="font-size:11.5px;margin-bottom:6px;">${statusTxt}</div>
+          ${acaoExtra}
+          <button onclick="removerLinhaImportacaoCorretora(${r.linha})" style="width:100%;box-sizing:border-box;background:none;border:1.4px solid #fecaca;border-radius:8px;cursor:pointer;color:#dc2626;padding:5px 6px;font-size:11px;font-weight:700;">Remover linha</button>
+        </td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--gray-500);">Nenhuma linha restante. Todas foram removidas.</td></tr>`;
+
+    document.getElementById('conf-import-total').innerHTML =
+      `<b>${matched.length}</b> corretora(s) serão <b>atualizadas</b> · <b>${novos.length}</b> serão <b>cadastradas</b> como novas.`;
+
+    const btnConf = document.getElementById('conf-import-btn-confirmar');
+    btnConf.disabled = rows.length === 0;
+    btnConf.textContent = `Confirmar e importar (${rows.length})`;
+    btnConf.onclick = confirmarImportacaoCorretoras;
+  }
+
+  function removerLinhaImportacaoCorretora(linha){
+    window._importCorretorasRows = (window._importCorretorasRows || []).filter(r => r.linha !== linha);
+    renderModalConfirmacaoCorretoras();
+  }
+
+  function vincularCorretoraImportLinha(linha, gid){
+    if(!gid) return;
+    const r = (window._importCorretorasRows || []).find(x => x.linha === linha);
+    if(r) r.gid = gid;
+    renderModalConfirmacaoCorretoras();
+  }
+
+  function desvincularCorretoraImportLinha(linha){
+    const r = (window._importCorretorasRows || []).find(x => x.linha === linha);
+    if(r) r.gid = null;
+    renderModalConfirmacaoCorretoras();
+  }
+
+  async function confirmarImportacaoCorretoras(){
+    const rows = window._importCorretorasRows || [];
+    const btnConf = document.getElementById('conf-import-btn-confirmar');
+    btnConf.disabled = true; btnConf.textContent = 'Importando...';
+    mostrarSplashOp('Importando...');
+
+    let inseridos = 0, atualizados = 0, erros = 0;
+    for(const r of rows){
+      const { payload, gid, nomeBruto } = r;
+      if(gid){
+        const corretoraAtual = GROUPS[gid];
+        const apelidosAtuais = Array.isArray(corretoraAtual.apelidos) ? corretoraAtual.apelidos : [];
+        const novoApelido = nomeBruto.trim();
+        const apelidosMerged = apelidosAtuais.includes(novoApelido) ? apelidosAtuais : [...apelidosAtuais, novoApelido];
+        const payloadUpdate = { ...payload, apelidos: apelidosMerged };
+        const { error } = await supabase.from('corretoras').update(payloadUpdate).eq('id', gid);
+        if(!error){
+          GROUPS[gid] = { ...GROUPS[gid], seguradoras: payload.seguradoras_permitidas, apelidos: apelidosMerged,
+            cnpj: payload.cnpj, susep: payload.susep, email: payload.email,
+            telefone: payload.telefone, cidade: payload.cidade, estado: payload.estado,
+            endereco: payload.endereco };
+          atualizados++;
+        } else erros++;
+      } else {
+        const { data, error } = await supabase.from('corretoras').insert(payload).select().single();
+        if(!error && data){
+          GROUPS[data.id] = { name: payload.razao_social, seguradoras: payload.seguradoras_permitidas, apelidos: payload.apelidos,
+            cnpj: payload.cnpj, susep: payload.susep, email: payload.email,
+            telefone: payload.telefone, cidade: payload.cidade, estado: payload.estado,
+            endereco: payload.endereco };
+          inseridos++;
+        } else erros++;
+      }
+    }
+
+    esconderSplashOp();
+    refreshCorretoraSelects();
+    renderCorretorasList();
+    registrarLog('Importou corretoras', `${inseridos} novas, ${atualizados} atualizadas, ${erros} com erro`);
+    closeModal('modal-confirmar-importacao');
+    window._importCorretorasRows = null;
+
+    const resultBox = document.getElementById(window._importCorretorasResultBoxId || 'corretoras-import-resultado');
+    if(resultBox){
       resultBox.innerHTML = `
         <div style="padding:14px;background:var(--surface-2);border-radius:10px;border:1.4px solid var(--border);margin-top:8px;">
           <div style="font-weight:800;margin-bottom:8px;">Importação concluída</div>
-          <div style="display:flex;gap:18px;font-size:13px;">
+          <div style="display:flex;gap:18px;font-size:13px;flex-wrap:wrap;">
             <span style="color:green;">✓ ${inseridos} corretoras criadas</span>
             <span style="color:var(--gray-600);">↺ ${atualizados} atualizadas</span>
-            ${erros ? `<span style="color:red;">✗ ${erros} com erro (linha em branco ou falha)</span>` : ''}
+            ${erros ? `<span style="color:red;">✗ ${erros} com erro</span>` : ''}
           </div>
         </div>`;
-    };
-    if(isCsv){ reader.readAsText(file, "UTF-8"); } else { reader.readAsArrayBuffer(file); }
+    }
   }
 
   function processarPlanilha(){
