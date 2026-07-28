@@ -1392,6 +1392,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
                 Importar equipe
               </button>
+              <button class="btn-outline" onclick="openImportarVinculoSeguradoraModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><circle cx="7" cy="12" r="3"/><circle cx="17" cy="6" r="3"/><circle cx="17" cy="18" r="3"/><path d="M9.6 10.7l4.8-3.4M9.6 13.3l4.8 3.4"/></svg>
+                Importar por seguradora
+              </button>
               <button class="btn-dark" onclick="openCorretoraForm(null)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
                 Nova corretora
@@ -1973,11 +1977,41 @@
                 </div>
               </div>
 
+              <!-- Corretoras Duplicadas -->
+              <div class="card" style="padding:20px;cursor:pointer;transition:box-shadow .2s,transform .15s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='';this.style.transform=''" onclick="abrirRelatorioDuplicatas()">
+                <div style="width:42px;height:42px;border-radius:12px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 011-1h11"/></svg>
+                </div>
+                <div style="font-size:13.5px;font-weight:800;margin-bottom:4px;">Corretoras Duplicadas</div>
+                <div style="font-size:12px;color:var(--gray-600);line-height:1.5;">Encontra corretoras cadastradas mais de uma vez com nomes parecidos.</div>
+                <div style="margin-top:14px;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--gray-400);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Abrir relatório
+                </div>
+              </div>
+
             </div>
           </div>
 
-          <!-- Área do relatório de Vínculo Corretora x Seguradora -->
-          <div id="relatorio-vinculo-area" style="display:none;">
+          <!-- Área do relatório de Corretoras Duplicadas -->
+          <div id="relatorio-duplicatas-area" style="display:none;">
+            <div class="relatorio-header-bar" style="display:flex;align-items:center;justify-content:space-between;background:var(--black);color:#fff;border-radius:14px;padding:14px 20px;margin-bottom:20px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <button onclick="voltarRelatorioDuplicatas()" style="background:rgba(255,255,255,.12);border:none;color:#fff;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                  Modelos
+                </button>
+                <span style="font-size:15px;font-weight:800;">Corretoras Duplicadas</span>
+              </div>
+              <button class="btn-dark" style="background:#fff;color:var(--black);font-size:12.5px;padding:8px 14px;" onclick="analisarDuplicatasCorretoras()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg>
+                Analisar agora
+              </button>
+            </div>
+
+            <p class="hint" style="margin-bottom:16px;">Compara os nomes de todas as corretoras cadastradas e agrupa as que forem muito parecidas (ex: "Prisma Corretora" e "Prisma Corretora Ltda"). Não apaga nem altera nada sozinho — só te mostra os grupos suspeitos pra você decidir o que fazer.</p>
+
+            <div id="duplicatas-resultado"><p class="hint">Clique em "Analisar agora" pra começar.</p></div>
+          </div>
             <div class="relatorio-header-bar" style="display:flex;align-items:center;justify-content:space-between;background:var(--black);color:#fff;border-radius:14px;padding:14px 20px;margin-bottom:20px;">
               <div style="display:flex;align-items:center;gap:10px;">
                 <button onclick="voltarRelatorioVinculo()" style="background:rgba(255,255,255,.12);border:none;color:#fff;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;">
@@ -2877,6 +2911,33 @@
     <div class="modal-actions">
       <button class="btn-outline" onclick="closeModal('modal-importar-equipe')">Cancelar</button>
       <button class="btn-dark" onclick="processarPlanilhaEquipe()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 16V4M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
+        Processar arquivo
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------- MODAL: IMPORTAR CORRETORAS POR SEGURADORA ---------------- -->
+<div class="modal-overlay" id="modal-importar-vinculo-seguradora" onclick="if(event.target===this) closeModal('modal-importar-vinculo-seguradora')">
+  <div class="modal-box modal-box-lg">
+    <h3>Importar corretoras por seguradora</h3>
+    <p class="hint" style="margin-bottom:14px;">
+      Suba uma planilha só com os nomes das corretoras (uma por linha, uma coluna só) e escolha a seguradora — o sistema vincula todas elas de uma vez.
+      Depois de processar, você confirma linha por linha, igual nas outras importações.
+    </p>
+
+    <div class="f-field">
+      <label>Seguradora a vincular</label>
+      <select id="vinculo-seg-import-seguradora"><option value="">Selecione...</option></select>
+    </div>
+    <div class="f-field"><label>Arquivo (.xlsx, .xls ou .csv)</label>
+      <input type="file" id="vinculo-seg-arquivo-input" accept=".xlsx,.xls,.csv">
+    </div>
+    <div id="vinculo-seg-import-resultado" style="margin-top:10px;"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('modal-importar-vinculo-seguradora')">Cancelar</button>
+      <button class="btn-dark" onclick="processarPlanilhaVinculoSeguradora()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 16V4M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
         Processar arquivo
       </button>
@@ -6878,6 +6939,7 @@
   function abrirRelatorioVinculo(){
     document.getElementById('relatorio-painel-modelos').style.display = 'none';
     document.getElementById('relatorio-consulta-area').style.display = 'none';
+    document.getElementById('relatorio-duplicatas-area').style.display = 'none';
     document.getElementById('relatorio-vinculo-area').style.display = 'block';
 
     const nomes = Object.values(SEGURADORAS).map(s => s.nome).sort((a,b)=>a.localeCompare(b));
@@ -6890,6 +6952,147 @@
   function voltarRelatorioVinculo(){
     document.getElementById('relatorio-vinculo-area').style.display = 'none';
     document.getElementById('relatorio-painel-modelos').style.display = 'block';
+  }
+
+  function abrirRelatorioDuplicatas(){
+    document.getElementById('relatorio-painel-modelos').style.display = 'none';
+    document.getElementById('relatorio-consulta-area').style.display = 'none';
+    document.getElementById('relatorio-vinculo-area').style.display = 'none';
+    document.getElementById('relatorio-duplicatas-area').style.display = 'block';
+  }
+
+  function voltarRelatorioDuplicatas(){
+    document.getElementById('relatorio-duplicatas-area').style.display = 'none';
+    document.getElementById('relatorio-painel-modelos').style.display = 'block';
+  }
+
+  // Remove acentos, deixa maiúsculo e tira termos societários comuns (LTDA, S.A., ME,
+  // "CORRETORA DE SEGUROS" etc.) pra sobrar só o "núcleo" do nome — é esse núcleo que
+  // comparamos entre as corretoras.
+  function nucleoNomeCorretora(nome){
+    let s = String(nome || '').toUpperCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[.\-,\/]/g, ' ');
+    const termos = [
+      'CORRETORA DE SEGUROS E RESSEGUROS', 'CORRETORA DE SEGUROS', 'CORRETORA DE SEGURO',
+      'ADMINISTRADORA DE SEGUROS', 'CORRETAGEM DE SEGUROS', 'CORRETORA', 'SEGUROS',
+      'ADMINISTRADORA', 'CONSULTORIA', 'CONSULTORIA E ', 'SOCIEDADE SIMPLES',
+      'LTDA ME', 'LTDA', 'EIRELI', 'S A', 'SA', 'ME', 'EPP', 'CIA', 'COMPANHIA',
+    ];
+    termos.forEach(t => { s = s.replace(new RegExp(`\\b${t}\\b`, 'g'), ' '); });
+    return s.replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function distanciaLevenshtein(a, b){
+    const m = a.length, n = b.length;
+    if(m === 0) return n;
+    if(n === 0) return m;
+    let anterior = new Array(n + 1);
+    let atual = new Array(n + 1);
+    for(let j = 0; j <= n; j++) anterior[j] = j;
+    for(let i = 1; i <= m; i++){
+      atual[0] = i;
+      for(let j = 1; j <= n; j++){
+        const custo = a[i-1] === b[j-1] ? 0 : 1;
+        atual[j] = Math.min(atual[j-1] + 1, anterior[j] + 1, anterior[j-1] + custo);
+      }
+      [anterior, atual] = [atual, anterior];
+    }
+    return anterior[n];
+  }
+
+  function similaridade(a, b){
+    if(!a || !b) return 0;
+    if(a === b) return 1;
+    const maxLen = Math.max(a.length, b.length);
+    if(maxLen === 0) return 1;
+    const dist = distanciaLevenshtein(a, b);
+    return 1 - (dist / maxLen);
+  }
+
+  function analisarDuplicatasCorretoras(){
+    const box = document.getElementById('duplicatas-resultado');
+    box.innerHTML = `<p class="hint">Analisando ${Object.keys(GROUPS).length} corretoras...</p>`;
+
+    // dá um respiro pro navegador desenhar o texto acima antes de começar a conta pesada
+    setTimeout(() => {
+      const entradas = Object.entries(GROUPS).map(([gid, g]) => ({
+        gid, nome: g.name || '', nucleo: nucleoNomeCorretora(g.name),
+      })).filter(e => e.nucleo);
+
+      const LIMITE_SIMILARIDADE = 0.82;
+      const adjacencia = new Map(entradas.map(e => [e.gid, new Set()]));
+
+      // agrupa por bucket (primeiros 3 caracteres do núcleo) pra não comparar tudo com tudo
+      const buckets = new Map();
+      entradas.forEach(e => {
+        const chave = e.nucleo.slice(0, 3);
+        if(!buckets.has(chave)) buckets.set(chave, []);
+        buckets.get(chave).push(e);
+      });
+
+      buckets.forEach(lista => {
+        for(let i = 0; i < lista.length; i++){
+          for(let j = i + 1; j < lista.length; j++){
+            const a = lista[i], b = lista[j];
+            // pula comparação cara se o tamanho for muito diferente (não vai bater mesmo)
+            if(Math.abs(a.nucleo.length - b.nucleo.length) > a.nucleo.length * 0.4 + 3) continue;
+            const contemUmAoOutro = a.nucleo.includes(b.nucleo) || b.nucleo.includes(a.nucleo);
+            const sim = similaridade(a.nucleo, b.nucleo);
+            if(contemUmAoOutro || sim >= LIMITE_SIMILARIDADE){
+              adjacencia.get(a.gid).add(b.gid);
+              adjacencia.get(b.gid).add(a.gid);
+            }
+          }
+        }
+      });
+
+      // agrupa em "componentes conectados" (BFS) — todo mundo que se parece, direta ou
+      // indiretamente, cai no mesmo grupo
+      const visitados = new Set();
+      const grupos = [];
+      entradas.forEach(e => {
+        if(visitados.has(e.gid) || adjacencia.get(e.gid).size === 0) return;
+        const fila = [e.gid];
+        const grupo = new Set();
+        while(fila.length){
+          const atual = fila.pop();
+          if(visitados.has(atual)) continue;
+          visitados.add(atual);
+          grupo.add(atual);
+          adjacencia.get(atual).forEach(vizinho => { if(!visitados.has(vizinho)) fila.push(vizinho); });
+        }
+        if(grupo.size > 1) grupos.push([...grupo]);
+      });
+
+      renderResultadoDuplicatas(grupos);
+    }, 30);
+  }
+
+  function renderResultadoDuplicatas(grupos){
+    const box = document.getElementById('duplicatas-resultado');
+    if(!grupos.length){
+      box.innerHTML = `<p class="hint">Nenhum grupo de possíveis duplicatas encontrado. 🎉</p>`;
+      return;
+    }
+    box.innerHTML = `
+      <p class="hint" style="margin-bottom:14px;"><b>${grupos.length}</b> grupo(s) de possível duplicata encontrado(s), envolvendo <b>${grupos.reduce((s,g)=>s+g.length,0)}</b> corretoras no total.</p>
+      ${grupos.map((grupo, i) => `
+        <div class="card" style="padding:16px;margin-bottom:12px;">
+          <div style="font-size:11.5px;font-weight:800;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;">Grupo ${i+1} · ${grupo.length} corretoras</div>
+          ${grupo.map(gid => {
+            const g = GROUPS[gid];
+            if(!g) return '';
+            return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);">
+              <div>
+                <div style="font-weight:700;font-size:13px;">${esc(g.name)}</div>
+                <div style="font-size:11.5px;color:var(--gray-600);">${esc(g.cnpj) || 'sem CNPJ'} · ${esc(g.cidade) || 'sem cidade'} · ${esc(g.filial) || 'sem filial'}</div>
+              </div>
+              <button class="access-btn" onclick="openCorretoraForm('${gid}')">Abrir</button>
+            </div>`;
+          }).join('')}
+        </div>`).join('')}
+    `;
   }
 
   function relatorioVinculoLinhas(){
@@ -6965,6 +7168,7 @@
     // Mostrar área de consulta, ocultar painel de modelos
     document.getElementById('relatorio-painel-modelos').style.display = 'none';
     document.getElementById('relatorio-vinculo-area').style.display = 'none';
+    document.getElementById('relatorio-duplicatas-area').style.display = 'none';
     document.getElementById('relatorio-consulta-area').style.display = 'block';
 
     // Limpar filtros
@@ -7456,6 +7660,195 @@
     ws['!cols'] = [{wch:30},{wch:20},{wch:10},{wch:28},{wch:18},{wch:18},{wch:8},{wch:30},{wch:30},{wch:35},{wch:12},{wch:25}];
     XLSX.utils.book_append_sheet(wb, ws, 'Corretoras');
     XLSX.writeFile(wb, 'modelo_importacao_corretoras.xlsx');
+  }
+
+  function openImportarVinculoSeguradoraModal(){
+    const sel = document.getElementById('vinculo-seg-import-seguradora');
+    const nomes = Object.values(SEGURADORAS).map(s => s.nome).sort((a,b) => a.localeCompare(b));
+    sel.innerHTML = '<option value="">Selecione...</option>' + nomes.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    document.getElementById('vinculo-seg-arquivo-input').value = '';
+    document.getElementById('vinculo-seg-import-resultado').innerHTML = '';
+    openModal('modal-importar-vinculo-seguradora');
+  }
+
+  function processarPlanilhaVinculoSeguradora(){
+    const seguradora = document.getElementById('vinculo-seg-import-seguradora').value;
+    const file = document.getElementById('vinculo-seg-arquivo-input').files[0];
+    const resultBox = document.getElementById('vinculo-seg-import-resultado');
+    if(!seguradora){ resultBox.innerHTML = `<p class="hint" style="color:var(--black);font-weight:700;">Selecione a seguradora primeiro.</p>`; return; }
+    if(!file){ resultBox.innerHTML = `<p class="hint" style="color:var(--black);font-weight:700;">Selecione um arquivo.</p>`; return; }
+    if(typeof XLSX === 'undefined'){ resultBox.innerHTML = `<p class="hint">Não foi possível carregar o leitor de planilhas.</p>`; return; }
+
+    resultBox.innerHTML = `<p class="hint">Lendo arquivo...</p>`;
+    const isCsv = file.name.toLowerCase().endsWith('.csv');
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      let linhasBrutas;
+      try {
+        if(isCsv){
+          linhasBrutas = e.target.result.split(/\r?\n/).map(l => l.split(',')[0].replace(/^"|"$/g,'').trim()).filter(Boolean);
+        } else {
+          const wb = XLSX.read(e.target.result, { type:'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const linhas = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+          linhasBrutas = linhas.map(l => String(l[0] ?? '').trim()).filter(Boolean);
+        }
+      } catch(err){
+        resultBox.innerHTML = `<p class="hint">Não foi possível ler o arquivo (${err.message}).</p>`;
+        return;
+      }
+      if(!linhasBrutas.length){ resultBox.innerHTML = `<p class="hint">Planilha vazia ou sem dados.</p>`; return; }
+
+      // se a primeira linha parecer um cabeçalho (ex: "Corretora", "Nome"), descarta
+      const possivelHeader = linhasBrutas[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      if(['corretora','corretoras','nome','razao social','razao_social'].includes(possivelHeader)){
+        linhasBrutas = linhasBrutas.slice(1);
+      }
+
+      const linhas = linhasBrutas.map((nome, i) => ({
+        linha: i + 2,
+        nomeBruto: nome,
+        gid: identificarCorretoraParcial(nome),
+      }));
+
+      window._importVinculoSegRows = linhas;
+      window._importVinculoSegSeguradora = seguradora;
+      renderModalConfirmacaoVinculoSeguradora();
+      openModal('modal-confirmar-importacao');
+    };
+    if(isCsv){ reader.readAsText(file, "UTF-8"); } else { reader.readAsArrayBuffer(file); }
+  }
+
+  function renderModalConfirmacaoVinculoSeguradora(){
+    const rows = window._importVinculoSegRows || [];
+    const seguradora = window._importVinculoSegSeguradora;
+    const identificadas = rows.filter(r => r.gid);
+    const naoIdentificadas = rows.filter(r => !r.gid);
+
+    document.getElementById('conf-import-subtitulo').innerHTML =
+      `Vinculando à seguradora <b>${esc(seguradora)}</b> · ${rows.length} nome(s) na planilha` +
+      (naoIdentificadas.length ? ` · <span style="color:#b45309;font-weight:700;">${naoIdentificadas.length} sem corretora identificada</span>` : '');
+
+    document.getElementById('conf-import-thead').innerHTML =
+      '<tr><th>Corretora (planilha)</th><th style="width:230px;">Vínculo</th></tr>';
+
+    const corretorasOrdenadas = Object.keys(GROUPS)
+      .sort((a,b) => (GROUPS[a].name||'').localeCompare(GROUPS[b].name||'', 'pt-BR'));
+    const datalistEl = document.getElementById('conf-import-corretoras-datalist');
+    if(datalistEl) datalistEl.innerHTML = corretorasOrdenadas.map(gid => `<option value="${esc(GROUPS[gid].name)}">`).join('');
+
+    document.getElementById('conf-import-tbody').innerHTML = rows.map(r => {
+      const jaTem = r.gid && (GROUPS[r.gid].seguradoras || []).includes(seguradora);
+      const vinculoTxt = r.gid
+        ? (jaTem
+            ? `<span style="color:var(--gray-600);font-weight:700;">✓ ${esc(GROUPS[r.gid].name)} <span style="font-weight:400;">(já vinculada)</span></span>`
+            : `<span style="color:#15803d;font-weight:700;">+ ${esc(GROUPS[r.gid].name)}</span>`)
+        : `<span style="color:#b45309;font-weight:700;">Não identificada</span>`;
+      const acaoExtra = r.gid
+        ? `<button onclick="desvincularVinculoSegImportLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;text-align:center;">Trocar</button>`
+        : `<button onclick="cadastrarCorretoraDaVinculoSegLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:8px;text-align:center;background:var(--black);color:#fff;border-color:var(--black);">+ Cadastrar corretora</button>
+           <input list="conf-import-corretoras-datalist" placeholder="Ou digite pra vincular a…" autocomplete="off" onchange="vincularVinculoSegImportLinhaPorNome(${r.linha}, this.value)" style="font-size:11px;padding:5px 6px;border:1.4px solid var(--border);border-radius:8px;background:#fff;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;">`;
+      return `<tr style="${r.gid ? '' : 'background:#fffbeb;'}">
+        <td><b>${esc(r.nomeBruto)}</b></td>
+        <td style="vertical-align:top;padding-top:10px;">
+          <div style="font-size:11.5px;margin-bottom:8px;">${vinculoTxt}</div>
+          ${acaoExtra}
+          <button onclick="removerLinhaImportacaoVinculoSeg(${r.linha})" style="width:100%;box-sizing:border-box;background:none;border:1.4px solid #fecaca;border-radius:8px;cursor:pointer;color:#dc2626;padding:5px 6px;font-size:11px;font-weight:700;">Remover linha</button>
+        </td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="2" style="text-align:center;color:var(--gray-500);">Nenhuma linha restante.</td></tr>`;
+
+    const novosVinculos = identificadas.filter(r => !(GROUPS[r.gid].seguradoras || []).includes(seguradora));
+    document.getElementById('conf-import-total').innerHTML =
+      `<b>${novosVinculos.length}</b> corretora(s) vão receber o vínculo com <b>${esc(seguradora)}</b>` +
+      (naoIdentificadas.length ? ` · <b>${naoIdentificadas.length}</b> sem corretora identificada` : '');
+
+    const btnConf = document.getElementById('conf-import-btn-confirmar');
+    btnConf.disabled = identificadas.length === 0;
+    btnConf.textContent = `Confirmar e vincular (${identificadas.length})`;
+    btnConf.onclick = confirmarImportacaoVinculoSeguradora;
+  }
+
+  function removerLinhaImportacaoVinculoSeg(linha){
+    window._importVinculoSegRows = (window._importVinculoSegRows || []).filter(r => r.linha !== linha);
+    renderModalConfirmacaoVinculoSeguradora();
+  }
+
+  function vincularVinculoSegImportLinhaPorNome(linha, nomeDigitado){
+    const nome = String(nomeDigitado||'').trim();
+    if(!nome) return;
+    const gid = Object.keys(GROUPS).find(k => (GROUPS[k].name||'').toLowerCase() === nome.toLowerCase());
+    if(!gid){ alert('Corretora não encontrada. Escolha uma sugestão da lista ao digitar.'); return; }
+    const r = (window._importVinculoSegRows || []).find(x => x.linha === linha);
+    if(r) r.gid = gid;
+    renderModalConfirmacaoVinculoSeguradora();
+  }
+
+  function desvincularVinculoSegImportLinha(linha){
+    const r = (window._importVinculoSegRows || []).find(x => x.linha === linha);
+    if(r) r.gid = null;
+    renderModalConfirmacaoVinculoSeguradora();
+  }
+
+  function cadastrarCorretoraDaVinculoSegLinha(linha){
+    const r = (window._importVinculoSegRows || []).find(x => x.linha === linha);
+    if(!r) return;
+    const seguradora = window._importVinculoSegSeguradora;
+
+    window._reabrirConfirmacaoImportacaoAoFechar = true;
+    window._corretoraQuickCreateCallback = async (novoGid) => {
+      // já nasce vinculada à seguradora escolhida — evita um passo extra
+      const segsAtuais = GROUPS[novoGid].seguradoras || [];
+      if(!segsAtuais.includes(seguradora)){
+        const novasSegs = [...segsAtuais, seguradora];
+        await supabase.from('corretoras').update({ seguradoras_permitidas: novasSegs }).eq('id', novoGid);
+        GROUPS[novoGid].seguradoras = novasSegs;
+      }
+      r.gid = novoGid;
+      renderModalConfirmacaoVinculoSeguradora();
+    };
+
+    closeModal('modal-confirmar-importacao');
+    openCorretoraForm(null);
+    const campoNome = document.getElementById('corretora-razao-social');
+    if(campoNome) campoNome.value = r.nomeBruto;
+  }
+
+  async function confirmarImportacaoVinculoSeguradora(){
+    const rows = (window._importVinculoSegRows || []).filter(r => r.gid);
+    const seguradora = window._importVinculoSegSeguradora;
+    const btnConf = document.getElementById('conf-import-btn-confirmar');
+    btnConf.disabled = true; btnConf.textContent = 'Vinculando...';
+    mostrarSplashOp('Vinculando...');
+
+    let vinculadas = 0, jaTinham = 0, erros = 0;
+    for(const r of rows){
+      const segsAtuais = GROUPS[r.gid].seguradoras || [];
+      if(segsAtuais.includes(seguradora)){ jaTinham++; continue; }
+      const novasSegs = [...segsAtuais, seguradora];
+      const { error } = await supabase.from('corretoras').update({ seguradoras_permitidas: novasSegs }).eq('id', r.gid);
+      if(error){ erros++; continue; }
+      GROUPS[r.gid].seguradoras = novasSegs;
+      vinculadas++;
+    }
+
+    esconderSplashOp();
+    registrarLog('Importou vínculo de corretoras por seguradora', `${seguradora}: ${vinculadas} vinculada(s), ${jaTinham} já tinham, ${erros} erro(s)`);
+    closeModal('modal-confirmar-importacao');
+    window._importVinculoSegRows = null;
+
+    const resultBox = document.getElementById('vinculo-seg-import-resultado');
+    if(resultBox){
+      resultBox.innerHTML = `
+        <div style="padding:14px;background:var(--surface-2);border-radius:10px;border:1.4px solid var(--border);margin-top:8px;">
+          <div style="font-weight:800;margin-bottom:8px;">Vínculo concluído</div>
+          <div style="display:flex;gap:18px;font-size:13px;flex-wrap:wrap;">
+            <span style="color:green;">✓ ${vinculadas} corretora(s) vinculada(s) a ${esc(seguradora)}</span>
+            <span style="color:var(--gray-600);">↺ ${jaTinham} já tinham esse vínculo</span>
+            ${erros ? `<span style="color:red;">✗ ${erros} com erro</span>` : ''}
+          </div>
+        </div>`;
+    }
   }
 
   function openImportarEquipeModal(){
