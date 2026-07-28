@@ -8097,12 +8097,16 @@
       origem: 'equipe',
     }));
 
-    let sucesso = 0, erros = 0;
+    let sucesso = 0, erros = 0, primeiroErro = '';
     const CHUNK = 200; // insere em lotes pra não estourar o tamanho da requisição
     for(let i=0; i<payload.length; i += CHUNK){
       const lote = payload.slice(i, i+CHUNK);
       const { error } = await supabase.from('marketing_contatos').insert(lote);
-      if(error) erros += lote.length; else sucesso += lote.length;
+      if(error){
+        erros += lote.length;
+        if(!primeiroErro) primeiroErro = error.message;
+        console.error('confirmarImportacaoEquipe: erro ao inserir lote:', error.message, error);
+      } else sucesso += lote.length;
     }
 
     esconderSplashOp();
@@ -8118,7 +8122,7 @@
           <div style="font-weight:800;margin-bottom:8px;">Importação concluída</div>
           <div style="display:flex;gap:18px;font-size:13px;flex-wrap:wrap;">
             <span style="color:green;">✓ ${sucesso} contato(s) importado(s)</span>
-            ${erros ? `<span style="color:red;">✗ ${erros} com erro</span>` : ''}
+            ${erros ? `<span style="color:red;">✗ ${erros} com erro${primeiroErro ? ': ' + esc(primeiroErro) : ''}</span>` : ''}
           </div>
         </div>`;
     }
