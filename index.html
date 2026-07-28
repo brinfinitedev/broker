@@ -1353,6 +1353,15 @@
             <div id="quick-access-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;"></div>
           </div>
 
+          <!-- ACESSOS DAS SEGURADORAS (login/senha da assessoria, puxado do cadastro) -->
+          <div class="card" style="padding:20px;margin-bottom:16px;">
+            <div class="card-head" style="margin-bottom:14px;">
+              <h2 style="font-size:14px;margin:0;">Acessos das seguradoras</h2>
+              <span class="hint" style="margin:0;font-size:11px;">Login e senha da assessoria de cada seguradora</span>
+            </div>
+            <div id="quick-access-seguradoras-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;"></div>
+          </div>
+
           <div class="home-grid">
             <div class="card">
               <div class="card-head">
@@ -3643,6 +3652,34 @@
       </a>`).join('');
   }
 
+  // Acessos das seguradoras: puxa direto do cadastro (link/login/senha da
+  // assessoria) — não precisa cadastrar de novo em lugar nenhum, e sempre
+  // reflete o que está salvo na tela de Seguradoras.
+  function renderQuickAccessSeguradoras(){
+    const grid = document.getElementById('quick-access-seguradoras-grid');
+    if(!grid) return;
+    const entradas = Object.values(SEGURADORAS).filter(s => s.link_assessoria || s.login_assessoria || s.senha_assessoria);
+    if(!entradas.length){
+      grid.innerHTML = `<p class="hint" style="margin:0;grid-column:1/-1;">Nenhuma seguradora com link/login de assessoria cadastrado ainda. Preencha isso no cadastro da seguradora.</p>`;
+      return;
+    }
+    entradas.sort((a,b) => (a.nome||'').localeCompare(b.nome||'', 'pt-BR'));
+    grid.innerHTML = entradas.map(s => `
+      <div style="border:1.4px solid var(--border);border-radius:12px;padding:14px;background:#fff;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <div class="av" style="width:28px;height:28px;font-size:10px;flex-shrink:0;${s.cor ? `background:${esc(s.cor)};color:#fff;` : ''}">${esc(initials(s.nome))}</div>
+          <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(s.nome)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          ${s.link_assessoria ? `<a href="${esc(s.link_assessoria)}" target="_blank" rel="noopener" class="btn-sm" style="text-align:center;text-decoration:none;">Abrir assessoria</a>` : ''}
+          <div style="display:flex;gap:6px;">
+            ${s.login_assessoria ? `<button class="btn-sm" style="flex:1;" data-copiar="${esc(s.login_assessoria)}" onclick="copiarTexto(this.dataset.copiar,this)">Copiar login</button>` : ''}
+            ${s.senha_assessoria ? `<button class="btn-sm" style="flex:1;" data-copiar="${esc(s.senha_assessoria)}" onclick="copiarTexto(this.dataset.copiar,this)">Copiar senha</button>` : ''}
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
   function renderQALista(){
     const list = loadQA();
     const el = document.getElementById('qa-lista');
@@ -3764,6 +3801,7 @@
       updateHomeGreeting();
       renderAniversariantes();
       renderQuickAccess();
+      renderQuickAccessSeguradoras();
     }
     if(id === 'crm'){
       renderKanban();
@@ -9865,6 +9903,7 @@
     });
     refreshSeguradoraSelects();
     renderSeguradoras();
+    renderQuickAccessSeguradoras();
   }
 
   // Repopula todo select/checklist de seguradora espalhado pelo sistema (cadastro de
