@@ -7005,11 +7005,18 @@
       .replace(/[.\-,\/]/g, ' ');
     const termos = [
       'CORRETORA DE SEGUROS E RESSEGUROS', 'CORRETORA DE SEGUROS', 'CORRETORA DE SEGURO',
-      'ADMINISTRADORA DE SEGUROS', 'CORRETAGEM DE SEGUROS', 'CORRETORA', 'SEGUROS',
-      'ADMINISTRADORA', 'CONSULTORIA', 'CONSULTORIA E ', 'SOCIEDADE SIMPLES',
-      'LTDA ME', 'LTDA', 'EIRELI', 'S A', 'SA', 'ME', 'EPP', 'CIA', 'COMPANHIA',
+      'ADMINISTRADORA DE SEGUROS E RESSEGUROS', 'ADMINISTRADORA DE SEGUROS',
+      'CORRETAGEM DE SEGUROS', 'ASSESSORIA DE SEGUROS', 'CONSULTORIA DE SEGUROS',
+      'SEGUROS GERAIS', 'GESTAO DE RISCOS', 'NEGOCIOS E SERVICOS FINANCEIROS',
+      'CONSULTORIA E SERVICOS FINANCEIROS', 'SERVICOS FINANCEIROS',
+      'CORRETORES DE SEGUROS', 'CORRETORES', 'CORRETORA', 'CORRETOR', 'SEGUROS',
+      'ADMINISTRADORA', 'ADMINISTRACAO', 'ASSESSORIA', 'CONSULTORIA', 'CONSULTORES',
+      'SOCIEDADE SIMPLES', 'NEGOCIOS',
+      'LTDA ME', 'LTDA EPP', 'LTDA', 'EIRELI', 'S A', 'SA', 'ME', 'EPP', 'CIA', 'COMPANHIA',
+      // conectores comuns que não ajudam a identificar a empresa e só atrapalham a comparação
+      ' E ', ' DE ', ' DA ', ' DO ', ' DAS ', ' DOS ',
     ];
-    termos.forEach(t => { s = s.replace(new RegExp(`\\b${t}\\b`, 'g'), ' '); });
+    termos.forEach(t => { s = s.replace(new RegExp(`\\b${t.trim()}\\b`, 'g'), ' '); });
     return s.replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
@@ -7048,34 +7055,65 @@
     setTimeout(() => {
       const entradas = Object.entries(GROUPS).map(([gid, g]) => ({
         gid, nome: g.name || '', nucleo: nucleoNomeCorretora(g.name),
+        cnpjNorm: String(g.cnpj || '').replace(/\D/g, ''),
       })).filter(e => e.nucleo);
 
-      const LIMITE_SIMILARIDADE = 0.82;
+      const LIMITE_SIMILARIDADE = 0.80;
       const adjacencia = new Map(entradas.map(e => [e.gid, new Set()]));
 
-      // agrupa por bucket (primeiros 3 caracteres do núcleo) pra não comparar tudo com tudo
-      const buckets = new Map();
-      entradas.forEach(e => {
-        const chave = e.nucleo.slice(0, 3);
-        if(!buckets.has(chave)) buckets.set(chave, []);
-        buckets.get(chave).push(e);
-      });
+      function conectar(a, b){
+        adjacencia.get(a.gid).add(b.gid);
+        adjacencia.get(b.gid).add(a.gid);
+      }
 
-      buckets.forEach(lista => {
+      // CAMADA 0: mesmíssimo CNPJ cadastrado em corretoras diferentes — é o sinal
+      // mais confiável de duplicata que existe (não depende do nome estar parecido).
+      const porCnpj = new Map();
+      entradas.forEach(e => {
+        if(!e.cnpjNorm) return;
+        if(!porCnpj.has(e.cnpjNorm)) porCnpj.set(e.cnpjNorm, []);
+        porCnpj.get(e.cnpjNorm).push(e);
+      });
+      porCnpj.forEach(lista => {
         for(let i = 0; i < lista.length; i++){
-          for(let j = i + 1; j < lista.length; j++){
-            const a = lista[i], b = lista[j];
-            // pula comparação cara se o tamanho for muito diferente (não vai bater mesmo)
-            if(Math.abs(a.nucleo.length - b.nucleo.length) > a.nucleo.length * 0.4 + 3) continue;
-            const contemUmAoOutro = a.nucleo.includes(b.nucleo) || b.nucleo.includes(a.nucleo);
-            const sim = similaridade(a.nucleo, b.nucleo);
-            if(contemUmAoOutro || sim >= LIMITE_SIMILARIDADE){
-              adjacencia.get(a.gid).add(b.gid);
-              adjacencia.get(b.gid).add(a.gid);
-            }
-          }
+          for(let j = i + 1; j < lista.length; j++) conectar(lista[i], lista[j]);
         }
       });
+
+      // CAMADA 1: núcleo IDÊNTICO após normalização — pega a maioria das duplicatas
+      // reais direto, sem risco de falso positivo (ex: "Prisma Corretora de Seguros
+      // Ltda" e "Prisma Corretora Ltda" viram as duas só "PRISMA").
+      const porNucleoExato = new Map();
+      entradas.forEach(e => {
+        if(!porNucleoExato.has(e.nucleo)) porNucleoExato.set(e.nucleo, []);
+        porNucleoExato.get(e.nucleo).push(e);
+      });
+      porNucleoExato.forEach(lista => {
+        for(let i = 0; i < lista.length; i++){
+          for(let j = i + 1; j < lista.length; j++) conectar(lista[i], lista[j]);
+        }
+      });
+
+      // CAMADA 2: nomes parecidos mas não idênticos (typo, sigla diferente etc).
+      // Em vez de só comparar quem começa com as mesmas 3 letras (o que deixava
+      // passar duplicata sempre que a diferença não era bem no início do nome),
+      // ordena todo mundo alfabeticamente pelo núcleo e compara cada corretora só
+      // com as poucas vizinhas mais próximas nessa ordenação — nomes parecidos
+      // ficam pertinho um do outro depois de ordenados, então isso pega muito mais
+      // caso sem precisar comparar todo mundo com todo mundo (o que travaria com
+      // milhares de corretoras).
+      const ordenadas = [...entradas].sort((a,b) => a.nucleo.localeCompare(b.nucleo));
+      const JANELA = 6;
+      for(let i = 0; i < ordenadas.length; i++){
+        for(let j = i + 1; j <= Math.min(i + JANELA, ordenadas.length - 1); j++){
+          const a = ordenadas[i], b = ordenadas[j];
+          if(a.nucleo === b.nucleo) continue; // já conectado na camada 1
+          if(Math.abs(a.nucleo.length - b.nucleo.length) > a.nucleo.length * 0.5 + 3) continue;
+          const contemUmAoOutro = a.nucleo.length >= 3 && b.nucleo.length >= 3 && (a.nucleo.includes(b.nucleo) || b.nucleo.includes(a.nucleo));
+          const sim = similaridade(a.nucleo, b.nucleo);
+          if(contemUmAoOutro || sim >= LIMITE_SIMILARIDADE) conectar(a, b);
+        }
+      }
 
       // agrupa em "componentes conectados" (BFS) — todo mundo que se parece, direta ou
       // indiretamente, cai no mesmo grupo
