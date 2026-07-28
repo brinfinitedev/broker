@@ -2635,7 +2635,7 @@
       <h3>Metas por seguradora <span style="font-weight:400;color:var(--gray-600);">(opcional)</span></h3>
       <div id="campanha-metas-seg-list" style="margin-bottom:10px;"></div>
       <div style="display:flex; gap:8px;">
-        <select id="campanha-nova-meta-seg-nome" style="flex:1;"><option value="">Selecione a seguradora...</option></select>
+        <select id="campanha-nova-meta-seg-nome" style="flex:1;min-width:0;"><option value="">Selecione a seguradora...</option></select>
         <input id="campanha-nova-meta-seg-valor" type="number" step="0.01" placeholder="Meta" style="width:140px;">
         <button class="btn-outline" style="padding:9px 14px;" onclick="addMetaSeguradoraCampanha()">+ Adicionar</button>
       </div>
@@ -2645,7 +2645,8 @@
       <h3>Metas por corretora <span style="font-weight:400;color:var(--gray-600);">(opcional)</span></h3>
       <div id="campanha-metas-cor-list" style="margin-bottom:10px;"></div>
       <div style="display:flex; gap:8px;">
-        <select id="campanha-nova-meta-cor-nome" style="flex:1;"><option value="">Selecione a corretora...</option></select>
+        <input id="campanha-nova-meta-cor-nome" list="campanha-corretoras-datalist" placeholder="Digite para buscar a corretora..." style="flex:1;min-width:0;" autocomplete="off">
+        <datalist id="campanha-corretoras-datalist"></datalist>
         <input id="campanha-nova-meta-cor-valor" type="number" step="0.01" placeholder="Meta" style="width:140px;">
         <button class="btn-outline" style="padding:9px 14px;" onclick="addMetaCorretoraCampanha()">+ Adicionar</button>
       </div>
@@ -2691,7 +2692,7 @@
       <p class="hint">Informações gerais de identificação</p>
       <div class="form-grid">
         <div class="f-field full"><label>Razão social</label><input type="text" id="corretora-razao-social" placeholder="Ex: Prisma Corretora de Seguros Ltda."></div>
-        <div class="f-field"><label>Filial</label><input type="text" id="corretora-filial" placeholder="Ex: Matriz, São Paulo, Curitiba..."></div>
+        <div class="f-field"><label>Filial</label><select id="corretora-filial"><option value="">Selecione...</option></select></div>
         <div class="f-field"><label>Status</label>
           <select id="corretora-status">
             <option value="ativa">Ativa</option>
@@ -4402,8 +4403,8 @@
     selSeg.innerHTML = `<option value="">Selecione a seguradora...</option>` + nomes.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
 
     const corretorasOrdenadas = Object.entries(GROUPS).sort((a,b)=>a[1].name.localeCompare(b[1].name));
-    const selCor = document.getElementById('campanha-nova-meta-cor-nome');
-    selCor.innerHTML = `<option value="">Selecione a corretora...</option>` + corretorasOrdenadas.map(([gid,g])=>`<option value="${gid}">${esc(g.name)}</option>`).join('');
+    const datalistCor = document.getElementById('campanha-corretoras-datalist');
+    datalistCor.innerHTML = corretorasOrdenadas.map(([gid,g])=>`<option value="${esc(g.name)}">`).join('');
   }
 
   function renderMetasSegCampanhaList(){
@@ -4444,9 +4445,12 @@
       : `<p class="tag-empty-hint">Nenhuma meta por corretora adicionada.</p>`;
   }
   function addMetaCorretoraCampanha(){
-    const gid = document.getElementById('campanha-nova-meta-cor-nome').value;
+    const nomeDigitado = document.getElementById('campanha-nova-meta-cor-nome').value.trim();
     const valor = Number(document.getElementById('campanha-nova-meta-cor-valor').value);
-    if(!gid){ alert('Selecione a corretora.'); return; }
+    if(!nomeDigitado){ alert('Digite o nome da corretora.'); return; }
+    const encontrada = Object.entries(GROUPS).find(([, g]) => g.name.toLowerCase() === nomeDigitado.toLowerCase());
+    if(!encontrada){ alert('Corretora não encontrada. Selecione uma opção da lista sugerida ao digitar.'); return; }
+    const gid = encontrada[0];
     if(!valor || valor <= 0){ alert('Informe uma meta válida.'); return; }
     if(PENDING_METAS_COR_CAMPANHA.some(m=>m.corretora_id===gid)){ alert('Essa corretora já tem meta nesta campanha.'); return; }
     PENDING_METAS_COR_CAMPANHA.push({ corretora_id: gid, meta: valor });
@@ -5016,7 +5020,7 @@
       return `
         <div class="material-seguradora-block">
           <div class="material-seguradora-head">
-            <div class="logo" style="background:${cor};">${s.logo ? `<img src="${esc(s.logo)}">` : esc(initials(s.nome))}</div>
+            <div class="logo" style="background:${s.logo ? '#fff' : cor};">${s.logo ? `<img src="${esc(s.logo)}" style="width:100%;height:100%;object-fit:contain;padding:4px;">` : esc(initials(s.nome))}</div>
             <h3>${esc(s.nome)}</h3>
             <span class="count">${materiaisDaSeguradora.length} material(is)</span>
           </div>
@@ -5510,6 +5514,36 @@
     closeModal('modal-selecionar-contatos');
   }
 
+  // Verifica, entre os contatos selecionados agora, quais já receberam algum
+  // disparo de WhatsApp antes (por número ou por nome, pra cobrir também os
+  // disparos antigos que só guardavam o nome). Não bloqueia — só avisa.
+  async function verificarContatosJaEnviados(selecionados){
+    const { data, error } = await supabase.from('marketing_disparos').select('contatos, created_at').eq('tipo', 'whatsapp');
+    if(error || !data) return [];
+    const porWhats = new Map();
+    const porNome = new Map();
+    data.forEach(d => {
+      (d.contatos || []).forEach(c => {
+        const nome = typeof c === 'string' ? c : c?.nome;
+        const whats = (typeof c === 'object' && c) ? c.whatsapp : null;
+        if(whats){
+          const atual = porWhats.get(whats);
+          if(!atual || new Date(d.created_at) > new Date(atual)) porWhats.set(whats, d.created_at);
+        }
+        if(nome){
+          const atual = porNome.get(nome);
+          if(!atual || new Date(d.created_at) > new Date(atual)) porNome.set(nome, d.created_at);
+        }
+      });
+    });
+    return selecionados
+      .map(c => {
+        const ultimoEnvio = (c.whatsapp && porWhats.get(c.whatsapp)) || porNome.get(c.nome);
+        return ultimoEnvio ? { ...c, ultimoEnvio } : null;
+      })
+      .filter(Boolean);
+  }
+
   async function dispatchWhatsapp(){
     const msg = document.getElementById('whats-msg').value.trim();
     if(!msg){ alert('Escreva a mensagem antes de disparar.'); return; }
@@ -5522,6 +5556,17 @@
       return;
     }
 
+    const repetidos = await verificarContatosJaEnviados(WHATS_SELECIONADOS);
+    if(repetidos.length){
+      const lista = repetidos
+        .map(c => `• ${c.nome} — último envio em ${new Date(c.ultimoEnvio).toLocaleDateString('pt-BR')}`)
+        .join('\n');
+      const continuar = confirm(
+        `Atenção: ${repetidos.length} de ${WHATS_SELECIONADOS.length} contato(s) selecionado(s) já receberam uma mensagem antes:\n\n${lista}\n\nQuer disparar mesmo assim?`
+      );
+      if(!continuar) return;
+    }
+
     WHATS_SELECIONADOS.forEach((c, i) => {
       if(c.whatsapp) setTimeout(() => openWhats(c.whatsapp, msg), i * 300); // pequeno intervalo entre aberturas de aba
     });
@@ -5529,7 +5574,7 @@
     await supabase.from('marketing_disparos').insert({
       tipo:'whatsapp', mensagem: msg, enviado_por: currentUserId,
       quantidade_contatos: WHATS_SELECIONADOS.length,
-      contatos: WHATS_SELECIONADOS.map(c => c.nome),
+      contatos: WHATS_SELECIONADOS.map(c => ({ nome: c.nome, whatsapp: c.whatsapp })),
     });
     registrarLog('Disparo de WhatsApp', `${WHATS_SELECIONADOS.length} contato(s)`);
 
@@ -5571,7 +5616,7 @@
     const ini = document.getElementById('hd-filtro-ini')?.value;
     const fim = document.getElementById('hd-filtro-fim')?.value;
     let lista = _hdCache;
-    if(q) lista = lista.filter(d => (d.mensagem||'').toLowerCase().includes(q)||(d._autorNome||'').toLowerCase().includes(q)||(d.contatos||[]).some(c=>c.toLowerCase().includes(q)));
+    if(q) lista = lista.filter(d => (d.mensagem||'').toLowerCase().includes(q)||(d._autorNome||'').toLowerCase().includes(q)||(d.contatos||[]).some(c=>(typeof c==='string'?c:(c?.nome||'')).toLowerCase().includes(q)));
     if(ini) lista = lista.filter(d => new Date(d.created_at) >= new Date(ini+'T00:00:00'));
     if(fim) lista = lista.filter(d => new Date(d.created_at) <= new Date(fim+'T23:59:59'));
     if(!lista.length){ wrap.innerHTML = `<p class="hint" style="margin:0;text-align:center;padding:30px 0;">Nenhum disparo encontrado.</p>`; return; }
@@ -5596,7 +5641,7 @@
     if(!d) return;
     const dt = new Date(d.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
     const tipo = d.tipo==='email' ? '📧 E-mail' : '💬 WhatsApp';
-    const contatos = d.contatos && d.contatos.length ? d.contatos : [];
+    const contatos = (d.contatos && d.contatos.length ? d.contatos : []).map(c => typeof c === 'string' ? c : (c?.nome || ''));
     const wrap = document.createElement('div');
     wrap.id = 'modal-detalhe-disparo-wrap';
     wrap.innerHTML = `<div class="modal-overlay open" onclick="if(event.target===this) document.getElementById('modal-detalhe-disparo-wrap').remove()">
@@ -5723,7 +5768,7 @@
   let PENDING_ANEXOS_CORRETORA = [];
   let CORRETORA_ANEXO_TEMP_ID = null; // agrupa arquivos de uma corretora ainda não salva (nova)
 
-  function openCorretoraForm(gid){
+  async function openCorretoraForm(gid){
     editingCorretoraGid = gid;
     const g = gid ? GROUPS[gid] : null;
 
@@ -5733,7 +5778,6 @@
 
     const fieldMap = {
       'corretora-razao-social': g ? g.name : '',
-      'corretora-filial': g ? (g.filial || '') : '',
       'corretora-cnpj': g ? g.cnpj : '',
       'corretora-ie': g ? (g.ie || '') : '',
       'corretora-susep': g ? g.susep : '',
@@ -5748,6 +5792,16 @@
       'corretora-complemento': g ? (g.complemento || '') : '',
     };
     Object.entries(fieldMap).forEach(([id, val]) => { const el=document.getElementById(id); if(el) el.value = val || ''; });
+
+    // Select de filial — populado a partir da tabela "filiais" cadastrada (não é mais texto livre)
+    const selFilial = document.getElementById('corretora-filial');
+    if(selFilial){
+      const { data: filiaisData } = await supabase.from('filiais').select('*').order('nome');
+      selFilial.innerHTML = '<option value="">Selecione...</option>' +
+        (filiaisData || []).map(f => `<option value="${esc(f.nome)}">${esc(f.nome)}</option>`).join('');
+      selFilial.value = g ? (g.filial || '') : '';
+    }
+
     // status
     const statusEl = document.getElementById('corretora-status');
     if(statusEl) statusEl.value = g ? (g.status || 'ativa') : 'ativa';
@@ -6497,12 +6551,20 @@
   async function getClientLocation(){
     if(_cachedLocalizacao) return _cachedLocalizacao;
     try{
-      const r = await fetch('https://ipapi.co/json/');
+      const r = await fetch('https://ipwho.is/');
       const j = await r.json();
+      if(j.success === false){
+        console.error('getClientLocation: ipwho.is retornou erro:', j.message);
+        _cachedLocalizacao = '—';
+        return _cachedLocalizacao;
+      }
       if(!_cachedIP) _cachedIP = j.ip || '—';
-      const partes = [j.city, j.region, j.country_name].filter(Boolean);
+      const partes = [j.city, j.region, j.country].filter(Boolean);
       _cachedLocalizacao = partes.length ? partes.join(' - ') : '—';
-    } catch(e){ _cachedLocalizacao = '—'; }
+    } catch(e){
+      console.error('getClientLocation: falha ao buscar localização:', e);
+      _cachedLocalizacao = '—';
+    }
     return _cachedLocalizacao;
   }
 
@@ -6520,7 +6582,11 @@
         action, details: details || '',
         created_at: new Date().toISOString(),
       });
-    } catch(e){ /* nunca deixa um erro de log quebrar a ação principal */ }
+    } catch(e){
+      // nunca deixa um erro de log quebrar a ação principal — mas registra no
+      // console pra dar pra diagnosticar (ex: coluna "localizacao" não criada ainda)
+      console.error('registrarLog: falha ao gravar log:', e.message);
+    }
   }
 
   async function upsertProducao({ corretora_id, seguradora, produto, competencia, valor }){
@@ -8681,9 +8747,11 @@
     const btnRemover = document.getElementById('btn-remover-logo');
     if(!box) return;
     if(PENDING_SEGURADORA_LOGO){
+      box.style.background = '#fff';
       box.innerHTML = `<img src="${PENDING_SEGURADORA_LOGO}" alt="Logo" style="width:100%;height:100%;object-fit:contain;padding:4px;">`;
       if(btnRemover) btnRemover.style.display = 'inline-flex';
     } else {
+      box.style.background = 'var(--surface-2)';
       box.innerHTML = '<span id="seguradora-logo-placeholder" style="font-size:11px;color:var(--gray-400);font-weight:600;">Sem logo</span>';
       if(btnRemover) btnRemover.style.display = 'none';
     }
