@@ -4129,12 +4129,12 @@
 
     const segFiltro = selSeg ? selSeg.value : '';
     const corFiltro = selCor ? selCor.value : '';
-    const buscaFiltro = (document.getElementById('funil-busca')?.value || '').trim().toLowerCase();
+    const buscaFiltro = normalizarBusca(document.getElementById('funil-busca')?.value || '');
 
     let linhas = RENOVACOES_CACHE.slice();
     if(segFiltro) linhas = linhas.filter(r => r.seguradora === segFiltro);
     if(corFiltro) linhas = linhas.filter(r => r.corretora_id === corFiltro);
-    if(buscaFiltro) linhas = linhas.filter(r => (r.cliente||'').toLowerCase().includes(buscaFiltro));
+    if(buscaFiltro) linhas = linhas.filter(r => normalizarBusca(r.cliente).includes(buscaFiltro));
 
     ESTAGIOS_FUNIL.forEach(estagio => {
       const col = document.querySelector(`#funil-board .kcol[data-col="${estagio}"]`);
@@ -5275,13 +5275,13 @@
     const tbody = document.getElementById('contatos-tbody');
     if(!tbody) return;
 
-    const q = (document.getElementById('contatos-filtro-texto')?.value || '').trim().toLowerCase();
+    const q = normalizarBusca(document.getElementById('contatos-filtro-texto')?.value || '');
     const fCorretora = (document.getElementById('contatos-filtro-corretora')?.value || '').toLowerCase();
     const fSeguradora = (document.getElementById('contatos-filtro-seguradora')?.value || '').toLowerCase();
     const fFilial = (document.getElementById('contatos-filtro-filial')?.value || '').toLowerCase();
 
     let linhas = todos;
-    if(q) linhas = linhas.filter(c => (c.nome||'').toLowerCase().includes(q)||(c.whatsapp||'').includes(q)||(c.email||'').toLowerCase().includes(q)||(c.corretoraNome||'').toLowerCase().includes(q));
+    if(q) linhas = linhas.filter(c => normalizarBusca(c.nome).includes(q)||(c.whatsapp||'').includes(q)||normalizarBusca(c.email).includes(q)||normalizarBusca(c.corretoraNome).includes(q));
     if(fCorretora) linhas = linhas.filter(c => (c.corretoraNome||'').toLowerCase() === fCorretora);
     if(fSeguradora) linhas = linhas.filter(c => (c.seguradoraNome||'').toLowerCase() === fSeguradora);
     if(fFilial) linhas = linhas.filter(c => (c.filial||'').toLowerCase() === fFilial);
@@ -5413,14 +5413,14 @@
 
   // ------------ Exportar contatos ------------
   async function exportarContatos(){
-    const q = (document.getElementById('contatos-filtro-texto')?.value || '').trim().toLowerCase();
+    const q = normalizarBusca(document.getElementById('contatos-filtro-texto')?.value || '');
     const fCorretora = (document.getElementById('contatos-filtro-corretora')?.value || '').toLowerCase();
     const fSeguradora = (document.getElementById('contatos-filtro-seguradora')?.value || '').toLowerCase();
     const buscaAtiva = !!(q || fCorretora || fSeguradora);
 
     let todos = await coletarTodosContatos();
     if(buscaAtiva){
-      if(q) todos = todos.filter(c => (c.nome||'').toLowerCase().includes(q)||(c.whatsapp||'').includes(q)||(c.email||'').toLowerCase().includes(q));
+      if(q) todos = todos.filter(c => normalizarBusca(c.nome).includes(q)||(c.whatsapp||'').includes(q)||normalizarBusca(c.email).includes(q));
       if(fCorretora) todos = todos.filter(c=>(c.corretoraNome||'').toLowerCase()===fCorretora);
       if(fSeguradora) todos = todos.filter(c=>(c.seguradoraNome||'').toLowerCase()===fSeguradora);
     }
@@ -5566,12 +5566,12 @@
   }
 
   function filtrarSeletor(){
-    const texto = (document.getElementById('seletor-filtro-texto').value||'').toLowerCase();
+    const texto = normalizarBusca(document.getElementById('seletor-filtro-texto').value||'');
     const corrFiltro = document.getElementById('seletor-filtro-corretora').value;
     const segFiltro = document.getElementById('seletor-filtro-seguradora').value;
 
     let lista = _seletorTodosContatos;
-    if(texto) lista = lista.filter(c => (c.nome||'').toLowerCase().includes(texto) || (c.whatsapp||'').includes(texto));
+    if(texto) lista = lista.filter(c => normalizarBusca(c.nome).includes(texto) || (c.whatsapp||'').includes(texto));
     if(segFiltro){
       // Filter by corretoras linked to this seguradora
       const corrIdsVinculadas = Object.entries(GROUPS)
@@ -5719,11 +5719,11 @@
   function filtrarHistoricoDisparos(){
     const wrap = document.getElementById('hd-lista');
     if(!wrap) return;
-    const q = (document.getElementById('hd-filtro-texto')?.value||'').toLowerCase();
+    const q = normalizarBusca(document.getElementById('hd-filtro-texto')?.value || '');
     const ini = document.getElementById('hd-filtro-ini')?.value;
     const fim = document.getElementById('hd-filtro-fim')?.value;
     let lista = _hdCache;
-    if(q) lista = lista.filter(d => (d.mensagem||'').toLowerCase().includes(q)||(d._autorNome||'').toLowerCase().includes(q)||(d.contatos||[]).some(c=>(typeof c==='string'?c:(c?.nome||'')).toLowerCase().includes(q)));
+    if(q) lista = lista.filter(d => normalizarBusca(d.mensagem).includes(q)||normalizarBusca(d._autorNome).includes(q)||(d.contatos||[]).some(c=>normalizarBusca(typeof c==='string'?c:(c?.nome||'')).includes(q)));
     if(ini) lista = lista.filter(d => new Date(d.created_at) >= new Date(ini+'T00:00:00'));
     if(fim) lista = lista.filter(d => new Date(d.created_at) <= new Date(fim+'T23:59:59'));
     if(!lista.length){ wrap.innerHTML = `<p class="hint" style="margin:0;text-align:center;padding:30px 0;">Nenhum disparo encontrado.</p>`; return; }
@@ -5818,17 +5818,17 @@
         </span>`;
     }
 
-    const query = (document.getElementById('corretoras-search')?.value || '').toLowerCase().trim();
+    const query = normalizarBusca(document.getElementById('corretoras-search')?.value || '');
     const statusFiltro = document.getElementById('corretoras-filter-status')?.value || '';
 
     const gids = allGids.filter(gid => {
       const g = GROUPS[gid];
       if(statusFiltro && (g.status || 'ativa') !== statusFiltro) return false;
       if(!query) return true;
-      return (g.name||'').toLowerCase().includes(query)
-          || (g.cnpj||'').toLowerCase().includes(query)
-          || (g.cidade||'').toLowerCase().includes(query)
-          || (g.apelidos||[]).some(a => a.toLowerCase().includes(query));
+      return normalizarBusca(g.name).includes(query)
+          || normalizarBusca(g.cnpj).includes(query)
+          || normalizarBusca(g.cidade).includes(query)
+          || (g.apelidos||[]).some(a => normalizarBusca(a).includes(query));
     }).sort((a, b) => (GROUPS[a].name||'').localeCompare(GROUPS[b].name||'', 'pt-BR'));
 
     if(gids.length === 0){
@@ -6384,6 +6384,19 @@
       // Col F (idx 5): Prêmio Líquido — vem como texto "R$13.245,89"
       idxCorretorFixo: 1,
       idxValorFixo: 5,
+      descartarColunaA: false,
+    },
+    'mapfre': {
+      tipo: 'corretora',
+      aliases: ['mapfre seguros', 'mapfre'],
+      // Planilha da Mapfre tem uma linha em branco antes do cabeçalho de verdade
+      // (linha 2: "Valores Emitidos como valores | Prêmios (Dia) | Prêmios (até a data)").
+      // Col A (idx 0): nome da corretora (vem truncado + " - código", ex: "PARCER
+      // CORRETORES DE SEGUROS P - 121954")
+      // Col C (idx 2): Prêmios (até a data) — valor usado
+      idxCorretorFixo: 0,
+      idxValorFixo: 2,
+      pularPrimeiraLinhaDados: true, // pula a linha 2 (cabeçalho de verdade, tratado como dado)
       descartarColunaA: false,
     },
   };
@@ -7683,8 +7696,8 @@
     const { data, error } = await query;
     if(error){ console.error('renderProducao:', error.message); return; }
 
-    const seguradoraFiltro = (document.getElementById('producao-filtro-seguradora')?.value||'').trim().toLowerCase();
-    const produtoFiltro = (document.getElementById('producao-filtro-produto')?.value||'').trim().toLowerCase();
+    const seguradoraFiltro = normalizarBusca(document.getElementById('producao-filtro-seguradora')?.value || '');
+    const produtoFiltro = normalizarBusca(document.getElementById('producao-filtro-produto')?.value || '');
     let filialFiltro = (document.getElementById('producao-filtro-filial')?.value||'').trim();
     // Administradores (não super) com filial definida SÓ enxergam a produção da própria filial —
     // essa restrição vale mesmo que tentem mexer no filtro (o valor é sempre forçado aqui).
@@ -7697,8 +7710,8 @@
     // demais métricas desta tela (que são sempre por corretora).
     linhas = linhas.filter(l => l.corretora_id !== null);
     if(filialFiltro) linhas = linhas.filter(l => (GROUPS[l.corretora_id]?.filial||'') === filialFiltro);
-    if(seguradoraFiltro) linhas = linhas.filter(l => (l.seguradora||'').toLowerCase().includes(seguradoraFiltro));
-    if(produtoFiltro)    linhas = linhas.filter(l => (l.produto||'').toLowerCase().includes(produtoFiltro));
+    if(seguradoraFiltro) linhas = linhas.filter(l => normalizarBusca(l.seguradora).includes(seguradoraFiltro));
+    if(produtoFiltro)    linhas = linhas.filter(l => normalizarBusca(l.produto).includes(produtoFiltro));
 
     const total = linhas.reduce((s,l)=> s + Number(l.valor||0), 0);
 
@@ -8686,14 +8699,14 @@
       const DIAG = [`Linhas brutas (sem cabeçalho): ${dataRows.length}`];
 
       // ── Palavras-chave que identificam linhas de rodapé/metadados a descartar ──
-      const PALAVRAS_DESCARTAR = ['total', 'filtros', 'filtro', 'codigo', 'código', 'codigo_sistema'];
+      // Só descarta se a célula inteira (depois de limpar) for EXATAMENTE uma dessas
+      // palavras — nunca por "começa com", porque isso derrubava corretoras de
+      // verdade cujo nome começa com "Total" (ex: "Total Express Corretora...").
+      const PALAVRAS_DESCARTAR = ['total', 'total geral', 'totais', 'subtotal', 'filtros', 'filtro', 'codigo', 'código', 'codigo_sistema'];
       function bateComPalavraDescartar(valor){
         const t = String(valor||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
         if(!t) return false;
-        return PALAVRAS_DESCARTAR.some(p => {
-          const pn = p.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-          return t === pn || t.startsWith(pn + ' ') || t.startsWith(pn + '_');
-        });
+        return PALAVRAS_DESCARTAR.some(p => t === p.normalize('NFD').replace(/[\u0300-\u036f]/g,''));
       }
 
       let idxCorretor = -1, idxValor = -1;
@@ -9732,6 +9745,12 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  // Normaliza texto pra busca: minúsculo + sem acento — assim "sao paulo" (sem til)
+  // encontra "São Paulo" (com til), e vice-versa.
+  function normalizarBusca(texto){
+    return String(texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   }
 
   function initials(nome){
