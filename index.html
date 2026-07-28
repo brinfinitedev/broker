@@ -5167,7 +5167,7 @@
   function chipSeguradora(nome, cor){
     if(!nome) return '';
     const bg = cor || '#132728';
-    return `<span style="display:inline-block; padding:3px 9px; border-radius:999px; background:${esc(bg)}; color:#fff; font-size:11px; font-weight:700; margin-right:6px;">${esc(nome)}</span>`;
+    return `<span style="display:inline-block; padding:3px 9px; border-radius:999px; background:${esc(bg)}; color:#fff; font-size:11px; font-weight:700; flex-shrink:0; white-space:nowrap;">${esc(nome)}</span>`;
   }
 
   const CONTATOS_PAGE_SIZE = 30;
@@ -5233,7 +5233,7 @@
       const textoCopiaTudo = [c.nome, c.whatsapp, c.email].filter(Boolean).join(' | ');
       return `
       <tr>
-        <td><div class="cell-strong">${chip}${esc(c.nome)}</div>${corretoraInline}</td>
+        <td><div class="cell-strong" style="display:flex;align-items:flex-start;gap:6px;">${chip}<span>${esc(c.nome)}</span></div>${corretoraInline}</td>
         <td>${esc(c.whatsapp) || '—'}</td>
         <td>${esc(c.email) || '—'}</td>
         <td style="font-size:12px;color:var(--gray-600);">${esc(c.filial) || '—'}</td>
@@ -7668,24 +7668,25 @@
   // desta linha, e já vincula automaticamente qualquer outra linha ainda não identificada
   // que tenha o EXATO mesmo texto de corretora — é comum várias pessoas serem da mesma
   // corretora, então evita ficar cadastrando a mesma empresa várias vezes.
-  async function cadastrarCorretoraDaEquipeLinha(linha){
+  function cadastrarCorretoraDaEquipeLinha(linha){
     const r = (window._importEquipeRows || []).find(x => x.linha === linha);
     if(!r) return;
-    const payload = { razao_social: r.corretoraTexto };
-    const { data, error } = await supabase.from('corretoras').insert(payload).select().single();
-    if(error){ alert('Erro ao cadastrar corretora: ' + error.message); return; }
-    GROUPS[data.id] = { name: r.corretoraTexto, seguradoras: [], apelidos: [] };
-
     const textoAlvo = r.corretoraTexto.trim().toLowerCase();
-    (window._importEquipeRows || []).forEach(x => {
-      if(!x.gid && x.corretoraTexto.trim().toLowerCase() === textoAlvo){
-        x.gid = data.id;
-      }
-    });
 
-    refreshCorretoraSelects();
-    renderCorretorasList();
-    renderModalConfirmacaoEquipe();
+    window._reabrirConfirmacaoImportacaoAoFechar = true;
+    window._corretoraQuickCreateCallback = (novoGid) => {
+      // vincula esta linha e qualquer outra ainda não identificada com o MESMO texto
+      // de corretora — é comum várias pessoas serem da mesma empresa na planilha
+      (window._importEquipeRows || []).forEach(x => {
+        if(!x.gid && x.corretoraTexto.trim().toLowerCase() === textoAlvo) x.gid = novoGid;
+      });
+      renderModalConfirmacaoEquipe();
+    };
+
+    closeModal('modal-confirmar-importacao');
+    openCorretoraForm(null);
+    const campoNome = document.getElementById('corretora-razao-social');
+    if(campoNome) campoNome.value = r.corretoraTexto;
   }
 
   async function confirmarImportacaoEquipe(){
@@ -7918,19 +7919,48 @@
   // Cadastra a corretora dessa linha imediatamente (sem esperar o "Confirmar e importar"
   // geral) — útil pra resolver uma linha específica na hora, igual já funciona na
   // confirmação de importação de produção.
-  async function cadastrarCorretoraImportLinha(linha){
+  function cadastrarCorretoraImportLinha(linha){
     const r = (window._importCorretorasRows || []).find(x => x.linha === linha);
     if(!r) return;
-    const { data, error } = await supabase.from('corretoras').insert(r.payload).select().single();
-    if(error){ alert('Erro ao cadastrar corretora: ' + error.message); return; }
-    GROUPS[data.id] = { name: r.payload.razao_social, seguradoras: r.payload.seguradoras_permitidas, apelidos: r.payload.apelidos,
-      cnpj: r.payload.cnpj, susep: r.payload.susep, email: r.payload.email,
-      telefone: r.payload.telefone, cidade: r.payload.cidade, estado: r.payload.estado, endereco: r.payload.endereco };
-    // já foi criada agora — remove da lista de pendências (não há mais nada a fazer com ela)
-    window._importCorretorasRows = (window._importCorretorasRows || []).filter(x => x.linha !== linha);
-    refreshCorretoraSelects();
-    renderCorretorasList();
-    renderModalConfirmacaoCorretoras();
+
+    window._reabrirConfirmacaoImportacaoAoFechar = true;
+    window._corretoraQuickCreateCallback = (novoGid) => {
+      // já foi criada e salva pelo próprio formulário — só remove da lista de pendências
+      window._importCorretorasRows = (window._importCorretorasRows || []).filter(x => x.linha !== linha);
+      renderModalConfirmacaoCorretoras();
+    };
+
+    closeModal('modal-confirmar-importacao');
+    openCorretoraForm(null);
+    // Pré-preenche o formulário com tudo que já veio da planilha, pra só faltar revisar/completar
+    const p = r.payload;
+    const campos = {
+      'corretora-razao-social': p.razao_social,
+      'corretora-cnpj': p.cnpj,
+      'corretora-susep': p.susep,
+      'corretora-email': p.email,
+      'corretora-telefone': p.telefone,
+      'corretora-cidade': p.cidade,
+      'corretora-estado': p.estado,
+      'corretora-rua': p.endereco, // planilha traz o endereço como texto único; ajuste manual se quiser separar
+    };
+    Object.entries(campos).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if(el && val) el.value = val;
+    });
+    if(p.filial){
+      // o select de filial só termina de carregar depois do await interno de openCorretoraForm — tenta logo e reforça em seguida
+      const trySetFilial = () => { const el = document.getElementById('corretora-filial'); if(el) el.value = p.filial; };
+      trySetFilial();
+      setTimeout(trySetFilial, 400);
+    }
+    if(Array.isArray(p.apelidos) && p.apelidos.length){
+      PENDING_APELIDOS = [...p.apelidos];
+      renderApelidosList();
+    }
+    if(p.observacao){
+      setTimeout(() => alert(`Também veio esta observação na planilha (não tem campo próprio no formulário — copie pra onde achar melhor):\n\n${p.observacao}`), 300);
+    }
   }
 
   function desvincularCorretoraImportLinha(linha){
