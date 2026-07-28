@@ -5837,10 +5837,17 @@
     // Select de filial — populado a partir da tabela "filiais" cadastrada (não é mais texto livre)
     const selFilial = document.getElementById('corretora-filial');
     if(selFilial){
-      const { data: filiaisData } = await supabase.from('filiais').select('*').order('nome');
-      selFilial.innerHTML = '<option value="">Selecione...</option>' +
-        (filiaisData || []).map(f => `<option value="${esc(f.nome)}">${esc(f.nome)}</option>`).join('');
-      selFilial.value = g ? (g.filial || '') : '';
+      try {
+        const { data: filiaisData, error: errFiliais } = await supabase.from('filiais').select('*').order('nome');
+        if(errFiliais) console.error('Erro ao carregar filiais:', errFiliais.message);
+        selFilial.innerHTML = '<option value="">Selecione...</option>' +
+          (filiaisData || []).map(f => `<option value="${esc(f.nome)}">${esc(f.nome)}</option>`).join('');
+        selFilial.value = g ? (g.filial || '') : '';
+      } catch(err){
+        // Nunca deixa uma falha aqui impedir o resto do formulário de abrir
+        console.error('Falha ao buscar filiais (modal abre mesmo assim):', err.message);
+        selFilial.innerHTML = `<option value="">Selecione...</option>${g && g.filial ? `<option value="${esc(g.filial)}" selected>${esc(g.filial)}</option>` : ''}`;
+      }
     }
 
     // status
