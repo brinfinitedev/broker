@@ -3059,6 +3059,7 @@
       </table>
     </div>
     <div id="conf-import-total" style="padding:10px 16px;background:var(--surface-2);border-radius:10px;margin-top:10px;font-size:13px;font-weight:700;"></div>
+    <datalist id="conf-import-corretoras-datalist"></datalist>
     <div class="modal-actions" style="margin-top:14px;">
       <button class="btn-outline" onclick="closeModal('modal-confirmar-importacao')">Voltar e corrigir</button>
       <button class="btn-dark" id="conf-import-btn-confirmar">Confirmar e importar</button>
@@ -7599,25 +7600,27 @@
     const corretorasOrdenadas = Object.keys(GROUPS)
       .sort((a,b) => (GROUPS[a].name||'').localeCompare(GROUPS[b].name||'', 'pt-BR'));
 
+    // Datalist montado UMA VEZ (não por linha) — evita travar o navegador com muitas
+    // pessoas na planilha e/ou muitas corretoras já cadastradas.
+    const datalistEl = document.getElementById('conf-import-corretoras-datalist');
+    if(datalistEl) datalistEl.innerHTML = corretorasOrdenadas.map(gid => `<option value="${esc(GROUPS[gid].name)}">`).join('');
+
     document.getElementById('conf-import-tbody').innerHTML = rows.map(r => {
       const dataFmt = r.nascimento ? new Date(r.nascimento+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '—';
       const vinculoTxt = r.gid
         ? `<span style="color:#15803d;font-weight:700;">✓ ${esc(GROUPS[r.gid]?.name || '—')}</span>`
         : `<span style="color:#b45309;font-weight:700;">Não identificada</span>`;
       const acaoExtra = r.gid
-        ? `<button onclick="desvincularEquipeImportLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;text-align:center;">Trocar vínculo</button>`
-        : `<button onclick="cadastrarCorretoraDaEquipeLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;text-align:center;background:var(--black);color:#fff;border-color:var(--black);">+ Cadastrar corretora</button>`;
+        ? `<button onclick="desvincularEquipeImportLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:8px;text-align:center;">Trocar vínculo</button>`
+        : `<button onclick="cadastrarCorretoraDaEquipeLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:8px;text-align:center;background:var(--black);color:#fff;border-color:var(--black);">+ Cadastrar corretora</button>`;
       return `<tr style="${r.gid ? '' : 'background:#fffbeb;'}">
         <td><b>${esc(r.nomeContato)}</b>${r.email ? `<br><span style="font-size:11px;color:var(--gray-600);">${esc(r.email)}</span>` : ''}</td>
         <td style="font-size:12px;">${dataFmt}</td>
         <td style="font-size:12px;">${esc(r.corretoraTexto)}</td>
         <td style="vertical-align:top;padding-top:10px;">
-          <div style="font-size:11.5px;margin-bottom:6px;">${vinculoTxt}</div>
+          <div style="font-size:11.5px;margin-bottom:8px;">${vinculoTxt}</div>
           ${acaoExtra}
-          <select onchange="vincularEquipeImportLinha(${r.linha}, this.value)" style="font-size:11px;padding:5px 6px;border:1.4px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;">
-            <option value="">${r.gid ? 'Vincular a outra…' : 'Vincular a…'}</option>
-            ${corretorasOrdenadas.map(gid => `<option value="${gid}">${esc(GROUPS[gid].name)}</option>`).join('')}
-          </select>
+          <input list="conf-import-corretoras-datalist" placeholder="${r.gid ? 'Ou digite pra vincular a outra…' : 'Digite pra vincular a…'}" autocomplete="off" onchange="vincularEquipeImportLinhaPorNome(${r.linha}, this.value)" style="font-size:11px;padding:5px 6px;border:1.4px solid var(--border);border-radius:8px;background:#fff;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;">
           <button onclick="removerLinhaImportacaoEquipe(${r.linha})" style="width:100%;box-sizing:border-box;background:none;border:1.4px solid #fecaca;border-radius:8px;cursor:pointer;color:#dc2626;padding:5px 6px;font-size:11px;font-weight:700;">Remover linha</button>
         </td>
       </tr>`;
@@ -7638,8 +7641,11 @@
     renderModalConfirmacaoEquipe();
   }
 
-  function vincularEquipeImportLinha(linha, gid){
-    if(!gid) return;
+  function vincularEquipeImportLinhaPorNome(linha, nomeDigitado){
+    const nome = String(nomeDigitado||'').trim();
+    if(!nome) return;
+    const gid = Object.keys(GROUPS).find(k => (GROUPS[k].name||'').toLowerCase() === nome.toLowerCase());
+    if(!gid){ alert('Corretora não encontrada. Escolha uma sugestão da lista ao digitar.'); return; }
     const r = (window._importEquipeRows || []).find(x => x.linha === linha);
     if(r) r.gid = gid;
     renderModalConfirmacaoEquipe();
@@ -7853,23 +7859,25 @@
     const corretorasOrdenadas = Object.keys(GROUPS)
       .sort((a,b) => (GROUPS[a].name||'').localeCompare(GROUPS[b].name||'', 'pt-BR'));
 
+    // Datalist montado UMA VEZ (não por linha) — evita travar o navegador quando
+    // há muitas linhas na planilha e/ou muitas corretoras já cadastradas.
+    const datalistEl = document.getElementById('conf-import-corretoras-datalist');
+    if(datalistEl) datalistEl.innerHTML = corretorasOrdenadas.map(gid => `<option value="${esc(GROUPS[gid].name)}">`).join('');
+
     document.getElementById('conf-import-tbody').innerHTML = rows.map(r => {
       const statusTxt = r.gid
         ? `<span style="color:#15803d;font-weight:700;">↺ Vai atualizar:</span> ${esc(GROUPS[r.gid]?.name || '—')}`
         : `<span style="color:#b45309;font-weight:700;">+ Vai cadastrar nova</span>`;
       const acaoExtra = r.gid
         ? `<button onclick="desvincularCorretoraImportLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;text-align:center;">Desvincular (cadastrar nova)</button>`
-        : `<button onclick="cadastrarCorretoraImportLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;text-align:center;background:var(--black);color:#fff;border-color:var(--black);">+ Cadastrar agora</button>
-           <select onchange="vincularCorretoraImportLinha(${r.linha}, this.value)" style="font-size:11px;padding:5px 6px;border:1.4px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;">
-             <option value="">Ou vincular a existente…</option>
-             ${corretorasOrdenadas.map(gid => `<option value="${gid}">${esc(GROUPS[gid].name)}</option>`).join('')}
-           </select>`;
+        : `<button onclick="cadastrarCorretoraImportLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:8px;text-align:center;background:var(--black);color:#fff;border-color:var(--black);">+ Cadastrar agora</button>
+           <input list="conf-import-corretoras-datalist" placeholder="Ou digite pra vincular a existente…" autocomplete="off" onchange="vincularCorretoraImportLinhaPorNome(${r.linha}, this.value)" style="font-size:11px;padding:5px 6px;border:1.4px solid var(--border);border-radius:8px;background:#fff;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;">`;
       return `<tr style="${r.gid ? '' : 'background:#fffbeb;'}">
         <td><b>${esc(r.nomeBruto)}</b></td>
         <td style="font-size:12px;">${esc(r.payload.cnpj) || '—'}</td>
         <td style="font-size:12px;">${esc(r.payload.cidade) || '—'}</td>
         <td style="vertical-align:top;padding-top:10px;">
-          <div style="font-size:11.5px;margin-bottom:6px;">${statusTxt}</div>
+          <div style="font-size:11.5px;margin-bottom:8px;">${statusTxt}</div>
           ${acaoExtra}
           <button onclick="removerLinhaImportacaoCorretora(${r.linha})" style="width:100%;box-sizing:border-box;background:none;border:1.4px solid #fecaca;border-radius:8px;cursor:pointer;color:#dc2626;padding:5px 6px;font-size:11px;font-weight:700;">Remover linha</button>
         </td>
@@ -7890,8 +7898,11 @@
     renderModalConfirmacaoCorretoras();
   }
 
-  function vincularCorretoraImportLinha(linha, gid){
-    if(!gid) return;
+  function vincularCorretoraImportLinhaPorNome(linha, nomeDigitado){
+    const nome = String(nomeDigitado||'').trim();
+    if(!nome) return;
+    const gid = Object.keys(GROUPS).find(k => (GROUPS[k].name||'').toLowerCase() === nome.toLowerCase());
+    if(!gid){ alert('Corretora não encontrada. Escolha uma sugestão da lista ao digitar.'); return; }
     const r = (window._importCorretorasRows || []).find(x => x.linha === linha);
     if(r) r.gid = gid;
     renderModalConfirmacaoCorretoras();
@@ -8209,6 +8220,11 @@
     const corretorasOrdenadas = Object.keys(GROUPS)
       .sort((a,b) => (GROUPS[a].name||'').localeCompare(GROUPS[b].name||'', 'pt-BR'));
 
+    // Datalist montado UMA VEZ (não por linha) — evita travar o navegador com muitas
+    // linhas na planilha e/ou muitas corretoras já cadastradas.
+    const datalistElProd = document.getElementById('conf-import-corretoras-datalist');
+    if(datalistElProd) datalistElProd.innerHTML = corretorasOrdenadas.map(gid => `<option value="${esc(GROUPS[gid].name)}">`).join('');
+
     document.getElementById('conf-import-tbody').innerHTML = rows.map(r => {
       const ehNegativa = r.gid && r.valor < 0;
       const fmt = 'R$\u00a0' + (r.valor||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -8216,17 +8232,14 @@
         ? `<br><span style="font-size:10.5px;color:var(--gray-500);font-weight:600;">soma de ${r.linhasOriginais.length} linhas da planilha (linhas ${r.linhasOriginais.join(', ')})</span>`
         : '';
       const nomeCol = r.gid
-        ? `<span>${GROUPS[r.gid]?.name || r.gid}</span>` +
+        ? `<span>${esc(GROUPS[r.gid]?.name) || r.gid}</span>` +
           (ehNegativa ? `<br><span style="font-size:10.5px;color:#dc2626;font-weight:600;">valor negativo — desconta do total e será salvo assim</span>` : '') +
           avisoDuplicata
-        : `<span style="color:#b45309;">${r.nomeBruto || '(vazio)'}</span><br><span style="font-size:10.5px;color:var(--gray-400);font-weight:600;">não cadastrada no sistema</span>`;
+        : `<span style="color:#b45309;">${esc(r.nomeBruto) || '(vazio)'}</span><br><span style="font-size:10.5px;color:var(--gray-400);font-weight:600;">não cadastrada no sistema</span>`;
       const acaoExtra = r.gid
         ? ''
         : `<button onclick="cadastrarCorretoraDaLinha(${r.linha})" class="access-btn" style="font-size:11px;padding:5px 8px;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;text-align:center;">+ Cadastrar nova</button>
-           <select onchange="vincularCorretoraDaLinha(${r.linha}, this.value)" style="font-size:11px;padding:5px 6px;border:1.4px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;">
-             <option value="">Vincular a existente…</option>
-             ${corretorasOrdenadas.map(gid => `<option value="${gid}">${GROUPS[gid].name}</option>`).join('')}
-           </select>`;
+           <input list="conf-import-corretoras-datalist" placeholder="Ou digite pra vincular a existente…" autocomplete="off" onchange="vincularCorretoraDaLinhaPorNome(${r.linha}, this.value)" style="font-size:11px;padding:5px 6px;border:1.4px solid var(--border);border-radius:8px;background:#fff;width:100%;box-sizing:border-box;display:block;margin-bottom:5px;">`;
       const corPainel = ehNegativa ? 'background:#fef2f2;' : (r.gid ? '' : 'background:#fffbeb;');
       return `<tr style="${corPainel}">
         <td>${nomeCol}</td>
@@ -8355,6 +8368,14 @@
       }
       GROUPS[gid].apelidos = novosApelidos;
     }
+  }
+
+  function vincularCorretoraDaLinhaPorNome(linha, nomeDigitado){
+    const nome = String(nomeDigitado||'').trim();
+    if(!nome) return;
+    const gid = Object.keys(GROUPS).find(k => (GROUPS[k].name||'').toLowerCase() === nome.toLowerCase());
+    if(!gid){ alert('Corretora não encontrada. Escolha uma sugestão da lista ao digitar.'); return; }
+    vincularCorretoraDaLinha(linha, gid);
   }
 
   let currentUserId = null;
