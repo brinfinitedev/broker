@@ -1647,11 +1647,17 @@
         <!-- ================= FUNIL DE RENOVAÇÕES ================= -->
         <section class="view hidden" id="view-funil">
           <div class="page-head">
-            <div><h1>Funil de Renovações</h1><p>Acompanhe as renovações de apólices, por seguradora, até o vencimento</p></div>
-            <button class="btn-dark" onclick="openModal('modal-importar-renovacoes')">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
-              Importar planilha
-            </button>
+            <div><h1>Pipeline</h1><p>Acompanhe as renovações de apólices, por seguradora, até o vencimento</p></div>
+            <div style="display:flex;gap:10px;">
+              <button class="btn-outline" onclick="abrirNovoCardPipeline()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                Novo negócio
+              </button>
+              <button class="btn-dark" onclick="openModal('modal-importar-renovacoes')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
+                Importar planilha
+              </button>
+            </div>
           </div>
 
           <div style="display:flex;gap:14px;align-items:flex-end;margin-bottom:18px;flex-wrap:wrap;">
@@ -1672,18 +1678,8 @@
           <div id="funil-counters" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;"></div>
 
           <div class="kanban kanban-funil" id="funil-board">
-            <div class="kcol" data-col="a_vencer_90" style="--kcol-cor:#64748b;" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
-              <div class="kcol-head"><h3>A vencer · 90 dias</h3><span class="count">0</span></div>
-              <div class="kcol-total"></div>
-              <div class="kcol-cards"></div>
-            </div>
-            <div class="kcol" data-col="a_vencer_60" style="--kcol-cor:#ca8a04;" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
-              <div class="kcol-head"><h3>A vencer · 60 dias</h3><span class="count">0</span></div>
-              <div class="kcol-total"></div>
-              <div class="kcol-cards"></div>
-            </div>
-            <div class="kcol" data-col="a_vencer_30" style="--kcol-cor:#ea580c;" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
-              <div class="kcol-head"><h3>A vencer · 30 dias</h3><span class="count">0</span></div>
+            <div class="kcol" data-col="a_vencer" style="--kcol-cor:#ca8a04;" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
+              <div class="kcol-head"><h3>A vencer</h3><span class="count">0</span></div>
               <div class="kcol-total"></div>
               <div class="kcol-cards"></div>
             </div>
@@ -2752,40 +2748,75 @@
   </div>
 </div>
 
-<!-- ---------------- MODAL: CARD DO FUNIL DE RENOVAÇÕES ---------------- -->
+<!-- ---------------- MODAL: CARD DO PIPELINE ---------------- -->
 <div class="modal-overlay" id="modal-funil-card" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-funil-card')">
-  <div class="modal-box">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
-      <h3 id="funil-card-cliente" style="margin:0;">Cliente</h3>
+  <div class="modal-box modal-box-lg">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+      <h3 id="funil-card-modal-title" style="margin:0;">Negócio</h3>
       <button onclick="closeModal('modal-funil-card')" style="background:none; border:none; font-size:22px; cursor:pointer; color:var(--gray-600);">✕</button>
     </div>
-    <div class="form-grid">
-      <div class="f-field"><label>Corretora</label><div id="funil-card-corretora" style="padding:9px 0;font-size:13.5px;font-weight:600;">—</div></div>
-      <div class="f-field"><label>Produto</label><div id="funil-card-produto" style="padding:9px 0;font-size:13.5px;font-weight:600;">—</div></div>
-      <div class="f-field"><label>Seguradora</label><div id="funil-card-seguradora" style="padding:9px 0;font-size:13.5px;font-weight:600;">—</div></div>
-      <div class="f-field"><label>Fim da vigência</label><div id="funil-card-vigencia" style="padding:9px 0;font-size:13.5px;font-weight:600;">—</div></div>
+
+    <div class="tab-strip" id="funil-card-tabs">
+      <button class="active" data-tab="negocio" onclick="switchFunilCardTab(this)">Negócio</button>
+      <button data-tab="anexos" onclick="switchFunilCardTab(this)">Anexos</button>
+      <button data-tab="historico" onclick="switchFunilCardTab(this)">Histórico</button>
     </div>
-    <div class="f-field full">
-      <label>Valor estimado <span style="font-weight:400;color:var(--gray-600);">(opcional — usado pra somar o total de cada coluna do pipeline)</span></label>
-      <input type="number" id="funil-card-valor" step="0.01" placeholder="Ex: 2500.00">
+
+    <div class="tab-pane" data-pane="negocio">
+      <div class="form-grid">
+        <div class="f-field"><label>Cliente</label><input id="funil-card-cliente" placeholder="Nome do cliente"></div>
+        <div class="f-field"><label>Corretora</label><input id="funil-card-corretora" placeholder="Nome da corretora" list="funil-card-corretora-datalist"><datalist id="funil-card-corretora-datalist"></datalist></div>
+        <div class="f-field"><label>Produto</label><input id="funil-card-produto" placeholder="Ex: Auto, Vida, Residencial..."></div>
+        <div class="f-field"><label>Seguradora</label><input id="funil-card-seguradora" placeholder="Nome da seguradora" list="funil-card-seguradora-datalist"><datalist id="funil-card-seguradora-datalist"></datalist></div>
+        <div class="f-field"><label>Fim da vigência</label><input type="date" id="funil-card-vigencia"></div>
+        <div class="f-field"><label>Valor estimado <span style="font-weight:400;color:var(--gray-600);">(opcional)</span></label><input type="number" id="funil-card-valor" step="0.01" placeholder="Ex: 2500.00"></div>
+      </div>
+      <div class="f-field full">
+        <label>Estágio</label>
+        <select id="funil-card-estagio">
+          <option value="a_vencer">A vencer</option>
+          <option value="negociacao">Em negociação</option>
+          <option value="renovado">Renovado</option>
+          <option value="perdido">Perdido</option>
+        </select>
+        <p class="hint">Ao mover manualmente (ou arrastar no quadro), o card deixa de avançar sozinho pelas colunas "A vencer" conforme a data se aproxima.</p>
+      </div>
+      <div class="f-field full" style="position:relative;">
+        <label>Responsáveis</label>
+        <div id="funil-card-membros-selected-display" style="display:flex;flex-wrap:wrap;gap:6px;min-height:36px;padding:8px 12px;border:1.4px solid var(--border);border-radius:11px;cursor:pointer;align-items:center;transition:border-color .2s;" onclick="toggleFunilMembrosPicker()" title="Clique para selecionar responsáveis">
+          <span id="funil-card-membros-placeholder" style="font-size:13px;color:var(--gray-400);">Nenhum responsável selecionado — clique para adicionar</span>
+        </div>
+        <div id="funil-card-membros-picker" style="display:none;position:relative;z-index:10;background:#fff;border:1.4px solid var(--border);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.10);padding:6px;max-height:200px;overflow-y:auto;width:100%;margin-top:6px;">
+          <div id="funil-card-membros-list" class="checklist" style="display:flex;flex-direction:column;gap:2px;"></div>
+        </div>
+      </div>
+      <div class="f-field" style="margin-top:6px;">
+        <label>Comentários</label>
+        <div id="funil-card-comentarios-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;"></div>
+        <div style="display:flex; gap:8px;">
+          <textarea id="funil-card-novo-comentario" rows="2" placeholder="Adicionar um comentário..." style="flex:1; border:1.4px solid var(--border); border-radius:10px; padding:10px 12px; font-size:13px; font-family:inherit; resize:vertical; outline:none;"></textarea>
+          <button class="btn-dark" style="align-self:flex-end; white-space:nowrap; padding:10px 16px;" onclick="adicionarComentarioFunilCard()">Comentar</button>
+        </div>
+      </div>
     </div>
-    <div class="f-field full">
-      <label>Estágio</label>
-      <select id="funil-card-estagio">
-        <option value="a_vencer_90">A vencer · 90 dias</option>
-        <option value="a_vencer_60">A vencer · 60 dias</option>
-        <option value="a_vencer_30">A vencer · 30 dias</option>
-        <option value="negociacao">Em negociação</option>
-        <option value="renovado">Renovado</option>
-        <option value="perdido">Perdido</option>
-      </select>
-      <p class="hint">Ao mover manualmente, o card deixa de avançar sozinho pelas colunas "A vencer" conforme a data se aproxima.</p>
+
+    <div class="tab-pane hidden" data-pane="anexos">
+      <div class="f-field">
+        <label>Anexos</label>
+        <input type="file" id="funil-card-anexo-input" multiple onchange="handleFunilCardAttachments(event)">
+        <div id="funil-card-anexo-list" class="attach-chip-list"></div>
+      </div>
     </div>
+
+    <div class="tab-pane hidden" data-pane="historico">
+      <div id="funil-card-historico-list" class="history-list"></div>
+    </div>
+
     <div class="modal-actions" style="justify-content:space-between;">
-      <button class="btn-outline" onclick="excluirRenovacao()" style="color:#dc2626;border-color:#fecaca;">Excluir</button>
-      <div style="display:flex;gap:10px;">
+      <button class="btn-outline hidden" id="funil-card-delete-btn" onclick="excluirRenovacao()" style="color:#dc2626;border-color:#fecaca;">Excluir</button>
+      <div style="display:flex;gap:10px;margin-left:auto;">
         <button class="btn-outline" onclick="closeModal('modal-funil-card')">Cancelar</button>
-        <button class="btn-dark" onclick="salvarEstagioFunilCard()">Salvar</button>
+        <button class="btn-dark" id="funil-card-save-btn" onclick="salvarEstagioFunilCard()">Salvar</button>
       </div>
     </div>
   </div>
@@ -3404,7 +3435,7 @@
     {id:'corretoras', label:'Corretoras'},
     {id:'seguradoras', label:'Seguradoras'},
     {id:'crm', label:'Tarefas'},
-    {id:'funil', label:'Funil de Renovações'},
+    {id:'funil', label:'Pipeline'},
     {id:'campanhas', label:'Campanhas'},
     {id:'contatos', label:'Contatos'},
     {id:'marketing', label:'Disparos de marketing'},
@@ -4432,18 +4463,14 @@
   let editingRenovacaoId = null;
   let draggedRenovacaoId = null;
 
-  const ESTAGIOS_FUNIL = ['a_vencer_90','a_vencer_60','a_vencer_30','negociacao','renovado','perdido'];
+  const ESTAGIOS_FUNIL = ['a_vencer','negociacao','renovado','perdido'];
 
   // Recebe 'YYYY-MM-DD' (ou null) e devolve o estágio automático com base na data de hoje.
   // Usado apenas para registros que ainda não foram movidos manualmente pelo usuário.
   function calcularEstagioAutomatico(vigenciaFimISO){
-    if(!vigenciaFimISO) return 'a_vencer_30';
-    const hoje = new Date(); hoje.setHours(0,0,0,0);
-    const fim = new Date(vigenciaFimISO + 'T00:00:00');
-    const dias = Math.round((fim - hoje) / 86400000);
-    if(dias > 60) return 'a_vencer_90';
-    if(dias > 30) return 'a_vencer_60';
-    return 'a_vencer_30'; // inclui os já vencidos — ficam no estágio mais urgente
+    // Só existe mais um estágio de "A vencer" — quem ainda não foi movido manualmente
+    // sempre cai/permanece aqui até alguém mover pra Negociação, Renovado ou Perdido.
+    return 'a_vencer';
   }
 
   function diasRestantesVigencia(vigenciaFimISO){
@@ -4457,7 +4484,208 @@
     if(dias === null) return 'Sem data';
     if(dias < 0) return `Vencida há ${Math.abs(dias)}d`;
     if(dias === 0) return 'Vence hoje';
-    return `${dias}d restantes`;
+    return `Faltam ${dias}d para vencer`;
+  }
+
+  // ==========================================================
+  // CARD DO PIPELINE — igual ao Tarefas: criar manual, mover, responsáveis,
+  // comentários, anexos e histórico.
+  // ==========================================================
+  let pendingFunilAttachments = [];
+  let pendingFunilHistorico = [];
+  let pendingFunilComentarios = [];
+
+  function switchFunilCardTab(btn){
+    const tab = btn.dataset.tab;
+    btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('#modal-funil-card .tab-pane').forEach(p=>{
+      p.classList.toggle('hidden', p.dataset.pane !== tab);
+    });
+  }
+
+  function resetFunilCardTabs(){
+    const strip = document.getElementById('funil-card-tabs');
+    strip.querySelectorAll('button').forEach((b,i)=>b.classList.toggle('active', i===0));
+    document.querySelectorAll('#modal-funil-card .tab-pane').forEach(p=>{
+      p.classList.toggle('hidden', p.dataset.pane !== 'negocio');
+    });
+  }
+
+  async function abrirNovoCardPipeline(){
+    if(!ALL_USERS_CACHE.length){
+      const { data: perfis } = await supabase.from('profiles').select('*');
+      ALL_USERS_CACHE = perfis || [];
+    }
+    editingRenovacaoId = null;
+    pendingFunilAttachments = [];
+    pendingFunilHistorico = [{when: nowLabel(), text:'Negócio criado.'}];
+    pendingFunilComentarios = [];
+    document.getElementById('funil-card-modal-title').textContent = 'Novo negócio';
+    document.getElementById('funil-card-save-btn').textContent = 'Criar negócio';
+    document.getElementById('funil-card-delete-btn').classList.add('hidden');
+    ['funil-card-cliente','funil-card-corretora','funil-card-produto','funil-card-seguradora','funil-card-vigencia','funil-card-valor','funil-card-novo-comentario'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.value = '';
+    });
+    document.getElementById('funil-card-estagio').value = 'a_vencer';
+    document.getElementById('funil-card-anexo-input').value = '';
+    popularDatalistsFunilCard();
+    renderFunilAttachChips();
+    renderFunilHistoricoList();
+    renderFunilCardComentarios();
+    renderFunilCardMembrosChecklist([]);
+    resetFunilCardTabs();
+    openModal('modal-funil-card');
+  }
+
+  function popularDatalistsFunilCard(){
+    const dlCor = document.getElementById('funil-card-corretora-datalist');
+    if(dlCor) dlCor.innerHTML = Object.values(GROUPS).map(g => `<option value="${esc(g.name)}">`).join('');
+    const dlSeg = document.getElementById('funil-card-seguradora-datalist');
+    if(dlSeg) dlSeg.innerHTML = Object.values(SEGURADORAS).map(s => `<option value="${esc(s.nome)}">`).join('');
+  }
+
+  function renderFunilCardMembrosChecklist(selecionados){
+    const wrap = document.getElementById('funil-card-membros-list');
+    const users = ALL_USERS_CACHE.length ? ALL_USERS_CACHE : [];
+    wrap.innerHTML = users.length ? users.map(u => `
+      <label class="chk-item" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+        <input type="checkbox" value="${u.id}" ${selecionados.includes(u.id) ? 'checked' : ''} onchange="atualizarFunilMembrosDisplay()" style="accent-color:var(--black);width:15px;height:15px;cursor:pointer;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--black);color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">${esc(initials(u.nome))}</span>
+        <span style="font-size:13px;font-weight:600;">${esc(u.nome)}</span>
+      </label>
+    `).join('') : `<p style="font-size:12.5px;color:var(--gray-600);margin:8px 0;">Nenhum usuário cadastrado ainda.</p>`;
+    atualizarFunilMembrosDisplay();
+  }
+
+  function toggleFunilMembrosPicker(){
+    const picker = document.getElementById('funil-card-membros-picker');
+    const display = document.getElementById('funil-card-membros-selected-display');
+    const isOpen = picker.style.display !== 'none';
+    picker.style.display = isOpen ? 'none' : 'block';
+    display.style.borderColor = isOpen ? 'var(--border)' : 'var(--black)';
+    if(!isOpen){
+      setTimeout(()=>{
+        const handler = (e) => {
+          if(!picker.contains(e.target) && !display.contains(e.target)){
+            picker.style.display = 'none';
+            display.style.borderColor = 'var(--border)';
+            document.removeEventListener('click', handler);
+          }
+        };
+        document.addEventListener('click', handler);
+      }, 0);
+    }
+  }
+
+  function atualizarFunilMembrosDisplay(){
+    const checked = Array.from(document.querySelectorAll('#funil-card-membros-list input:checked'));
+    const display = document.getElementById('funil-card-membros-selected-display');
+    const placeholder = document.getElementById('funil-card-membros-placeholder');
+    if(!display) return;
+    display.querySelectorAll('.membro-av-chip').forEach(el => el.remove());
+    if(checked.length === 0){
+      if(placeholder) placeholder.style.display = '';
+      autoSalvarCampoFunilCard('membros', []);
+      return;
+    }
+    if(placeholder) placeholder.style.display = 'none';
+    checked.forEach(inp => {
+      const user = ALL_USERS_CACHE.find(u => u.id === inp.value);
+      if(!user) return;
+      const chip = document.createElement('span');
+      chip.className = 'membro-av-chip';
+      chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:var(--black);color:#fff;padding:3px 10px 3px 5px;border-radius:999px;font-size:11.5px;font-weight:700;';
+      chip.innerHTML = `<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.2);font-size:9px;">${initials(user.nome)}</span>${user.nome.split(' ')[0]}`;
+      display.insertBefore(chip, placeholder);
+    });
+    autoSalvarCampoFunilCard('membros', checked.map(inp => inp.value));
+  }
+
+  function renderFunilAttachChips(){
+    const wrap = document.getElementById('funil-card-anexo-list');
+    wrap.innerHTML = pendingFunilAttachments.map((name,i) => `
+      <span class="chip-file"><span>📎 ${esc(name)}</span><button onclick="removeFunilAttachment(${i})">✕</button></span>
+    `).join('');
+  }
+
+  function handleFunilCardAttachments(e){
+    Array.from(e.target.files).forEach(f => {
+      pendingFunilAttachments.push(f.name);
+      pendingFunilHistorico.unshift({when: nowLabel(), text:`Anexo adicionado: ${f.name}`});
+    });
+    e.target.value = '';
+    renderFunilAttachChips();
+    renderFunilHistoricoList();
+    autoSalvarCampoFunilCard('anexos', pendingFunilAttachments.slice());
+  }
+
+  function removeFunilAttachment(i){
+    const [removed] = pendingFunilAttachments.splice(i,1);
+    if(removed) pendingFunilHistorico.unshift({when: nowLabel(), text:`Anexo removido: ${removed}`});
+    renderFunilAttachChips();
+    renderFunilHistoricoList();
+    autoSalvarCampoFunilCard('anexos', pendingFunilAttachments.slice());
+  }
+
+  function renderFunilHistoricoList(){
+    const wrap = document.getElementById('funil-card-historico-list');
+    if(pendingFunilHistorico.length === 0){
+      wrap.innerHTML = `<p class="hint">Nenhuma movimentação registrada ainda.</p>`;
+      return;
+    }
+    wrap.innerHTML = pendingFunilHistorico.map((h,i) => `
+      <div class="history-item">
+        <div class="dot-col"><div class="dot"></div>${i < pendingFunilHistorico.length-1 ? '<div class="line"></div>' : ''}</div>
+        <div class="txt">${esc(h.text)}<span class="when">${esc(h.when)}</span></div>
+      </div>
+    `).join('');
+  }
+
+  function renderFunilCardComentarios(){
+    const wrap = document.getElementById('funil-card-comentarios-list');
+    if(!wrap) return;
+    if(!pendingFunilComentarios.length){
+      wrap.innerHTML = '<p class="hint" style="margin:0;">Nenhum comentário ainda. Seja o primeiro a comentar.</p>';
+      return;
+    }
+    wrap.innerHTML = pendingFunilComentarios.map(cm => {
+      const foto = cm.foto ? `<img src="${esc(cm.foto)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : esc(initials(cm.autor||'?'));
+      return `<div style="display:flex;gap:10px;align-items:flex-start;">
+        <div class="av" style="width:32px;height:32px;font-size:11px;flex-shrink:0;">${foto}</div>
+        <div style="flex:1;background:var(--surface-2);border-radius:12px;padding:10px 14px;">
+          <div style="font-weight:700;font-size:12.5px;">${esc(cm.autor||'Usuário')} <span style="font-weight:500;color:var(--gray-600);font-size:11px;">${esc(cm.quando)}</span></div>
+          <div style="margin-top:4px;font-size:13px;line-height:1.5;">${esc(cm.texto)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Salva um campo IMEDIATAMENTE no banco (comentário, membro, anexo) — sem
+  // depender do botão "Salvar", igual já fizemos no Tarefas. Só funciona
+  // editando um negócio que já existe.
+  async function autoSalvarCampoFunilCard(campo, valor){
+    if(!editingRenovacaoId) return;
+    const { error } = await supabase.from('renovacoes').update({ [campo]: valor }).eq('id', editingRenovacaoId);
+    if(error){ console.error(`autoSalvarCampoFunilCard (${campo}):`, error.message); return; }
+    const r = RENOVACOES_CACHE.find(x => x.id === editingRenovacaoId);
+    if(r) r[campo] = valor;
+    renderFunil();
+  }
+
+  function adicionarComentarioFunilCard(){
+    const txt = document.getElementById('funil-card-novo-comentario').value.trim();
+    if(!txt) return;
+    const perfil = ALL_USERS_CACHE.find(u => u.id === currentUserId) || {};
+    pendingFunilComentarios.push({
+      autor: perfil.nome || currentUserFullName || 'Usuário',
+      foto: perfil.foto_url || null,
+      quando: nowLabel(),
+      texto: txt,
+    });
+    document.getElementById('funil-card-novo-comentario').value = '';
+    renderFunilCardComentarios();
+    autoSalvarCampoFunilCard('comentarios', pendingFunilComentarios.slice());
   }
 
   async function renderFunil(){
@@ -4481,6 +4709,9 @@
     // recalcula em memória o estágio de quem ainda não foi movido manualmente,
     // fazendo o card "andar sozinho" pelas colunas de "A vencer" conforme a data se aproxima
     RENOVACOES_CACHE.forEach(r => {
+      // Compatibilidade com dados antigos (de quando existiam 3 colunas de vencimento
+      // separadas) — qualquer uma delas agora cai na única coluna "A vencer".
+      if(['a_vencer_90','a_vencer_60','a_vencer_30'].includes(r.estagio)) r.estagio = 'a_vencer';
       if(!r.estagio_manual){
         r.estagio = calcularEstagioAutomatico(r.vigencia_fim);
       }
@@ -4567,47 +4798,104 @@
     }
   }
 
-  function openFunilCard(id){
+  async function openFunilCard(id){
     const r = RENOVACOES_CACHE.find(x => x.id === id);
     if(!r) return;
+    if(!ALL_USERS_CACHE.length){
+      const { data: perfis } = await supabase.from('profiles').select('*');
+      ALL_USERS_CACHE = perfis || [];
+    }
     editingRenovacaoId = id;
-    const corretoraNome = r.corretora_id ? (GROUPS[r.corretora_id]?.name || r.corretora_nome || '—') : (r.corretora_nome || '—');
-    document.getElementById('funil-card-cliente').textContent = r.cliente;
-    document.getElementById('funil-card-corretora').textContent = corretoraNome;
-    document.getElementById('funil-card-produto').textContent = r.produto || '—';
-    document.getElementById('funil-card-seguradora').textContent = r.seguradora || '—';
-    document.getElementById('funil-card-vigencia').textContent = r.vigencia_fim
-      ? new Date(r.vigencia_fim + 'T00:00:00').toLocaleDateString('pt-BR') + ` (${labelDiasVigencia(diasRestantesVigencia(r.vigencia_fim))})`
-      : '—';
+    pendingFunilAttachments = (r.anexos || []).slice();
+    pendingFunilHistorico = (r.historico || []).slice();
+    pendingFunilComentarios = (r.comentarios || []).slice();
+
+    const corretoraNome = r.corretora_id ? (GROUPS[r.corretora_id]?.name || r.corretora_nome || '') : (r.corretora_nome || '');
+    document.getElementById('funil-card-modal-title').textContent = 'Editar negócio';
+    document.getElementById('funil-card-save-btn').textContent = 'Salvar alterações';
+    document.getElementById('funil-card-cliente').value = r.cliente || '';
+    document.getElementById('funil-card-corretora').value = corretoraNome;
+    document.getElementById('funil-card-produto').value = r.produto || '';
+    document.getElementById('funil-card-seguradora').value = r.seguradora || '';
+    document.getElementById('funil-card-vigencia').value = r.vigencia_fim || '';
     document.getElementById('funil-card-valor').value = r.valor || '';
     document.getElementById('funil-card-estagio').value = r.estagio;
+    document.getElementById('funil-card-anexo-input').value = '';
+
+    const souCriador = r.criado_por === currentUserId;
+    const btnExcluir = document.getElementById('funil-card-delete-btn');
+    btnExcluir.classList.toggle('hidden', !(souCriador || isSuperAdmin() || !r.criado_por));
+
+    popularDatalistsFunilCard();
+    renderFunilAttachChips();
+    renderFunilHistoricoList();
+    renderFunilCardComentarios();
+    renderFunilCardMembrosChecklist(r.membros || []);
+    resetFunilCardTabs();
     openModal('modal-funil-card');
   }
 
   async function salvarEstagioFunilCard(){
-    if(!editingRenovacaoId) return;
-    const novoEstagio = document.getElementById('funil-card-estagio').value;
+    const cliente = document.getElementById('funil-card-cliente').value.trim();
+    if(!cliente){ alert('Informe o nome do cliente.'); return; }
+    const corretoraTexto = document.getElementById('funil-card-corretora').value.trim();
+    const produto = document.getElementById('funil-card-produto').value.trim();
+    const seguradora = document.getElementById('funil-card-seguradora').value.trim();
+    const vigenciaFim = document.getElementById('funil-card-vigencia').value || null;
     const novoValor = document.getElementById('funil-card-valor').value;
-    const r = RENOVACOES_CACHE.find(x => x.id === editingRenovacaoId);
-    if(!r) return;
-    const btn = document.querySelector('#modal-funil-card .btn-dark');
+    const novoEstagio = document.getElementById('funil-card-estagio').value;
+    const corretoraId = corretoraTexto ? identificarCorretoraPorNome(corretoraTexto) : null;
+
+    const btn = document.getElementById('funil-card-save-btn');
     btn.disabled = true; btn.textContent = 'Salvando...';
-    const { error } = await supabase.from('renovacoes').update({
-      estagio: novoEstagio, estagio_manual: true,
+
+    const payload = {
+      cliente, corretora_id: corretoraId, corretora_nome: corretoraTexto,
+      produto, seguradora, vigencia_fim: vigenciaFim,
       valor: novoValor ? Number(novoValor) : null,
-    }).eq('id', editingRenovacaoId);
-    btn.disabled = false; btn.textContent = 'Salvar';
-    if(error){ alert('Erro ao salvar: ' + error.message); return; }
-    r.estagio = novoEstagio;
-    r.estagio_manual = true;
-    r.valor = novoValor ? Number(novoValor) : null;
+      estagio: novoEstagio, estagio_manual: true,
+      membros: Array.from(document.querySelectorAll('#funil-card-membros-list input:checked')).map(el => el.value),
+      anexos: pendingFunilAttachments.slice(),
+      comentarios: pendingFunilComentarios.slice(),
+    };
+
+    if(editingRenovacaoId){
+      const r = RENOVACOES_CACHE.find(x => x.id === editingRenovacaoId);
+      if(r && r.estagio !== novoEstagio){
+        pendingFunilHistorico.unshift({when: nowLabel(), text:'Movido de estágio.'});
+      } else {
+        pendingFunilHistorico.unshift({when: nowLabel(), text:'Informações atualizadas.'});
+      }
+      payload.historico = pendingFunilHistorico;
+      const { error } = await supabase.from('renovacoes').update(payload).eq('id', editingRenovacaoId);
+      btn.disabled = false; btn.textContent = 'Salvar alterações';
+      if(error){ alert('Erro ao salvar: ' + error.message); return; }
+      Object.assign(r, payload);
+    } else {
+      pendingFunilHistorico.unshift({when: nowLabel(), text:'Negócio criado.'});
+      payload.historico = pendingFunilHistorico;
+      payload.chave_importacao = null;
+      payload.criado_por = currentUserId;
+      payload.criado_por_nome = currentUserFullName;
+      const { data, error } = await supabase.from('renovacoes').insert(payload).select().single();
+      btn.disabled = false; btn.textContent = 'Criar negócio';
+      if(error){ alert('Erro ao criar: ' + error.message); return; }
+      RENOVACOES_CACHE.push(data);
+      registrarLog('Criou negócio no pipeline', cliente);
+    }
+
     closeModal('modal-funil-card');
     renderFunil();
   }
 
   async function excluirRenovacao(){
     if(!editingRenovacaoId) return;
-    if(!confirm('Excluir este registro do funil de renovações? Essa ação não pode ser desfeita.')) return;
+    const r = RENOVACOES_CACHE.find(x => x.id === editingRenovacaoId);
+    if(r && r.criado_por && r.criado_por !== currentUserId && !isSuperAdmin()){
+      alert('Só quem criou este negócio (ou o Super Administrador) pode excluí-lo.');
+      return;
+    }
+    if(!confirm('Excluir este negócio do pipeline? Essa ação não pode ser desfeita.')) return;
     const { error } = await supabase.from('renovacoes').delete().eq('id', editingRenovacaoId);
     if(error){ alert('Erro ao excluir: ' + error.message); return; }
     RENOVACOES_CACHE = RENOVACOES_CACHE.filter(x => x.id !== editingRenovacaoId);
@@ -6114,11 +6402,15 @@
     }
 
     const wrap = document.getElementById('seletor-contatos-list');
+    const bloqueados = window._numerosBloqueadosDuplicar || null;
     wrap.innerHTML = lista.length ? lista.map(c => {
       const corrNome = (c.corretora_id && GROUPS[c.corretora_id]) ? GROUPS[c.corretora_id].name : '';
-      return `<label class="perm-row">
-        <span class="perm-row-label">${esc(c.nome)}${corrNome?` <span style="font-size:11px;color:var(--gray-600);">· ${esc(corrNome)}</span>`:''}<br><span class="hint" style="margin:0;">${esc(c.whatsapp)}</span></span>
+      const numeroLimpo = (c.whatsapp || '').replace(/\D/g, '');
+      const bloqueado = bloqueados && bloqueados.has(numeroLimpo);
+      return `<label class="perm-row" style="${bloqueado ? 'opacity:.5;' : ''}">
+        <span class="perm-row-label">${esc(c.nome)}${corrNome?` <span style="font-size:11px;color:var(--gray-600);">· ${esc(corrNome)}</span>`:''}<br><span class="hint" style="margin:0;">${esc(c.whatsapp)}${bloqueado ? ' · <span style="color:#dc2626;font-weight:700;">já recebeu este disparo</span>' : ''}</span></span>
         <input type="checkbox" value="${c.id}" data-nome="${esc(c.nome)}" data-whats="${esc(c.whatsapp)}"
+          ${bloqueado ? 'disabled title="Já recebeu este disparo — escolha outra pessoa"' : ''}
           ${WHATS_SELECIONADOS.some(s => s.id === c.id) ? 'checked' : ''} onchange="onSeletorContatoChange(this)">
       </label>`;
     }).join('') : `<p class="hint" style="margin:12px;">Nenhum contato encontrado para este filtro.</p>`;
@@ -6133,7 +6425,7 @@
   // (ex: filtrou por uma corretora ou seguradora — marca todo mundo dela).
   // Respeita o limite de contatos por disparo.
   function marcarTodosFiltradosSeletor(){
-    const checkboxes = Array.from(document.querySelectorAll('#seletor-contatos-list input[type="checkbox"]'));
+    const checkboxes = Array.from(document.querySelectorAll('#seletor-contatos-list input[type="checkbox"]:not(:disabled)'));
     const naoMarcados = checkboxes.filter(el => !el.checked);
     const jaMarcados = checkboxes.length - naoMarcados.length;
     let vagas = LIMITE_CONTATOS_DISPARO - jaMarcados;
@@ -6276,6 +6568,7 @@
 
     alert(`Disparo enviado para ${WHATS_SELECIONADOS.length} contato(s)${mensagens.length > 1 ? `, alternando entre ${mensagens.length} variações de mensagem` : ''}.`);
     WHATS_SELECIONADOS = [];
+    window._numerosBloqueadosDuplicar = null;
     document.getElementById('whats-selecionados-resumo').textContent = 'Nenhum contato selecionado ainda.';
     document.getElementById('whats-msg').value = '';
     document.getElementById('whats-msg-2').value = '';
@@ -6334,6 +6627,36 @@
     }).join('');
   }
 
+  // Reaproveita um disparo anterior (mensagens já preenchidas) mas BLOQUEIA quem
+  // já recebeu ESSE disparo específico, pra nunca mandar duplicado sem querer.
+  function duplicarDisparo(id){
+    const d = _hdCache.find(x => x.id === id);
+    if(!d || d.tipo !== 'whatsapp') return;
+
+    // Extrai de volta até 3 variações do texto salvo (formato "[Rodízio de N
+    // mensagens]\n\nVariação 1: ...\n\nVariação 2: ..."), ou usa a mensagem
+    // inteira se só tinha uma variação.
+    const bloco = String(d.mensagem || '');
+    const variacoes = [...bloco.matchAll(/Variação \d+:\s*([\s\S]*?)(?=\n\nVaria(?:c|ç)ão \d+:|$)/g)].map(m => m[1].trim());
+    const mensagens = variacoes.length ? variacoes : [bloco];
+
+    document.getElementById('whats-msg').value = mensagens[0] || '';
+    document.getElementById('whats-msg-2').value = mensagens[1] || '';
+    document.getElementById('whats-msg-3').value = mensagens[2] || '';
+
+    // Números que já receberam ESSE disparo — ficam bloqueados no seletor
+    const numeros = (d.contatos || [])
+      .map(c => (typeof c === 'object' && c) ? c.whatsapp : null)
+      .filter(Boolean)
+      .map(n => String(n).replace(/\D/g, ''));
+    window._numerosBloqueadosDuplicar = new Set(numeros);
+
+    showView('marketing');
+    const btnWhats = Array.from(document.querySelectorAll('.tab-strip button, .form-tabs button, button')).find(b => b.getAttribute('onclick') === "switchMktTab(this,'mkt-whats')");
+    if(btnWhats) switchMktTab(btnWhats, 'mkt-whats');
+    alert(`Mensagens preenchidas de novo${mensagens.length>1?` (${mensagens.length} variações)`:''}. Os ${numeros.length} contato(s) que já receberam esse disparo vão aparecer bloqueados quando você for selecionar os destinatários — escolha outras pessoas dessa vez.`);
+  }
+
   function abrirDetalheDisparo(id){
     const d = _hdCache.find(x=>x.id===id);
     if(!d) return;
@@ -6363,6 +6686,7 @@
         </div>
         <div class="modal-actions" style="margin-top:20px;">
           <button class="btn-outline" onclick="document.getElementById('modal-detalhe-disparo-wrap').remove()">Fechar</button>
+          ${d.tipo === 'whatsapp' ? `<button class="btn-dark" onclick="document.getElementById('modal-detalhe-disparo-wrap').remove(); duplicarDisparo('${d.id}')">Duplicar disparo</button>` : ''}
         </div>
       </div>
     </div>`;
@@ -10309,7 +10633,7 @@
   // abas que podem ser liberadas/bloqueadas para um usuário comum (a Home fica sempre visível)
   const TOGGLEABLE_ABAS = [
     {id:'crm', label:'Tarefas'},
-    {id:'funil', label:'Funil de Renovações'},
+    {id:'funil', label:'Pipeline'},
     {id:'campanhas', label:'Campanhas'},
     {id:'contatos', label:'Contatos'},
     {id:'marketing', label:'Disparos de marketing'},
