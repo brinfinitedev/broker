@@ -1499,6 +1499,11 @@
               <div class="f-field"><label>E-mail</label><input type="email" id="seguradora-email" placeholder="contato@seguradora.com.br"></div>
               <div class="f-field"><label>Telefone</label><input type="text" id="seguradora-telefone" placeholder="(00) 0000-0000"></div>
               <div class="f-field"><label>Assistência 24 horas (link ou telefone)</label><input type="text" id="seguradora-assistencia-24h" placeholder="https://... ou 0800 000 0000"></div>
+              <div class="f-field">
+                <label>Inatividade da corretora (meses sem produção)</label>
+                <input type="number" min="1" step="1" id="seguradora-meses-inatividade" placeholder="Ex: 12">
+                <p class="hint" style="margin-top:4px;">Se uma corretora vinculada a esta seguradora ficar esse tempo sem aparecer na produção, ela entra no relatório de "paradas" pra você decidir se inativa.</p>
+              </div>
             </div>
           </div>
 
@@ -1563,6 +1568,12 @@
               </div>
             </div>
             <button class="add-card-btn" onclick="addTeamRow('seguradora-team-rows')">+ Adicionar colaborador</button>
+          </div>
+
+          <div class="form-section hidden" id="seguradora-historico-section">
+            <h3>Histórico de alterações</h3>
+            <p class="hint">Quem mexeu, quando, e o que mudou nesse cadastro.</p>
+            <div id="seguradora-historico-lista" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;"></div>
           </div>
 
           <div class="form-actions">
@@ -1999,11 +2010,43 @@
                 </div>
               </div>
 
+              <!-- Auditoria por seguradora (não vinculadas + paradas) -->
+              <div class="card" style="padding:20px;cursor:pointer;transition:box-shadow .2s,transform .15s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='';this.style.transform=''" onclick="abrirRelatorioAuditoriaSeguradora()">
+                <div style="width:42px;height:42px;border-radius:12px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                </div>
+                <div style="font-size:13.5px;font-weight:800;margin-bottom:4px;">Auditoria por Seguradora</div>
+                <div style="font-size:12px;color:var(--gray-600);line-height:1.5;">Corretoras não vinculadas a uma seguradora, e as vinculadas que estão sem produção há muito tempo.</div>
+                <div style="margin-top:14px;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--gray-400);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Abrir relatório
+                </div>
+              </div>
+
             </div>
           </div>
 
-          <!-- Área do relatório de Corretoras Duplicadas -->
-          <div id="relatorio-duplicatas-area" style="display:none;">
+          <!-- Área do relatório de Auditoria por Seguradora -->
+          <div id="relatorio-auditoria-seg-area" style="display:none;">
+            <div class="relatorio-header-bar" style="display:flex;align-items:center;justify-content:space-between;background:var(--black);color:#fff;border-radius:14px;padding:14px 20px;margin-bottom:20px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <button onclick="voltarRelatorioAuditoriaSeguradora()" style="background:rgba(255,255,255,.12);border:none;color:#fff;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                  Modelos
+                </button>
+                <span style="font-size:15px;font-weight:800;">Auditoria por Seguradora</span>
+              </div>
+            </div>
+
+            <div class="card" style="padding:20px;margin-bottom:16px;">
+              <div class="f-field" style="margin:0;max-width:340px;">
+                <label>Seguradora</label>
+                <select id="auditoria-seg-select" onchange="analisarAuditoriaSeguradora()"><option value="">Selecione...</option></select>
+              </div>
+            </div>
+
+            <div id="auditoria-seg-resultado"><p class="hint">Selecione uma seguradora acima pra começar.</p></div>
+          </div>
+
             <div class="relatorio-header-bar" style="display:flex;align-items:center;justify-content:space-between;background:var(--black);color:#fff;border-radius:14px;padding:14px 20px;margin-bottom:20px;">
               <div style="display:flex;align-items:center;gap:10px;">
                 <button onclick="voltarRelatorioDuplicatas()" style="background:rgba(255,255,255,.12);border:none;color:#fff;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;">
@@ -2122,8 +2165,8 @@
                   <select id="relatorio-filtro-filial" onchange="renderRelatorioBody()" style="width:100%;"><option value="">Todas</option></select>
                 </div>
                 <div class="f-field" style="margin:0;" id="relatorio-campo-seguradora">
-                  <label>Seguradora</label>
-                  <select id="relatorio-filtro-seguradora" onchange="renderRelatorioBody()" style="width:100%;"><option value="">Todas</option></select>
+                  <label>Seguradora <span style="font-weight:400;color:var(--gray-600);">(Ctrl/Cmd+clique p/ várias)</span></label>
+                  <select id="relatorio-filtro-seguradora" multiple size="3" onchange="renderRelatorioBody()" style="width:100%;"></select>
                 </div>
                 <div class="f-field" style="margin:0;" id="relatorio-campo-produto">
                   <label>Produto</label>
@@ -2132,6 +2175,14 @@
                     <option>Auto</option><option>Frota</option><option>Empresa</option>
                     <option>Condomínio</option><option>Garantia</option><option>Vida</option>
                     <option>Residencial</option><option>Engenharia</option><option>Outros</option>
+                  </select>
+                </div>
+                <div class="f-field" style="margin:0;">
+                  <label>Ordenar por valor</label>
+                  <select id="relatorio-ordenar-valor" onchange="renderRelatorioBody()" style="width:100%;">
+                    <option value="">Sem ordenação</option>
+                    <option value="asc">Menor para o maior</option>
+                    <option value="desc">Maior para o menor</option>
                   </select>
                 </div>
               </div>
@@ -2742,7 +2793,7 @@
       <h3>Dados da corretora</h3>
       <p class="hint">Informações gerais de identificação</p>
       <div class="form-grid">
-        <div class="f-field full"><label>Razão social</label><input type="text" id="corretora-razao-social" placeholder="Ex: Prisma Corretora de Seguros Ltda."></div>
+        <div class="f-field full"><label>Razão social</label><input type="text" id="corretora-razao-social" placeholder="Ex: PRISMA CORRETORA DE SEGUROS LTDA." style="text-transform:uppercase;" oninput="const p=this.selectionStart; this.value=this.value.toUpperCase(); this.setSelectionRange(p,p);"></div>
         <div class="f-field"><label>Filial</label><select id="corretora-filial"><option value="">Selecione...</option></select></div>
         <div class="f-field"><label>Status</label>
           <select id="corretora-status">
@@ -2804,8 +2855,16 @@
       <div id="team-rows"></div>
       <button class="add-card-btn" onclick="addTeamRow()">+ Adicionar colaborador</button>
     </div>
+    <div class="form-section hidden" id="corretora-historico-section">
+      <h3>Histórico de alterações</h3>
+      <p class="hint">Quem mexeu, quando, e o que mudou nesse cadastro.</p>
+      <div id="corretora-historico-lista" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
     <div class="modal-actions" style="justify-content:space-between;">
-      <button class="btn-outline hidden" id="btn-excluir-corretora" onclick="excluirCorretoraCadastrada()" style="color:#dc2626;border-color:#fecaca;">Excluir corretora</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-outline hidden" id="btn-excluir-corretora" onclick="excluirCorretoraCadastrada()" style="color:#dc2626;border-color:#fecaca;">Excluir corretora</button>
+        <button class="btn-outline hidden" id="btn-exportar-corretora" onclick="exportarCorretoraAtual()">Exportar dados</button>
+      </div>
       <div style="display:flex;gap:10px;">
         <button class="btn-outline" onclick="closeModal('modal-corretora')">Cancelar</button>
         <button class="btn-dark" onclick="saveCorretoraForm()">Salvar cadastro</button>
@@ -2977,7 +3036,7 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
       <div style="display:flex;flex-direction:column;gap:3px;">
         <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Seguradora</label>
-        <select id="seletor-filtro-seguradora" onchange="onSeletorSeguradoraChange()" style="border:1.4px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;"><option value="">Todas</option></select>
+        <select id="seletor-filtro-seguradora" multiple size="4" onchange="onSeletorSeguradoraChange()" style="border:1.4px solid var(--border);border-radius:10px;padding:6px;font-size:13px;font-family:inherit;outline:none;"></select>
       </div>
       <div style="display:flex;flex-direction:column;gap:3px;">
         <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Corretora</label>
@@ -3076,9 +3135,8 @@
       </select>
     </div>
     <div class="f-field">
-      <label>Seguradora</label>
-      <select id="filtros-producao-seguradora" style="width:100%;border:1.4px solid var(--border);border-radius:11px;padding:12px 14px;outline:none;font-size:13.5px;font-family:inherit;">
-        <option value="">Todas as seguradoras</option>
+      <label>Seguradora <span style="font-weight:400;color:var(--gray-600);">(Ctrl/Cmd+clique pra marcar várias)</span></label>
+      <select id="filtros-producao-seguradora" multiple size="4" style="width:100%;border:1.4px solid var(--border);border-radius:11px;padding:8px;outline:none;font-size:13.5px;font-family:inherit;">
       </select>
     </div>
     <div class="f-field">
@@ -3477,13 +3535,14 @@
       lista.push({
         nome: m ? m[1] : c.nome, origem: (c.corretora_id && GROUPS[c.corretora_id]) ? GROUPS[c.corretora_id].name : 'Equipe da corretora',
         whatsapp: c.whatsapp || '', nascimento: c.nascimento,
+        corretoraId: c.corretora_id || null,
       });
     });
 
     // 2) comercial responsável de cada seguradora
-    Object.values(SEGURADORAS).forEach(s => {
+    Object.entries(SEGURADORAS).forEach(([sid, s]) => {
       if(s.comercial && s.comercialNascimento){
-        lista.push({ nome: s.comercial, origem: s.nome, whatsapp: s.telefone || '', nascimento: s.comercialNascimento });
+        lista.push({ nome: s.comercial, origem: s.nome, whatsapp: s.telefone || '', nascimento: s.comercialNascimento, seguradoraId: sid });
       }
     });
 
@@ -3503,12 +3562,16 @@
     const [, mes, dia] = p.nascimento.split('-').map(Number);
     const dataFmt = `${String(dia).padStart(2,'0')}/${String(mes).padStart(2,'0')}`;
     const msg = (p.mensagem && p.mensagem.trim() ? p.mensagem : MENSAGEM_PADRAO_ANIVERSARIO).replace('{nome}', p.nome.split(' ')[0]);
-    return `<div class="bday-row">
+    const temVinculo = !!(p.corretoraId || p.seguradoraId);
+    const onclickVinculo = p.corretoraId
+      ? `openCorretoraForm('${p.corretoraId}')`
+      : (p.seguradoraId ? `openSeguradoraForm('${p.seguradoraId}')` : '');
+    return `<div class="bday-row" ${temVinculo ? `onclick="${onclickVinculo}" style="cursor:pointer;" title="Clique para abrir ${p.corretoraId ? 'a corretora' : 'a seguradora'} vinculada"` : ''}>
       <div class="av">${esc(initials(p.nome))}</div>
       <div class="info"><div class="n">${esc(p.nome)}</div><div class="d">${esc(p.origem)}</div></div>
       <div class="bday-actions">
         <span class="tag">${p.dias === 0 ? 'Hoje' : esc(dataFmt)}</span>
-        ${p.whatsapp ? `<button class="bday-wa-btn" title="Mandar parabéns no WhatsApp" data-whats="${esc(p.whatsapp)}" data-msg="${esc(msg)}" onclick="openWhats(this.dataset.whats, this.dataset.msg)">
+        ${p.whatsapp ? `<button class="bday-wa-btn" title="Mandar parabéns no WhatsApp" data-whats="${esc(p.whatsapp)}" data-msg="${esc(msg)}" onclick="event.stopPropagation(); openWhats(this.dataset.whats, this.dataset.msg)">
           <svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1112 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8 1-.1.1-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.4c.1-.1.2-.3.2-.4.1-.1 0-.3 0-.4l-.7-1.7c-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.2.9 2.4c.1.2 1.6 2.5 3.9 3.4.5.2.9.4 1.3.5.5.2 1 .1 1.3.1.4 0 1.4-.6 1.6-1.1.2-.5.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>
         </button>` : ''}
       </div>
@@ -3775,6 +3838,7 @@
   };
 
   function showView(id){
+    const viewAnterior = currentView;
     currentView = id;
     try { localStorage.setItem('ultimaViewAtiva', id); } catch(e){ /* localStorage indisponível — ignora */ }
     document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
@@ -3784,6 +3848,14 @@
     // mark active nav item first
     document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.view===id));
     // move sidebar active bar — rAF garante posição correta após reflow
+
+    // Limpa os filtros da tela que está sendo deixada — sem isso, o filtro
+    // ficava "grudado" e confundia quando a pessoa voltava depois.
+    if(viewAnterior && viewAnterior !== id){
+      if(viewAnterior === 'producao' && typeof limparFiltrosProducao === 'function') limparFiltrosProducao();
+      if(viewAnterior === 'relatorios' && typeof limparFiltrosRelatorio === 'function') limparFiltrosRelatorio();
+      if(viewAnterior === 'contatos' && typeof limparFiltrosContatos === 'function') limparFiltrosContatos();
+    }
 
     if(id === 'seguradoras'){
       renderSeguradoras();
@@ -5570,14 +5642,14 @@
     Object.values(SEGURADORAS).forEach(s => segs.add(s.nome));
     Object.values(GROUPS).forEach(g => (g.seguradoras||[]).forEach(s => segs.add(s)));
     const selSeg = document.getElementById('seletor-filtro-seguradora');
-    selSeg.innerHTML = '<option value="">Todas</option>' + [...segs].sort().map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    selSeg.innerHTML = [...segs].sort().map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
 
     // populate corretora with all initially
     const selCorr = document.getElementById('seletor-filtro-corretora');
     selCorr.innerHTML = '<option value="">Todas</option>' + Object.values(GROUPS).map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
 
     document.getElementById('seletor-filtro-texto').value = '';
-    selSeg.value = '';
+    Array.from(selSeg.options).forEach(o => o.selected = false);
     selCorr.value = '';
 
     filtrarSeletor();
@@ -5585,13 +5657,13 @@
     openModal('modal-selecionar-contatos');
   }
 
-  // Quando seleciona seguradora: restringe corretoras vinculadas a ela
+  // Quando seleciona seguradora(s): restringe corretoras vinculadas a elas
   function onSeletorSeguradoraChange(){
-    const segFiltro = document.getElementById('seletor-filtro-seguradora').value;
+    const segsFiltro = Array.from(document.getElementById('seletor-filtro-seguradora').selectedOptions).map(o=>o.value);
     const selCorr = document.getElementById('seletor-filtro-corretora');
-    if(segFiltro){
-      // Show only corretoras linked to this seguradora
-      const corrsFiltradas = Object.values(GROUPS).filter(g => (g.seguradoras||[]).includes(segFiltro));
+    if(segsFiltro.length){
+      // Show only corretoras linked a QUALQUER uma das seguradoras marcadas
+      const corrsFiltradas = Object.values(GROUPS).filter(g => (g.seguradoras||[]).some(s => segsFiltro.includes(s)));
       selCorr.innerHTML = '<option value="">Todas as vinculadas</option>' +
         corrsFiltradas.map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
     } else {
@@ -5606,14 +5678,14 @@
   function filtrarSeletor(){
     const texto = normalizarBusca(document.getElementById('seletor-filtro-texto').value||'');
     const corrFiltro = document.getElementById('seletor-filtro-corretora').value;
-    const segFiltro = document.getElementById('seletor-filtro-seguradora').value;
+    const segsFiltro = Array.from(document.getElementById('seletor-filtro-seguradora').selectedOptions).map(o=>o.value);
 
     let lista = _seletorTodosContatos;
     if(texto) lista = lista.filter(c => normalizarBusca(c.nome).includes(texto) || (c.whatsapp||'').includes(texto));
-    if(segFiltro){
-      // Filter by corretoras linked to this seguradora
+    if(segsFiltro.length){
+      // Filter by corretoras linked a QUALQUER uma das seguradoras marcadas
       const corrIdsVinculadas = Object.entries(GROUPS)
-        .filter(([,g]) => (g.seguradoras||[]).includes(segFiltro))
+        .filter(([,g]) => (g.seguradoras||[]).some(s => segsFiltro.includes(s)))
         .map(([id]) => id);
       lista = lista.filter(c => corrIdsVinculadas.includes(c.corretora_id));
     }
@@ -5949,6 +6021,15 @@
     const btnExcluir = document.getElementById('btn-excluir-corretora');
     if(btnExcluir) btnExcluir.classList.toggle('hidden', !(gid && isSuperAdmin()));
 
+    const btnExportar = document.getElementById('btn-exportar-corretora');
+    if(btnExportar) btnExportar.classList.toggle('hidden', !gid);
+
+    const historicoSection = document.getElementById('corretora-historico-section');
+    if(historicoSection){
+      historicoSection.classList.toggle('hidden', !gid);
+      if(gid) carregarHistoricoCorretora(gid);
+    }
+
     const fieldMap = {
       'corretora-razao-social': g ? g.name : '',
       'corretora-cnpj': g ? g.cnpj : '',
@@ -6167,9 +6248,136 @@
     renderCorretorasList();
   }
 
+  // Compara o estado da corretora antes/depois de salvar e monta um texto
+  // legível com só os campos que realmente mudaram — é isso que vira o
+  // histórico daquele cadastro.
+  function montarDiffCorretora(antes, depois){
+    if(!antes) return '';
+    const rotulos = {
+      name: 'Razão social', filial: 'Filial', cnpj: 'CNPJ', susep: 'SUSEP',
+      email: 'E-mail', telefone: 'Telefone', endereco: 'Endereço',
+      cidade: 'Cidade', estado: 'Estado', status: 'Status',
+    };
+    const partes = [];
+    Object.entries(rotulos).forEach(([campo, rotulo]) => {
+      const valorAntes = (antes[campo] ?? '').toString().trim();
+      const valorDepois = (depois[campo] ?? '').toString().trim();
+      if(valorAntes !== valorDepois){
+        partes.push(`${rotulo}: "${valorAntes || '—'}" → "${valorDepois || '—'}"`);
+      }
+    });
+    // seguradoras e apelidos são listas — compara como conjunto, não item a item
+    const segAntes = new Set(antes.seguradoras || []);
+    const segDepois = new Set(depois.seguradoras || []);
+    const segAdicionadas = [...segDepois].filter(s => !segAntes.has(s));
+    const segRemovidas = [...segAntes].filter(s => !segDepois.has(s));
+    if(segAdicionadas.length) partes.push(`Seguradoras vinculadas — adicionou: ${segAdicionadas.join(', ')}`);
+    if(segRemovidas.length) partes.push(`Seguradoras vinculadas — removeu: ${segRemovidas.join(', ')}`);
+
+    const apeAntes = new Set(antes.apelidos || []);
+    const apeDepois = new Set(depois.apelidos || []);
+    const apeAdicionados = [...apeDepois].filter(a => !apeAntes.has(a));
+    if(apeAdicionados.length) partes.push(`Apelidos — adicionou: ${apeAdicionados.join(', ')}`);
+
+    return partes.join(' | ');
+  }
+
+  async function carregarHistoricoCorretora(gid){
+    const lista = document.getElementById('corretora-historico-lista');
+    if(!lista) return;
+    lista.innerHTML = `<p class="hint">Carregando histórico...</p>`;
+
+    const nomeAtual = GROUPS[gid]?.name || '';
+    // Filtra por corretora_id (mais confiável) OU pelo nome atual (cobre registros
+    // antigos, gravados antes de existir a coluna corretora_id).
+    const { data, error } = await supabase
+      .from('system_logs')
+      .select('*')
+      .or(`corretora_id.eq.${gid},corretora_nome.eq.${nomeAtual}`)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if(error){
+      lista.innerHTML = `<p class="hint" style="color:#dc2626;">Erro ao carregar histórico: ${esc(error.message)}</p>`;
+      return;
+    }
+    if(!data || !data.length){
+      lista.innerHTML = `<p class="hint">Nenhuma alteração registrada ainda para esta corretora.</p>`;
+      return;
+    }
+
+    lista.innerHTML = data.map(l => `
+      <div style="border:1.4px solid var(--border);border-radius:10px;padding:10px 12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">
+          <span style="font-weight:700;font-size:12.5px;">${esc(l.user_name) || 'Sistema'}</span>
+          <span style="font-size:11px;color:var(--gray-600);white-space:nowrap;">${new Date(l.created_at).toLocaleString('pt-BR')}</span>
+        </div>
+        <div style="font-size:11.5px;font-weight:700;color:var(--black);margin-bottom:2px;">${esc(l.action)}</div>
+        ${l.details ? `<div style="font-size:11.5px;color:var(--gray-600);line-height:1.5;">${esc(l.details)}</div>` : ''}
+      </div>`).join('');
+  }
+
+  async function exportarCorretoraAtual(){
+    const gid = editingCorretoraGid;
+    if(!gid || !GROUPS[gid]){ alert('Abra uma corretora salva antes de exportar.'); return; }
+    if(typeof XLSX === 'undefined'){ alert('Leitor de planilhas indisponível.'); return; }
+
+    const g = GROUPS[gid];
+    const wb = XLSX.utils.book_new();
+
+    // Aba 1: dados gerais
+    const dados = [
+      { Campo: 'Razão social', Valor: g.name || '' },
+      { Campo: 'Apelidos', Valor: (g.apelidos||[]).join(', ') },
+      { Campo: 'CNPJ', Valor: g.cnpj || '' },
+      { Campo: 'IE', Valor: g.ie || '' },
+      { Campo: 'SUSEP', Valor: g.susep || '' },
+      { Campo: 'Filial', Valor: g.filial || '' },
+      { Campo: 'Status', Valor: g.status || 'ativa' },
+      { Campo: 'E-mail', Valor: g.email || '' },
+      { Campo: 'Telefone', Valor: g.telefone || '' },
+      { Campo: 'Endereço', Valor: g.endereco || '' },
+      { Campo: 'Cidade', Valor: g.cidade || '' },
+      { Campo: 'Estado', Valor: g.estado || '' },
+      { Campo: 'Seguradoras vinculadas', Valor: (g.seguradoras||[]).join(', ') },
+    ];
+    const wsDados = XLSX.utils.json_to_sheet(dados);
+    XLSX.utils.book_append_sheet(wb, wsDados, 'Dados');
+
+    // Aba 2: equipe (busca fresca do banco, pra garantir que está atualizada)
+    const { data: equipe } = await supabase.from('marketing_contatos').select('*').eq('corretora_id', gid).eq('origem', 'equipe');
+    const wsEquipe = XLSX.utils.json_to_sheet((equipe||[]).map(e => ({
+      Nome: e.nome, Telefone: e.whatsapp || '', 'E-mail': e.email || '',
+      Aniversário: e.nascimento ? new Date(e.nascimento+'T00:00:00').toLocaleDateString('pt-BR') : '',
+    })));
+    XLSX.utils.book_append_sheet(wb, wsEquipe, 'Equipe');
+
+    // Aba 3: anexos (nome + link assinado válido por 10 minutos)
+    const anexos = g.anexos || [];
+    const linhasAnexos = [];
+    for(const a of anexos){
+      let link = '';
+      if(a.path){
+        const { data: sig } = await supabase.storage.from(BUCKET_ANEXOS_CORRETORAS).createSignedUrl(a.path, 600);
+        link = sig ? sig.signedUrl : '';
+      }
+      linhasAnexos.push({ Nome: a.nome || '', 'Link (válido por 10 min)': link });
+    }
+    const wsAnexos = XLSX.utils.json_to_sheet(linhasAnexos.length ? linhasAnexos : [{ Nome: 'Nenhum anexo', 'Link (válido por 10 min)': '' }]);
+    XLSX.utils.book_append_sheet(wb, wsAnexos, 'Anexos');
+
+    const nomeArquivo = `corretora_${slugify(g.name)}_${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(wb, nomeArquivo);
+    registrarLog('Exportou dados da corretora', g.name);
+  }
+
   async function saveCorretoraForm(){
-    const nomeCompleto = document.getElementById('corretora-razao-social').value.trim();
+    const nomeCompleto = document.getElementById('corretora-razao-social').value.trim().toUpperCase();
     if(!nomeCompleto){ alert('Informe a razão social da corretora.'); return; }
+
+    // Guarda uma cópia de como a corretora estava ANTES de salvar, pra montar o
+    // histórico de mudanças campo a campo (só existe quando já é uma edição).
+    const dadosAntes = editingCorretoraGid && GROUPS[editingCorretoraGid] ? { ...GROUPS[editingCorretoraGid] } : null;
 
     const rua = document.getElementById('corretora-rua').value.trim();
     const numero = document.getElementById('corretora-numero').value.trim();
@@ -6238,7 +6446,18 @@
     btn.disabled = false; btn.textContent = 'Salvar cadastro';
     refreshCorretoraSelects();
     refreshGroupUI(gid);
-    registrarLog(editingCorretoraGid ? 'Editou corretora' : 'Criou corretora', nomeCompleto);
+
+    if(editingCorretoraGid){
+      const diffTxt = montarDiffCorretora(dadosAntes, {
+        name: nomeCompleto, filial: payload.filial, cnpj: payload.cnpj, susep: payload.susep,
+        email: payload.email, telefone: payload.telefone, endereco: payload.endereco,
+        cidade: payload.cidade, estado: payload.estado, status: payload.status,
+        seguradoras: payload.seguradoras_permitidas, apelidos: payload.apelidos,
+      });
+      registrarLog('Editou corretora', diffTxt || 'Salvou sem alterar nenhum campo (ou só mexeu em equipe/anexo).');
+    } else {
+      registrarLog('Criou corretora', nomeCompleto);
+    }
 
     // Se essa corretora foi criada "na hora" a partir de uma linha não identificada
     // na importação de planilha, vincula automaticamente e volta para a confirmação.
@@ -6427,14 +6646,16 @@
     'mapfre': {
       tipo: 'corretora',
       aliases: ['mapfre seguros', 'mapfre'],
-      // Planilha da Mapfre tem uma linha em branco antes do cabeçalho de verdade
-      // (linha 2: "Valores Emitidos como valores | Prêmios (Dia) | Prêmios (até a data)").
+      // Planilha da Mapfre tem uma linha 1 totalmente em branco — o sistema já
+      // remove linhas 100% vazias ANTES de identificar o cabeçalho, então a
+      // linha 2 ("Valores Emitidos...") já vira sozinha a primeira linha
+      // reconhecida (headerRow). NÃO precisa de pularPrimeiraLinhaDados aqui
+      // (isso pulava a "PARCER", a primeira corretora de verdade, por engano).
       // Col A (idx 0): nome da corretora (vem truncado + " - código", ex: "PARCER
       // CORRETORES DE SEGUROS P - 121954")
       // Col C (idx 2): Prêmios (até a data) — valor usado
       idxCorretorFixo: 0,
       idxValorFixo: 2,
-      pularPrimeiraLinhaDados: true, // pula a linha 2 (cabeçalho de verdade, tratado como dado)
       descartarColunaA: false,
     },
   };
@@ -6491,9 +6712,8 @@
     // Fill corretoras
     selCor.innerHTML = '<option value="todas">Todas as corretoras</option>' +
       Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${esc(g.name)}</option>`).join('');
-    // Fill seguradoras
-    selSeg.innerHTML = '<option value="">Todas as seguradoras</option>' +
-      Object.values(SEGURADORAS).map(s => `<option value="${esc(s.nome)}">${esc(s.nome)}</option>`).join('');
+    // Fill seguradoras (multi-seleção — sem opção "Todas", basta não marcar nenhuma)
+    selSeg.innerHTML = Object.values(SEGURADORAS).map(s => `<option value="${esc(s.nome)}">${esc(s.nome)}</option>`).join('');
     // Fill filiais (valores únicos de filial entre as corretoras cadastradas)
     const filiaisUnicas = [...new Set(Object.values(GROUPS).map(g => g.filial).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
     selFil.innerHTML = '<option value="">Todas as filiais</option>' +
@@ -6502,7 +6722,8 @@
     const curComp = document.getElementById('producao-competencia')?.value || '';
     const curCor = document.getElementById('producao-filtro-corretora')?.value || 'todas';
     const curFil = document.getElementById('producao-filtro-filial')?.value || '';
-    const curSeg = (document.getElementById('producao-filtro-seguradora')?.value || '').trim();
+    let curSegArray = [];
+    try { curSegArray = JSON.parse(document.getElementById('producao-filtro-seguradora')?.value || '[]'); } catch(e){ curSegArray = []; }
     const curProd = document.getElementById('producao-filtro-produto')?.value || '';
     const fComp = document.getElementById('filtros-producao-competencia');
     const fCor = document.getElementById('filtros-producao-corretora');
@@ -6512,7 +6733,7 @@
     if(fComp) fComp.value = curComp;
     if(fCor) fCor.value = curCor;
     if(fFil) fFil.value = curFil;
-    if(fSeg) fSeg.value = curSeg;
+    if(fSeg) Array.from(fSeg.options).forEach(o => { o.selected = curSegArray.includes(o.value); });
     if(fProd) fProd.value = curProd;
     // Link the comp picker
     ligarCompetenciaPicker('filtros-producao-competencia');
@@ -6527,7 +6748,7 @@
     const comp = document.getElementById('filtros-producao-competencia')?.value || '';
     const cor = document.getElementById('filtros-producao-corretora')?.value || 'todas';
     const fil = document.getElementById('filtros-producao-filial')?.value || '';
-    const seg = document.getElementById('filtros-producao-seguradora')?.value || '';
+    const segArray = Array.from(document.getElementById('filtros-producao-seguradora')?.selectedOptions || []).map(o=>o.value);
     const prod = document.getElementById('filtros-producao-produto')?.value || '';
     // Apply to hidden fields
     const hComp = document.getElementById('producao-competencia');
@@ -6538,14 +6759,14 @@
     if(hComp) hComp.value = comp;
     if(hCor) hCor.value = cor;
     if(hFil) hFil.value = fil;
-    if(hSeg) hSeg.value = seg;
+    if(hSeg) hSeg.value = JSON.stringify(segArray);
     if(hProd) hProd.value = prod;
     // Update active filters badge
     const partes = [];
     if(comp){ partes.push(labelCompetencia(comp)); }
     if(cor && cor !== 'todas'){ partes.push(GROUPS[cor]?.name || cor); }
     if(fil){ partes.push('Filial: ' + fil); }
-    if(seg){ partes.push(seg); }
+    if(segArray.length){ partes.push(segArray.join(', ')); }
     if(prod){ partes.push(prod); }
     const badge = document.getElementById('producao-filtros-badge');
     const container = document.getElementById('producao-filtros-ativos');
@@ -6770,6 +6991,9 @@
         user_name: currentUserFullName || 'Sistema',
         role: currentRole,
         corretora_nome: (editingCorretoraGid && GROUPS[editingCorretoraGid]) ? GROUPS[editingCorretoraGid].name : '',
+        corretora_id: editingCorretoraGid || null,
+        seguradora_nome: (editingSeguradoraId && SEGURADORAS[editingSeguradoraId]) ? SEGURADORAS[editingSeguradoraId].nome : '',
+        seguradora_id: editingSeguradoraId || null,
         ip_address: ip,
         localizacao,
         action, details: details || '',
@@ -7024,6 +7248,7 @@
     document.getElementById('relatorio-painel-modelos').style.display = 'none';
     document.getElementById('relatorio-consulta-area').style.display = 'none';
     document.getElementById('relatorio-duplicatas-area').style.display = 'none';
+    document.getElementById('relatorio-auditoria-seg-area').style.display = 'none';
     document.getElementById('relatorio-vinculo-area').style.display = 'block';
 
     const nomes = Object.values(SEGURADORAS).map(s => s.nome).sort((a,b)=>a.localeCompare(b));
@@ -7042,12 +7267,139 @@
     document.getElementById('relatorio-painel-modelos').style.display = 'none';
     document.getElementById('relatorio-consulta-area').style.display = 'none';
     document.getElementById('relatorio-vinculo-area').style.display = 'none';
+    document.getElementById('relatorio-auditoria-seg-area').style.display = 'none';
     document.getElementById('relatorio-duplicatas-area').style.display = 'block';
   }
 
   function voltarRelatorioDuplicatas(){
     document.getElementById('relatorio-duplicatas-area').style.display = 'none';
     document.getElementById('relatorio-painel-modelos').style.display = 'block';
+  }
+
+  function abrirRelatorioAuditoriaSeguradora(){
+    document.getElementById('relatorio-painel-modelos').style.display = 'none';
+    document.getElementById('relatorio-consulta-area').style.display = 'none';
+    document.getElementById('relatorio-vinculo-area').style.display = 'none';
+    document.getElementById('relatorio-duplicatas-area').style.display = 'none';
+    document.getElementById('relatorio-auditoria-seg-area').style.display = 'block';
+
+    const sel = document.getElementById('auditoria-seg-select');
+    const nomes = Object.values(SEGURADORAS).map(s => s.nome).sort((a,b)=>a.localeCompare(b));
+    sel.innerHTML = `<option value="">Selecione...</option>` + nomes.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    document.getElementById('auditoria-seg-resultado').innerHTML = `<p class="hint">Selecione uma seguradora acima pra começar.</p>`;
+  }
+
+  function voltarRelatorioAuditoriaSeguradora(){
+    document.getElementById('relatorio-auditoria-seg-area').style.display = 'none';
+    document.getElementById('relatorio-painel-modelos').style.display = 'block';
+  }
+
+  async function analisarAuditoriaSeguradora(){
+    const nomeSeg = document.getElementById('auditoria-seg-select').value;
+    const box = document.getElementById('auditoria-seg-resultado');
+    if(!nomeSeg){ box.innerHTML = `<p class="hint">Selecione uma seguradora acima pra começar.</p>`; return; }
+    box.innerHTML = `<p class="hint">Analisando...</p>`;
+
+    const segObj = Object.values(SEGURADORAS).find(s => s.nome === nomeSeg);
+    const mesesLimite = (segObj && segObj.meses_inatividade) ? Number(segObj.meses_inatividade) : 12;
+
+    const todasCorretoras = Object.entries(GROUPS)
+      .filter(([,g]) => (g.status||'ativa') === 'ativa')
+      .sort((a,b) => (a[1].name||'').localeCompare(b[1].name||'', 'pt-BR'));
+
+    // Busca a produção do MÊS ATUAL (todas as seguradoras) pra descobrir quem
+    // realmente está com movimento — mesmo critério (>R$10) usado na aba Produção.
+    // Sem isso, "não vinculadas" mostrava as 1000+ corretoras cadastradas, incluindo
+    // as que nunca produziram nada de verdade.
+    const competenciaAtual = new Date().toISOString().slice(0,7); // 'YYYY-MM'
+    const { data: producaoMesAtual } = await fetchAllRows((from,to) =>
+      supabase.from('producao_mensal').select('corretora_id, valor').eq('competencia', competenciaAtual).range(from,to)
+    );
+    const totalPorCorretoraMesAtual = {};
+    (producaoMesAtual||[]).forEach(l => {
+      if(!l.corretora_id) return;
+      totalPorCorretoraMesAtual[l.corretora_id] = (totalPorCorretoraMesAtual[l.corretora_id] || 0) + Number(l.valor||0);
+    });
+    const LIMITE_MINIMO_PRODUCAO = 10;
+    const corretorasComProducaoIds = new Set(
+      Object.entries(totalPorCorretoraMesAtual).filter(([,v]) => v > LIMITE_MINIMO_PRODUCAO).map(([gid]) => gid)
+    );
+
+    const naoVinculadas = todasCorretoras.filter(([gid,g]) => !(g.seguradoras||[]).includes(nomeSeg) && corretorasComProducaoIds.has(gid));
+    const vinculadas = todasCorretoras.filter(([,g]) => (g.seguradoras||[]).includes(nomeSeg));
+
+    // Busca a produção dessa seguradora pra achar a última competência de cada corretora
+    const { data: producao, error } = await fetchAllRows((from,to) =>
+      supabase.from('producao_mensal').select('corretora_id, competencia').eq('seguradora', nomeSeg).range(from,to)
+    );
+    if(error){
+      box.innerHTML = `<p class="hint" style="color:#dc2626;">Erro ao buscar produção: ${esc(error.message)}</p>`;
+      return;
+    }
+
+    const ultimaCompetenciaPorCorretora = {};
+    (producao||[]).forEach(p => {
+      if(!p.corretora_id || !p.competencia) return;
+      const atual = ultimaCompetenciaPorCorretora[p.corretora_id];
+      if(!atual || p.competencia > atual) ultimaCompetenciaPorCorretora[p.corretora_id] = p.competencia;
+    });
+
+    const hoje = new Date();
+    const paradas = [];
+    vinculadas.forEach(([gid, g]) => {
+      const ultima = ultimaCompetenciaPorCorretora[gid]; // formato 'YYYY-MM'
+      let mesesSemProducao;
+      if(!ultima){
+        mesesSemProducao = null; // nunca produziu nessa seguradora
+      } else {
+        const [ano, mes] = ultima.split('-').map(Number);
+        mesesSemProducao = (hoje.getFullYear() - ano) * 12 + (hoje.getMonth()+1 - mes);
+      }
+      if(mesesSemProducao === null || mesesSemProducao >= mesesLimite){
+        paradas.push({ gid, nome: g.name, ultima, mesesSemProducao });
+      }
+    });
+    paradas.sort((a,b) => (b.mesesSemProducao ?? 9999) - (a.mesesSemProducao ?? 9999));
+
+    box.innerHTML = `
+      <div class="card" style="padding:20px;margin-bottom:16px;">
+        <div style="font-size:12.5px;font-weight:800;margin-bottom:4px;">Não vinculadas a "${esc(nomeSeg)}" (${naoVinculadas.length})</div>
+        <p class="hint" style="margin-bottom:10px;">Considera só corretoras com produção real (mais de R$ 10) neste mês em qualquer seguradora — não mostra a base toda cadastrada.</p>
+        ${naoVinculadas.length ? naoVinculadas.map(([gid,g]) => `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);">
+            <div style="font-size:13px;font-weight:600;">${esc(g.name)}</div>
+            <button class="access-btn" onclick="openCorretoraForm('${gid}')">Abrir</button>
+          </div>`).join('') : `<p class="tag-empty-hint">Todas as corretoras ativas já estão vinculadas a esta seguradora.</p>`}
+      </div>
+
+      <div class="card" style="padding:20px;">
+        <div style="font-size:12.5px;font-weight:800;margin-bottom:4px;">Vinculadas, mas paradas há ${mesesLimite}+ meses (${paradas.length})</div>
+        <p class="hint" style="margin-bottom:10px;">Limite configurado no cadastro desta seguradora (padrão: 12 meses se não configurado).</p>
+        ${paradas.length ? paradas.map(p => `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);">
+            <div>
+              <div style="font-size:13px;font-weight:600;">${esc(p.nome)}</div>
+              <div style="font-size:11px;color:var(--gray-600);">${p.ultima ? `Última produção: ${labelCompetencia(p.ultima)} (${p.mesesSemProducao} meses parada)` : 'Nunca teve produção registrada nesta seguradora'}</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button class="access-btn" onclick="openCorretoraForm('${p.gid}')">Abrir</button>
+              <button class="access-btn" style="color:#dc2626;border-color:#fecaca;" onclick="inativarCorretoraDaAuditoria('${p.gid}')">Inativar</button>
+            </div>
+          </div>`).join('') : `<p class="tag-empty-hint">Nenhuma corretora parada além do limite configurado. 🎉</p>`}
+      </div>
+    `;
+  }
+
+  async function inativarCorretoraDaAuditoria(gid){
+    const g = GROUPS[gid];
+    if(!g) return;
+    if(!confirm(`Marcar "${g.name}" como inativa?`)) return;
+    const { error } = await supabase.from('corretoras').update({ status: 'inativa' }).eq('id', gid);
+    if(error){ alert('Erro ao inativar: ' + error.message); return; }
+    g.status = 'inativa';
+    registrarLog('Inativou corretora (auditoria de seguradora)', g.name);
+    renderCorretorasList();
+    analisarAuditoriaSeguradora();
   }
 
   // Remove acentos, deixa maiúsculo e tira termos societários comuns (LTDA, S.A., ME,
@@ -7428,6 +7780,7 @@
     document.getElementById('relatorio-painel-modelos').style.display = 'none';
     document.getElementById('relatorio-vinculo-area').style.display = 'none';
     document.getElementById('relatorio-duplicatas-area').style.display = 'none';
+    document.getElementById('relatorio-auditoria-seg-area').style.display = 'none';
     document.getElementById('relatorio-consulta-area').style.display = 'block';
 
     // Limpar filtros
@@ -7516,8 +7869,8 @@
       selFil.innerHTML = `<option value="">Todas</option>` + filiaisUnicas.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
     }
     const selSeg = document.getElementById('relatorio-filtro-seguradora');
-    if(selSeg && selSeg.options.length <= 1){
-      selSeg.innerHTML = `<option value="">Todas</option>` + Object.values(SEGURADORAS).map(s=>`<option value="${esc(s.nome)}">${esc(s.nome)}</option>`).join('');
+    if(selSeg && selSeg.options.length === 0){
+      selSeg.innerHTML = Object.values(SEGURADORAS).map(s=>`<option value="${esc(s.nome)}">${esc(s.nome)}</option>`).join('');
     }
     // do NOT auto-render table — wait for user to apply filters
   }
@@ -7528,8 +7881,9 @@
     document.getElementById('relatorio-filtro-data-fim').value = '';
     document.getElementById('relatorio-filtro-corretora').value = '';
     const rf = document.getElementById('relatorio-filtro-filial'); if(rf) rf.value='';
-    document.getElementById('relatorio-filtro-seguradora').value = '';
+    const selSegLimpar = document.getElementById('relatorio-filtro-seguradora'); if(selSegLimpar) Array.from(selSegLimpar.options).forEach(o => o.selected = false);
     const rp = document.getElementById('relatorio-filtro-produto'); if(rp) rp.value='';
+    const ro = document.getElementById('relatorio-ordenar-valor'); if(ro) ro.value='';
     document.getElementById('relatorio-tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray-600);padding:40px 20px;">Defina os filtros acima e clique em <b>Pesquisar</b>.</td></tr>`;
     const kpiGrid = document.getElementById('relatorio-kpis'); if(kpiGrid) kpiGrid.style.display='none';
     const resumoEl = document.getElementById('relatorio-resumo-filtros'); if(resumoEl) resumoEl.textContent='';
@@ -7546,13 +7900,13 @@
     if(!isSuperAdmin() && currentUserFilial){
       filialNome = currentUserFilial;
     }
-    const seguradoraNome = document.getElementById('relatorio-filtro-seguradora').value;
+    const seguradorasNomes = Array.from(document.getElementById('relatorio-filtro-seguradora').selectedOptions).map(o=>o.value);
     const produtoNome = document.getElementById('relatorio-filtro-produto')?.value || '';
 
     let query = supabase.from('producao_mensal').select('*');
     if(competencia) query = query.eq('competencia', competencia);
     if(corretoraId) query = query.eq('corretora_id', corretoraId);
-    if(seguradoraNome) query = query.eq('seguradora', seguradoraNome);
+    if(seguradorasNomes.length) query = query.in('seguradora', seguradorasNomes);
     if(produtoNome) query = query.eq('produto', produtoNome);
     const { data } = await query;
 
@@ -7580,7 +7934,7 @@
       competencia ? `Competência: ${labelCompetencia(competencia)}` : 'Todas as competências',
       `Corretora: ${corretoraId ? (GROUPS[corretoraId]?.name||'—') : 'Todas'}`,
       filialNome ? `Filial: ${filialNome}` : null,
-      `Seguradora: ${seguradoraNome || 'Todas'}`,
+      `Seguradora: ${seguradorasNomes.length ? seguradorasNomes.join(', ') : 'Todas'}`,
       `Produto: ${produtoNome || 'Todos'}`,
       (dataIni || dataFim) ? `Atualizado entre ${dataIni||'—'} e ${dataFim||'—'}` : '',
     ].filter(Boolean).join(' · ');
@@ -7597,10 +7951,10 @@
     const dataFim = document.getElementById('relatorio-filtro-data-fim').value;
     const corretoraId = document.getElementById('relatorio-filtro-corretora').value;
     const filialNome = document.getElementById('relatorio-filtro-filial')?.value || '';
-    const seguradoraNome = document.getElementById('relatorio-filtro-seguradora').value;
+    const seguradorasNomesCheck = Array.from(document.getElementById('relatorio-filtro-seguradora').selectedOptions).map(o=>o.value);
     const produtoNome = document.getElementById('relatorio-filtro-produto')?.value || '';
 
-    const algumFiltro = !!(competencia || dataIni || dataFim || corretoraId || filialNome || seguradoraNome || produtoNome);
+    const algumFiltro = !!(competencia || dataIni || dataFim || corretoraId || filialNome || seguradorasNomesCheck.length || produtoNome);
     if(!algumFiltro){
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray-600);padding:40px 20px;">Defina os filtros acima e clique em <b>Pesquisar</b>.</td></tr>`;
       document.getElementById('relatorio-kpis').style.display='none';
@@ -7610,6 +7964,10 @@
 
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray-600);padding:30px;">Buscando...</td></tr>`;
     const { linhas, resumoFiltros } = await coletarRelatorioFiltrado();
+
+    const ordemValor = document.getElementById('relatorio-ordenar-valor')?.value || '';
+    if(ordemValor === 'asc') linhas.sort((a,b) => Number(a.valor||0) - Number(b.valor||0));
+    else if(ordemValor === 'desc') linhas.sort((a,b) => Number(b.valor||0) - Number(a.valor||0));
 
     // KPIs
     const total = linhas.reduce((s,l)=>s+Number(l.valor||0),0);
@@ -7734,7 +8092,9 @@
     const { data, error } = await query;
     if(error){ console.error('renderProducao:', error.message); return; }
 
-    const seguradoraFiltro = normalizarBusca(document.getElementById('producao-filtro-seguradora')?.value || '');
+    let seguradorasFiltro = [];
+    try { seguradorasFiltro = JSON.parse(document.getElementById('producao-filtro-seguradora')?.value || '[]'); } catch(e){ seguradorasFiltro = []; }
+    seguradorasFiltro = seguradorasFiltro.map(normalizarBusca);
     const produtoFiltro = normalizarBusca(document.getElementById('producao-filtro-produto')?.value || '');
     let filialFiltro = (document.getElementById('producao-filtro-filial')?.value||'').trim();
     // Administradores (não super) com filial definida SÓ enxergam a produção da própria filial —
@@ -7748,7 +8108,7 @@
     // demais métricas desta tela (que são sempre por corretora).
     linhas = linhas.filter(l => l.corretora_id !== null);
     if(filialFiltro) linhas = linhas.filter(l => (GROUPS[l.corretora_id]?.filial||'') === filialFiltro);
-    if(seguradoraFiltro) linhas = linhas.filter(l => normalizarBusca(l.seguradora).includes(seguradoraFiltro));
+    if(seguradorasFiltro.length) linhas = linhas.filter(l => seguradorasFiltro.some(s => normalizarBusca(l.seguradora).includes(s)));
     if(produtoFiltro)    linhas = linhas.filter(l => normalizarBusca(l.produto).includes(produtoFiltro));
 
     const total = linhas.reduce((s,l)=> s + Number(l.valor||0), 0);
@@ -7776,7 +8136,8 @@
     ['producao-competencia','filtros-producao-competencia'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     ['producao-filtro-corretora','filtros-producao-corretora'].forEach(id => { const el = document.getElementById(id); if(el) el.value='todas'; });
     ['producao-filtro-filial','filtros-producao-filial'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
-    ['producao-filtro-seguradora','filtros-producao-seguradora'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    const hiddenSeg = document.getElementById('producao-filtro-seguradora'); if(hiddenSeg) hiddenSeg.value = '[]';
+    const multiSeg = document.getElementById('filtros-producao-seguradora'); if(multiSeg) Array.from(multiSeg.options).forEach(o => o.selected = false);
     ['producao-filtro-produto','filtros-producao-produto'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     const badge = document.getElementById('producao-filtros-ativos');
     if(badge) badge.style.display = 'none';
@@ -9904,6 +10265,7 @@
         logo: row.logo || null,
         cor: row.cor || '#132728',
         assistencia_24h: row.assistencia_24h || '',
+        meses_inatividade: row.meses_inatividade || null,
         link_corretor: cred.link_corretor || row.link_corretor || '',
         link_assessoria: cred.link_assessoria || row.link_assessoria || '',
         login_assessoria: cred.login_assessoria || row.login_assessoria || '',
@@ -10023,11 +10385,20 @@
 
   let _responsaveisSelecionados = [];
 
-  function renderResponsaveisPicker(selecionados){
+  async function renderResponsaveisPicker(selecionados){
     _responsaveisSelecionados = selecionados ? [...selecionados] : [];
     const list = document.getElementById('seguradora-responsaveis-list');
     if(!list) return;
-    const users = USERS_CACHE && USERS_CACHE.length ? USERS_CACHE : [];
+    list.innerHTML = '<p style="font-size:12.5px;color:var(--gray-600);margin:8px 0;">Carregando usuários...</p>';
+    // Busca sempre fresco do banco — não depende de já ter visitado a aba
+    // Usuários antes (era esse o motivo do seletor aparecer vazio às vezes).
+    const { data, error } = await supabase.from('profiles').select('id, nome').order('nome');
+    if(error){
+      list.innerHTML = `<p style="font-size:12.5px;color:#dc2626;margin:8px 0;">Erro ao carregar usuários: ${esc(error.message)}</p>`;
+      return;
+    }
+    const users = data || [];
+    USERS_CACHE = users; // mantém o cache atualizado pra quem mais usar
     list.innerHTML = users.length ? users.map(u => `
       <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
         <input type="checkbox" value="${u.id}" ${_responsaveisSelecionados.includes(u.id)?'checked':''} onchange="atualizarResponsaveisDisplay()" style="accent-color:var(--black);width:15px;height:15px;cursor:pointer;">
@@ -10078,6 +10449,39 @@
     });
   }
 
+  async function carregarHistoricoSeguradora(id){
+    const lista = document.getElementById('seguradora-historico-lista');
+    if(!lista) return;
+    lista.innerHTML = `<p class="hint">Carregando histórico...</p>`;
+
+    const nomeAtual = SEGURADORAS[id]?.nome || '';
+    const { data, error } = await supabase
+      .from('system_logs')
+      .select('*')
+      .or(`seguradora_id.eq.${id},seguradora_nome.eq.${nomeAtual}`)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if(error){
+      lista.innerHTML = `<p class="hint" style="color:#dc2626;">Erro ao carregar histórico: ${esc(error.message)}</p>`;
+      return;
+    }
+    if(!data || !data.length){
+      lista.innerHTML = `<p class="hint">Nenhuma alteração registrada ainda para esta seguradora.</p>`;
+      return;
+    }
+
+    lista.innerHTML = data.map(l => `
+      <div style="border:1.4px solid var(--border);border-radius:10px;padding:10px 12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;">
+          <span style="font-weight:700;font-size:12.5px;">${esc(l.user_name) || 'Sistema'}</span>
+          <span style="font-size:11px;color:var(--gray-600);white-space:nowrap;">${new Date(l.created_at).toLocaleString('pt-BR')}</span>
+        </div>
+        <div style="font-size:11.5px;font-weight:700;color:var(--black);margin-bottom:2px;">${esc(l.action)}</div>
+        ${l.details ? `<div style="font-size:11.5px;color:var(--gray-600);line-height:1.5;">${esc(l.details)}</div>` : ''}
+      </div>`).join('');
+  }
+
   function openSeguradoraForm(id){
     editingSeguradoraId = id || null;
     const s = id ? SEGURADORAS[id] : null;
@@ -10088,6 +10492,7 @@
     document.getElementById('seguradora-email').value = s ? s.email : '';
     document.getElementById('seguradora-telefone').value = s ? s.telefone : '';
     document.getElementById('seguradora-assistencia-24h').value = s ? (s.assistencia_24h||'') : '';
+    document.getElementById('seguradora-meses-inatividade').value = s ? (s.meses_inatividade || '') : '';
     document.getElementById('seguradora-link-corretor').value = s ? (s.link_corretor||'') : '';
     document.getElementById('seguradora-link-assessoria').value = s ? (s.link_assessoria||'') : '';
     document.getElementById('seguradora-login-assessoria').value = s ? (s.login_assessoria||'') : '';
@@ -10097,12 +10502,52 @@
     renderLogoPreview();
     atualizarPreviewCor();
     renderResponsaveisPicker(s ? (s.responsaveisIds || []) : []);
+    const historicoSection = document.getElementById('seguradora-historico-section');
+    if(historicoSection){
+      historicoSection.classList.toggle('hidden', !id);
+      if(id) carregarHistoricoSeguradora(id);
+    }
     showView('seguradora-form');
+  }
+
+  // Mesmo princípio do diff de corretora — só que pra seguradora. A senha da
+  // assessoria nunca aparece no histórico (só avisa que mudou), por segurança.
+  function montarDiffSeguradora(antes, depois){
+    if(!antes) return '';
+    const rotulos = {
+      nome: 'Nome', comercial: 'Contato comercial', email: 'E-mail', telefone: 'Telefone',
+      cor: 'Cor', assistencia_24h: 'Assistência 24h',
+      link_corretor: 'Link do corretor', link_assessoria: 'Link da assessoria',
+      login_assessoria: 'Login da assessoria', meses_inatividade: 'Meses p/ sugerir inatividade',
+    };
+    const partes = [];
+    Object.entries(rotulos).forEach(([campo, rotulo]) => {
+      const valorAntes = (antes[campo] ?? '').toString().trim();
+      const valorDepois = (depois[campo] ?? '').toString().trim();
+      if(valorAntes !== valorDepois){
+        partes.push(`${rotulo}: "${valorAntes || '—'}" → "${valorDepois || '—'}"`);
+      }
+    });
+    if((antes.senha_assessoria || '') !== (depois.senha_assessoria || '')){
+      partes.push('Senha da assessoria foi alterada');
+    }
+    const respAntes = new Set(antes.responsaveisIds || []);
+    const respDepois = new Set(depois.responsaveisIds || []);
+    const nomeUsuario = (id) => ALL_USERS_CACHE.find(u=>u.id===id)?.nome || USERS_CACHE.find(u=>u.id===id)?.nome || id;
+    const respAdicionados = [...respDepois].filter(id => !respAntes.has(id)).map(nomeUsuario);
+    const respRemovidos = [...respAntes].filter(id => !respDepois.has(id)).map(nomeUsuario);
+    if(respAdicionados.length) partes.push(`Responsáveis — adicionou: ${respAdicionados.join(', ')}`);
+    if(respRemovidos.length) partes.push(`Responsáveis — removeu: ${respRemovidos.join(', ')}`);
+    return partes.join(' | ');
   }
 
   async function saveSeguradoraForm(){
     const nome = document.getElementById('seguradora-nome').value.trim();
     if(!nome){ alert('Informe o nome da seguradora.'); return; }
+
+    // Guarda o estado anterior pra montar o histórico de mudanças
+    const dadosAntes = editingSeguradoraId && SEGURADORAS[editingSeguradoraId] ? { ...SEGURADORAS[editingSeguradoraId] } : null;
+
     const responsaveisIds = Array.from(document.querySelectorAll('#seguradora-responsaveis-list input:checked')).map(el=>el.value);
 
     const credenciais = {
@@ -10121,6 +10566,7 @@
       email: document.getElementById('seguradora-email').value.trim(),
       telefone: document.getElementById('seguradora-telefone').value.trim(),
       assistencia_24h: document.getElementById('seguradora-assistencia-24h').value.trim(),
+      meses_inatividade: document.getElementById('seguradora-meses-inatividade').value ? Number(document.getElementById('seguradora-meses-inatividade').value) : null,
       logo: PENDING_SEGURADORA_LOGO,
       responsaveis_ids: responsaveisIds,
       credenciais,
@@ -10135,7 +10581,7 @@
     }
 
     // Tenta salvar retirando campos inexistentes até funcionar
-    const optionalFields = ['credenciais','responsaveis_ids','logo','assistencia_24h','comercialNascimento'];
+    const optionalFields = ['credenciais','responsaveis_ids','logo','assistencia_24h','comercialNascimento','meses_inatividade'];
     let payload = { ...fullPayload };
     let result = await trySave(payload);
 
@@ -10155,7 +10601,12 @@
       SEGURADORAS[savedId] = { ...fullPayload, ...credenciais, responsaveisIds };
     }
 
-    registrarLog(editingSeguradoraId ? 'Editou seguradora' : 'Criou seguradora', nome);
+    if(editingSeguradoraId){
+      const diffTxt = montarDiffSeguradora(dadosAntes, { ...fullPayload, ...credenciais, responsaveisIds });
+      registrarLog('Editou seguradora', diffTxt || 'Salvou sem alterar nenhum campo.');
+    } else {
+      registrarLog('Criou seguradora', nome);
+    }
     refreshSeguradoraSelects();
     renderSeguradoras();
     showView('seguradoras');
