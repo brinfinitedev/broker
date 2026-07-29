@@ -414,7 +414,10 @@
   .toggle-row input:checked::after{ transform: translateX(16px); }
   .toggle-row input:disabled{ opacity:.5; cursor:not-allowed; }
 
-  .team-row{ display:grid; grid-template-columns: 1.4fr 1fr 1.4fr 1fr 1fr auto; gap:10px; align-items:center; margin-bottom:10px; }
+  .team-row{ display:grid; grid-template-columns: 1.4fr 1fr 1.4fr 1fr 1fr auto; gap:14px; align-items:center; margin-bottom:12px; }
+  .team-row input{ min-width:0; }
+  .team-row-header{ display:grid; grid-template-columns: 1.4fr 1fr 1.4fr 1fr 1fr auto; gap:14px; margin-bottom:8px; }
+  .team-row-header span{ font-size:11px; font-weight:700; color:var(--gray-600); text-transform:uppercase; letter-spacing:.3px; }
   .team-row input{ border:1.4px solid var(--border); border-radius:10px; padding:10px 12px; outline:none; width:100%; transition:border-color .2s; }
   .team-row input:focus{ border-color:var(--black); }
   .icon-x{ width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--gray-400); transition: background .2s, color .2s; }
@@ -626,6 +629,20 @@
     position:absolute; }
 
   .modal-box-lg{ max-width:600px; }
+  .modal-box-xl{ max-width:880px; }
+
+  /* ---- Seletor múltiplo com busca (substitui <select multiple> nativo) ---- */
+  .ms-box{ position:relative; border:1.4px solid var(--border); border-radius:11px; padding:8px 10px; background:#fff; }
+  .ms-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .ms-chips:not(:empty){ margin-bottom:6px; }
+  .ms-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--black); color:#fff; padding:4px 6px 4px 10px; border-radius:999px; font-size:12px; font-weight:600; max-width:220px; }
+  .ms-chip span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ms-chip button{ background:rgba(255,255,255,.2); border:none; color:#fff; border-radius:50%; width:16px; height:16px; font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; line-height:1; flex-shrink:0; }
+  .ms-search{ width:100%; border:none; outline:none; font-size:13px; font-family:inherit; padding:4px 2px; }
+  .ms-dropdown{ position:absolute; top:100%; left:0; right:0; background:#fff; border:1.4px solid var(--border); border-radius:11px; margin-top:4px; max-height:220px; overflow-y:auto; box-shadow:var(--shadow-lg); z-index:80; }
+  .ms-option{ padding:9px 14px; font-size:13px; cursor:pointer; }
+  .ms-option:hover{ background:var(--surface-2); }
+  .ms-option-empty{ padding:9px 14px; font-size:12.5px; color:var(--gray-600); }
   .tab-strip{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:20px; }
   .tab-strip button{
     padding:9px 14px; font-size:12.5px; font-weight:700; color:var(--gray-600);
@@ -1378,14 +1395,14 @@
               <div class="card-head">
                 <h2>📋 Tarefas pendentes</h2>
               </div>
-              <div id="home-tarefas-list"></div>
+              <div id="home-tarefas-list" style="max-height:280px;overflow-y:auto;"></div>
             </div>
 
             <div class="card">
               <div class="card-head">
                 <h2>🎂 Aniversariantes</h2>
               </div>
-              <div id="home-bday-list"></div>
+              <div id="home-bday-list" style="max-height:280px;overflow-y:auto;"></div>
             </div>
 
             <div class="card">
@@ -1575,6 +1592,9 @@
           <div class="form-section">
             <h3>Equipe de relacionamento</h3>
             <p class="hint">Nome, nascimento, e-mail, telefone e cargo de cada colaborador</p>
+            <div class="team-row-header">
+              <span>Nome</span><span>Aniversário</span><span>E-mail</span><span>Telefone</span><span>Cargo</span><span></span>
+            </div>
             <div id="seguradora-team-rows">
               <div class="team-row">
                 <input placeholder="Nome">
@@ -2172,8 +2192,12 @@
                   <input type="date" id="relatorio-filtro-data-fim" onchange="renderRelatorioBody()" style="width:100%;">
                 </div>
                 <div class="f-field" style="margin:0;" id="relatorio-campo-corretora">
-                  <label>Corretora <span style="font-weight:400;color:var(--gray-600);">(Ctrl/Cmd+clique p/ várias)</span></label>
-                  <select id="relatorio-filtro-corretora" multiple size="3" onchange="renderRelatorioBody()" style="width:100%;"></select>
+                  <label>Corretora</label>
+                  <div class="ms-box" id="ms-box-rel-cor">
+                    <div class="ms-chips" id="ms-chips-rel-cor"></div>
+                    <input class="ms-search" id="ms-search-rel-cor" placeholder="Digite pra buscar...">
+                    <div class="ms-dropdown hidden" id="ms-dropdown-rel-cor"></div>
+                  </div>
                 </div>
                 <div class="f-field" style="margin:0;" id="relatorio-campo-filial">
                   <label>Filial</label>
@@ -2240,7 +2264,7 @@
 
 
         <!-- ================= USUARIOS ================= -->
-        <section class="view hidden" id="view-usuarios" data-role="admin">
+        <section class="view hidden" id="view-usuarios" data-role="admin gestor consultor">
           <div class="page-head"><div><h1>Usuários</h1><p>Controle de acesso da equipe interna</p></div>
             <div style="display:flex; gap:10px;">
               <button class="btn-outline" onclick="openModal('modal-filial')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>Cadastrar filial</button>
@@ -2279,15 +2303,17 @@
         </section>
 
         <!-- ================= LOGS (Super Administrador) ================= -->
-        <section class="view hidden" id="view-logs" data-role="admin">
+        <section class="view hidden" id="view-logs" data-role="admin gestor consultor">
           <div class="page-head"><div><h1>Logs</h1><p>Auditoria de ações e acessos realizados no sistema</p></div></div>
 
-          <!-- tabs sistema / acesso -->
+          <!-- tabs sistema / acesso / lixeira -->
           <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--surface-2);border:1.4px solid var(--border);border-radius:12px;padding:4px;width:fit-content;">
-            <button id="logs-tab-sistema" class="logs-tab-btn active" onclick="setLogsTab('sistema')">Log do Sistema</button>
-            <button id="logs-tab-acesso" class="logs-tab-btn" onclick="setLogsTab('acesso')">Log de Acessos</button>
+            <button id="logs-tab-sistema" class="logs-tab-btn active" data-role="admin" onclick="setLogsTab('sistema')">Log do Sistema</button>
+            <button id="logs-tab-acesso" class="logs-tab-btn" data-role="admin" onclick="setLogsTab('acesso')">Log de Acessos</button>
+            <button id="logs-tab-lixeira" class="logs-tab-btn" onclick="setLogsTab('lixeira')">Lixeira</button>
           </div>
 
+          <div id="logs-filtros-tabela-wrap">
           <!-- filtros -->
           <div class="card" style="padding:18px;margin-bottom:16px;">
             <div class="log-field-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:10px;">
@@ -2321,6 +2347,17 @@
             </div>
             <div id="logs-paginacao" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--border);"></div>
             <p id="logs-hint" style="font-size:11px;color:var(--gray-600);padding:0 18px 12px;margin:0;"></p>
+          </div>
+          </div>
+
+          <!-- Lixeira: solicitações de exclusão -->
+          <div id="logs-lixeira-wrap" class="hidden">
+            <p class="hint" style="margin-bottom:14px;">Administrador e Consultor solicitam; o Super Administrador aprova ou rejeita.</p>
+            <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--surface-2);border:1.4px solid var(--border);border-radius:12px;padding:4px;width:fit-content;">
+              <button id="solic-tab-pendentes" class="logs-tab-btn active" onclick="setSolicitacoesTab('pendente')">Pendentes</button>
+              <button id="solic-tab-resolvidas" class="logs-tab-btn" onclick="setSolicitacoesTab('resolvida')">Já resolvidas</button>
+            </div>
+            <div id="solicitacoes-exclusao-lista"></div>
           </div>
         </section>
 
@@ -2497,6 +2534,7 @@
     <div class="f-field"><label>Perfil</label>
       <select id="user-role" onchange="onUserRoleChange()">
         <option value="gestor">Administrador</option>
+        <option value="consultor">Consultor</option>
         <option value="admin">Super Administrador</option>
       </select>
     </div>
@@ -2802,7 +2840,7 @@
 
 <!-- ---------------- MODAL: CADASTRO DE CORRETORA ---------------- -->
 <div class="modal-overlay" id="modal-corretora" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-corretora')">
-  <div class="modal-box modal-box-lg">
+  <div class="modal-box modal-box-xl">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
       <h3 id="corretora-form-title" style="margin:0;">Cadastro da corretora</h3>
       <button onclick="closeModal('modal-corretora')" style="background:none; border:none; font-size:22px; cursor:pointer; color:var(--gray-600);">✕</button>
@@ -2870,6 +2908,9 @@
     <div class="form-section">
       <h3>Equipe</h3>
       <p class="hint">Contatos aparecerão automaticamente na aba Contatos.</p>
+      <div class="team-row-header" id="team-rows-header-corretora">
+        <span>Nome</span><span>Aniversário</span><span>E-mail</span><span>Telefone</span><span>Cargo</span><span></span>
+      </div>
       <div id="team-rows"></div>
       <button class="add-card-btn" onclick="addTeamRow()">+ Adicionar colaborador</button>
     </div>
@@ -3053,8 +3094,12 @@
         <select id="seletor-filtro-seguradora" multiple size="4" onchange="onSeletorSeguradoraChange()" style="border:1.4px solid var(--border);border-radius:10px;padding:6px;font-size:13px;font-family:inherit;outline:none;"></select>
       </div>
       <div style="display:flex;flex-direction:column;gap:3px;">
-        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Corretora <span style="font-weight:400;text-transform:none;">(Ctrl/Cmd+clique p/ várias)</span></label>
-        <select id="seletor-filtro-corretora" multiple size="4" onchange="filtrarSeletor()" style="border:1.4px solid var(--border);border-radius:10px;padding:6px;font-size:13px;font-family:inherit;outline:none;"></select>
+        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Corretora</label>
+        <div class="ms-box" id="ms-box-sel-cor">
+          <div class="ms-chips" id="ms-chips-sel-cor"></div>
+          <input class="ms-search" id="ms-search-sel-cor" placeholder="Digite pra buscar...">
+          <div class="ms-dropdown hidden" id="ms-dropdown-sel-cor"></div>
+        </div>
       </div>
     </div>
 
@@ -3137,9 +3182,12 @@
       <input type="month" id="filtros-producao-competencia" style="display:none;">
     </div>
     <div class="f-field">
-      <label>Corretora <span style="font-weight:400;color:var(--gray-600);">(Ctrl/Cmd+clique p/ várias; deixe sem marcar = todas)</span></label>
-      <select id="filtros-producao-corretora" multiple size="5" style="width:100%;border:1.4px solid var(--border);border-radius:11px;padding:8px;outline:none;font-size:13.5px;font-family:inherit;">
-      </select>
+      <label>Corretora <span style="font-weight:400;color:var(--gray-600);">(deixe sem marcar = todas)</span></label>
+      <div class="ms-box" id="ms-box-prod-cor">
+        <div class="ms-chips" id="ms-chips-prod-cor"></div>
+        <input class="ms-search" id="ms-search-prod-cor" placeholder="Digite pra buscar corretora...">
+        <div class="ms-dropdown hidden" id="ms-dropdown-prod-cor"></div>
+      </div>
     </div>
     <div class="f-field">
       <label>Filial</label>
@@ -3347,6 +3395,87 @@
     const s = SEGURADORAS[segId];
     return s && Array.isArray(s.responsaveisIds) && s.responsaveisIds.includes(currentUserId);
   }
+  /* ==========================================================
+     SELETOR MÚLTIPLO COM BUSCA — substitui <select multiple> nativo,
+     que ficava listando tudo de uma vez (ruim com 1000+ corretoras).
+     Uso: msInit('meu-id', [{value,label}], ['valorJaSelecionado'], callback)
+     Precisa de 3 elementos no HTML: #ms-chips-ID, #ms-search-ID, #ms-dropdown-ID
+  ========================================================== */
+  window._msRegistry = window._msRegistry || {};
+
+  function msInit(id, opcoes, selecionados, onChange){
+    window._msRegistry[id] = { opcoes: opcoes || [], selecionados: [...(selecionados||[])], onChange: onChange || null };
+    msRenderChips(id);
+    const inputEl = document.getElementById('ms-search-'+id);
+    if(inputEl){
+      inputEl.value = '';
+      inputEl.oninput = () => msFilter(id, inputEl.value);
+      inputEl.onfocus = () => msFilter(id, inputEl.value);
+      inputEl.onblur = () => setTimeout(() => { const d = document.getElementById('ms-dropdown-'+id); if(d) d.classList.add('hidden'); }, 180);
+    }
+  }
+
+  function msRenderChips(id){
+    const st = window._msRegistry[id];
+    const chipsEl = document.getElementById('ms-chips-'+id);
+    if(!st || !chipsEl) return;
+    chipsEl.innerHTML = st.selecionados.map(v => {
+      const opt = st.opcoes.find(o => String(o.value) === String(v));
+      const vSeguro = String(v).replace(/'/g, "&#39;");
+      return `<span class="ms-chip"><span>${esc(opt ? opt.label : v)}</span><button type="button" onmousedown="event.preventDefault();" onclick="msRemove('${id}','${vSeguro}')">✕</button></span>`;
+    }).join('');
+  }
+
+  function msFilter(id, query){
+    const st = window._msRegistry[id];
+    const dropEl = document.getElementById('ms-dropdown-'+id);
+    if(!st || !dropEl) return;
+    const q = normalizarBusca(query || '');
+    const disponiveis = st.opcoes.filter(o => !st.selecionados.includes(o.value) && (!q || normalizarBusca(o.label).includes(q)));
+    const limitadas = disponiveis.slice(0, 60);
+    dropEl.innerHTML = limitadas.length
+      ? limitadas.map(o => {
+          const vSeguro = String(o.value).replace(/'/g, "&#39;");
+          return `<div class="ms-option" onmousedown="event.preventDefault(); msAdd('${id}','${vSeguro}')">${esc(o.label)}</div>`;
+        }).join('') + (disponiveis.length > 60 ? `<div class="ms-option-empty">+ ${disponiveis.length - 60} outra(s) — digite pra refinar a busca</div>` : '')
+      : `<div class="ms-option-empty">${st.opcoes.length === st.selecionados.length ? 'Todas já selecionadas' : 'Nenhuma encontrada'}</div>`;
+    dropEl.classList.remove('hidden');
+  }
+
+  function msAdd(id, value){
+    const st = window._msRegistry[id];
+    if(!st) return;
+    if(!st.selecionados.includes(value)) st.selecionados.push(value);
+    msRenderChips(id);
+    const inputEl = document.getElementById('ms-search-'+id);
+    if(inputEl){ inputEl.value = ''; msFilter(id, ''); inputEl.focus(); }
+    if(st.onChange) st.onChange(st.selecionados);
+  }
+
+  function msRemove(id, value){
+    const st = window._msRegistry[id];
+    if(!st) return;
+    st.selecionados = st.selecionados.filter(v => String(v) !== String(value));
+    msRenderChips(id);
+    if(st.onChange) st.onChange(st.selecionados);
+  }
+
+  function msGetSelecionados(id){
+    return (window._msRegistry[id] && window._msRegistry[id].selecionados) || [];
+  }
+
+  function msSetSelecionados(id, novos){
+    const st = window._msRegistry[id];
+    if(!st) return;
+    st.selecionados = [...(novos||[])];
+    msRenderChips(id);
+  }
+
+  function msSetOpcoes(id, opcoes){
+    const st = window._msRegistry[id];
+    if(st) st.opcoes = opcoes || [];
+  }
+
   let currentView = 'home';
   // Usada pra resolver o bug de "selecionar texto dentro do modal fecha ele" — só
   // fecha o modal se o mousedown TAMBÉM começou no fundo (overlay), não só o click.
@@ -3358,7 +3487,8 @@
 
   function navFor(role){
     let nav = NAV_ALL.filter(item => {
-      if(item.id === 'usuarios' || item.id === 'permissoes' || item.id === 'logs') return role === 'admin'; // só o Super Administrador
+      if(item.id === 'permissoes') return role === 'admin'; // só o Super Administrador de verdade
+      if(item.id === 'usuarios' || item.id === 'logs') return role === 'admin' || role === 'gestor' || role === 'consultor'; // Logs agora tem a aba Lixeira, que todo mundo precisa ver
       return true;
     });
     nav = nav.filter(item => !LOGGED_USER_ABAS_BLOQUEADAS.includes(item.id));
@@ -3405,6 +3535,7 @@
   const ROLE_LABELS = {
     admin:'Super Administrador',
     gestor:'Administrador',
+    consultor:'Consultor',
   };
 
   function applyRoleVisibility(){
@@ -3611,7 +3742,7 @@
 
     const todos = await coletarAniversariantes();
     const hoje = todos.filter(p => p.dias === 0);
-    const proximos = todos.filter(p => p.dias > 0 && p.dias <= 10);
+    const proximos = todos.filter(p => p.dias > 0 && p.dias <= 5);
 
     if(!todos.length){
       homeList.innerHTML = `<p class="hint" style="margin:6px 0 0;">Nenhum aniversariante cadastrado ainda.</p>`;
@@ -3621,8 +3752,8 @@
     let html = '';
     html += `<div class="bday-section-label">Hoje</div>`;
     html += hoje.length ? hoje.map(bdayRowHTML).join('') : `<p class="hint" style="margin:0 0 4px;">Ninguém faz aniversário hoje.</p>`;
-    html += `<div class="bday-section-label">Próximos 10 dias</div>`;
-    html += proximos.length ? proximos.map(bdayRowHTML).join('') : `<p class="hint" style="margin:0;">Nenhum aniversariante nos próximos 10 dias.</p>`;
+    html += `<div class="bday-section-label">Próximos 5 dias</div>`;
+    html += proximos.length ? proximos.map(bdayRowHTML).join('') : `<p class="hint" style="margin:0;">Nenhum aniversariante nos próximos 5 dias.</p>`;
     homeList.innerHTML = html;
   }
 
@@ -3867,7 +3998,7 @@
   function showView(id){
     const viewAnterior = currentView;
     currentView = id;
-    try { localStorage.setItem('ultimaViewAtiva', id); } catch(e){ /* localStorage indisponível — ignora */ }
+    try { sessionStorage.setItem('ultimaViewAtiva', id); } catch(e){ /* sessionStorage indisponível — ignora */ }
     document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));
     document.getElementById('view-'+id).classList.remove('hidden');
     const crumbEl = document.getElementById('crumb-current');
@@ -3893,7 +4024,8 @@
     }
 
     if(id === 'logs'){
-      renderLogs();
+      if(isSuperAdmin()){ renderLogs(); setLogsTab('sistema'); }
+      else { setLogsTab('lixeira'); }
     }
     if(id === 'home'){
       renderComunicados();
@@ -4193,7 +4325,7 @@
       if(a.prazo) return -1;
       if(b.prazo) return 1;
       return 0;
-    }).slice(0, 8);
+    }).slice(0, 5);
 
     const colunaLabel = { todo: 'A fazer', doing: 'Fazendo' };
     wrap.innerHTML = lista.map(c => {
@@ -5461,6 +5593,7 @@
     (manuais || []).forEach(c => lista.push({
       id: c.id, nome: c.nome, whatsapp: c.whatsapp || '', email: c.email || '',
       corretoraNome: c.corretora_id && GROUPS[c.corretora_id] ? GROUPS[c.corretora_id].name : '',
+      corretora_id: c.corretora_id || null,
       filial: c.corretora_id && GROUPS[c.corretora_id] ? (GROUPS[c.corretora_id].filial || '') : (c.filial||''),
       seguradoraNome: '', origem: 'manual', editavel: true,
     }));
@@ -5470,6 +5603,7 @@
     (eqCorretoras || []).forEach(c => lista.push({
       id: c.id, nome: c.nome, whatsapp: c.whatsapp || '', email: c.email || '',
       corretoraNome: c.corretora_id && GROUPS[c.corretora_id] ? GROUPS[c.corretora_id].name : '',
+      corretora_id: c.corretora_id || null,
       filial: c.corretora_id && GROUPS[c.corretora_id] ? (GROUPS[c.corretora_id].filial || '') : (c.filial||''),
       seguradoraNome: '', origem: 'equipe-corretora', editavel: false,
     }));
@@ -5570,7 +5704,7 @@
       const textoCopiaTudo = [c.nome, c.whatsapp, c.email].filter(Boolean).join(' | ');
       return `
       <tr>
-        <td><div class="cell-strong" style="display:flex;align-items:flex-start;gap:6px;">${chip}<span>${esc(c.nome)}</span></div>${corretoraInline}</td>
+        <td onclick="abrirEditarContato('${c.id}','${c.origem}')" style="cursor:pointer;" title="Clique para ${c.corretora_id ? 'abrir a corretora' : 'editar'}"><div class="cell-strong" style="display:flex;align-items:flex-start;gap:6px;">${chip}<span>${esc(c.nome)}</span></div>${corretoraInline}</td>
         <td>${esc(c.whatsapp) || '—'}</td>
         <td>${esc(c.email) || '—'}</td>
         <td style="font-size:12px;color:var(--gray-600);">${esc(c.filial) || '—'}</td>
@@ -5604,6 +5738,14 @@
     // find the contact in the cache
     const c = (_todosContatosCache||[]).find(x=>x.id===id);
     if(!c){ alert('Contato não encontrado.'); return; }
+
+    // Contato de equipe (ou manual) vinculado a uma corretora — edita direto lá,
+    // na seção Equipe do cadastro dela, em vez de um modal separado.
+    if(c.corretora_id){
+      openCorretoraForm(c.corretora_id);
+      return;
+    }
+
     const wrap = document.createElement('div');
     wrap.id = 'modal-editar-contato-wrap';
     wrap.innerHTML = `<div class="modal-overlay open" id="modal-editar-contato" onclick="if(event.target===this) document.getElementById('modal-editar-contato-wrap').remove()">
@@ -5805,13 +5947,13 @@
     const selSeg = document.getElementById('seletor-filtro-seguradora');
     selSeg.innerHTML = [...segs].sort().map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
 
-    // populate corretora with all initially
-    const selCorr = document.getElementById('seletor-filtro-corretora');
-    selCorr.innerHTML = Object.values(GROUPS).map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
+    // populate corretora com o componente de busca (valor = nome da corretora,
+    // mesmo padrão já usado nesse seletor)
+    const opcoesCorrTodas = Object.values(GROUPS).map(g => ({ value: g.name, label: g.name })).sort((a,b)=>a.label.localeCompare(b.label,'pt-BR'));
+    msInit('sel-cor', opcoesCorrTodas, [], () => filtrarSeletor());
 
     document.getElementById('seletor-filtro-texto').value = '';
     Array.from(selSeg.options).forEach(o => o.selected = false);
-    Array.from(selCorr.options).forEach(o => o.selected = false);
 
     filtrarSeletor();
     atualizarContadorSeletor();
@@ -5821,22 +5963,22 @@
   // Quando seleciona seguradora(s): restringe corretoras vinculadas a elas
   function onSeletorSeguradoraChange(){
     const segsFiltro = Array.from(document.getElementById('seletor-filtro-seguradora').selectedOptions).map(o=>o.value);
-    const selCorr = document.getElementById('seletor-filtro-corretora');
+    let opcoesCorr;
     if(segsFiltro.length){
-      // Show only corretoras linked a QUALQUER uma das seguradoras marcadas
-      const corrsFiltradas = Object.values(GROUPS).filter(g => (g.seguradoras||[]).some(s => segsFiltro.includes(s)));
-      selCorr.innerHTML = corrsFiltradas.map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
+      // Mostra só corretoras vinculadas a QUALQUER uma das seguradoras marcadas
+      opcoesCorr = Object.values(GROUPS).filter(g => (g.seguradoras||[]).some(s => segsFiltro.includes(s)));
     } else {
-      // Reset to all corretoras
-      selCorr.innerHTML = Object.values(GROUPS).map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
+      opcoesCorr = Object.values(GROUPS);
     }
-    Array.from(selCorr.options).forEach(o => o.selected = false);
+    opcoesCorr = opcoesCorr.map(g => ({ value: g.name, label: g.name })).sort((a,b)=>a.label.localeCompare(b.label,'pt-BR'));
+    msSetOpcoes('sel-cor', opcoesCorr);
+    msSetSelecionados('sel-cor', []); // as opções mudaram — evita ficar com uma seleção que não existe mais na lista
     filtrarSeletor();
   }
 
   function filtrarSeletor(){
     const texto = normalizarBusca(document.getElementById('seletor-filtro-texto').value||'');
-    const corrsFiltro = Array.from(document.getElementById('seletor-filtro-corretora').selectedOptions).map(o=>o.value);
+    const corrsFiltro = msGetSelecionados('sel-cor');
     const segsFiltro = Array.from(document.getElementById('seletor-filtro-seguradora').selectedOptions).map(o=>o.value);
 
     let lista = _seletorTodosContatos;
@@ -6176,9 +6318,13 @@
     editingCorretoraGid = gid;
     const g = gid ? GROUPS[gid] : null;
 
-    // Botão de excluir só aparece editando uma corretora existente, e só para super admin
+    // Botão de excluir aparece editando uma corretora existente, pra qualquer papel —
+    // Super Admin exclui de verdade; os demais só solicitam (texto do botão muda).
     const btnExcluir = document.getElementById('btn-excluir-corretora');
-    if(btnExcluir) btnExcluir.classList.toggle('hidden', !(gid && isSuperAdmin()));
+    if(btnExcluir){
+      btnExcluir.classList.toggle('hidden', !gid);
+      btnExcluir.textContent = isSuperAdmin() ? 'Excluir corretora' : 'Solicitar exclusão';
+    }
 
     const btnExportar = document.getElementById('btn-exportar-corretora');
     if(btnExportar) btnExportar.classList.toggle('hidden', !gid);
@@ -6384,11 +6530,137 @@
     if(cardSel) cardSel.innerHTML = Object.keys(GROUPS).map(gid => `<option>${GROUPS[gid].name}</option>`).join('');
   }
 
+  let SOLIC_TAB = 'pendente';
+  function setSolicitacoesTab(status){
+    SOLIC_TAB = status;
+    const btnP = document.getElementById('solic-tab-pendentes');
+    const btnR = document.getElementById('solic-tab-resolvidas');
+    if(btnP) btnP.classList.toggle('active', status==='pendente');
+    if(btnR) btnR.classList.toggle('active', status!=='pendente');
+    renderSolicitacoesExclusao();
+  }
+
+  function labelTipoSolicitacao(t){
+    return { corretora: 'Corretora', usuario: 'Usuário' }[t] || t;
+  }
+
+  async function renderSolicitacoesExclusao(){
+    const box = document.getElementById('solicitacoes-exclusao-lista');
+    if(!box) return;
+    box.innerHTML = `<p class="hint">Carregando...</p>`;
+
+    let query = supabase.from('solicitacoes_exclusao').select('*').order('created_at', { ascending:false });
+    query = SOLIC_TAB === 'pendente' ? query.eq('status','pendente') : query.in('status', ['aprovado','rejeitado']);
+    if(!isSuperAdmin()) query = query.eq('solicitado_por', currentUserId);
+
+    const { data, error } = await query;
+    if(error){ box.innerHTML = `<p class="hint" style="color:#dc2626;">Erro ao carregar: ${esc(error.message)}</p>`; return; }
+    window._solicitacoesCache = data || [];
+
+    if(!data || !data.length){
+      box.innerHTML = `<p class="hint">Nenhuma solicitação ${SOLIC_TAB==='pendente' ? 'pendente' : 'resolvida'} ${isSuperAdmin() ? '' : 'sua '}no momento.</p>`;
+      return;
+    }
+
+    box.innerHTML = data.map(s => {
+      const statusBadge = s.status === 'pendente'
+        ? `<span class="chip" style="background:#fef3c7;color:#92400e;">Pendente</span>`
+        : s.status === 'aprovado'
+          ? `<span class="chip on">Aprovado e excluído</span>`
+          : `<span class="chip" style="color:var(--gray-400);">Rejeitado</span>`;
+      const acoes = (isSuperAdmin() && s.status === 'pendente')
+        ? `<button class="access-btn" style="color:#15803d;border-color:#bbf7d0;" onclick="aprovarSolicitacaoExclusao('${s.id}')">Aprovar e excluir</button>
+           <button class="access-btn" style="color:#dc2626;border-color:#fecaca;" onclick="rejeitarSolicitacaoExclusao('${s.id}')">Rejeitar</button>`
+        : '';
+      return `<div class="card" style="padding:16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700;font-size:13.5px;">${esc(s.registro_nome)} <span style="font-weight:400;color:var(--gray-600);">(${esc(labelTipoSolicitacao(s.tipo))})</span></div>
+          <div style="font-size:11.5px;color:var(--gray-600);margin-top:2px;">Solicitado por ${esc(s.solicitado_por_nome)} em ${new Date(s.created_at).toLocaleString('pt-BR')}</div>
+          ${s.revisado_em ? `<div style="font-size:11.5px;color:var(--gray-600);">Revisado em ${new Date(s.revisado_em).toLocaleString('pt-BR')}</div>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${statusBadge}${acoes}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Executa a exclusão de verdade, de acordo com o tipo da solicitação — só é
+  // chamada quando o Super Administrador aprova um pedido.
+  async function executarExclusaoReal(tipo, registroId){
+    if(tipo === 'corretora'){
+      const g = GROUPS[registroId];
+      const { error } = await supabase.from('corretoras').delete().eq('id', registroId);
+      if(error) return { error };
+      if(g){
+        const paths = (g.anexos || []).map(a => a.path).filter(Boolean);
+        if(paths.length) await supabase.storage.from(BUCKET_ANEXOS_CORRETORAS).remove(paths);
+        delete GROUPS[registroId];
+        refreshCorretoraSelects();
+        renderCorretorasList();
+      }
+      return { error: null };
+    }
+    if(tipo === 'usuario'){
+      const { error } = await supabase.from('profiles').delete().eq('id', registroId);
+      return { error };
+    }
+    return { error: { message: 'Tipo de solicitação desconhecido: ' + tipo } };
+  }
+
+  async function aprovarSolicitacaoExclusao(id){
+    if(!isSuperAdmin()) return;
+    const s = (window._solicitacoesCache || []).find(x => x.id === id);
+    if(!s) return;
+    if(!confirm(`Aprovar e EXCLUIR DEFINITIVAMENTE "${s.registro_nome}" (${labelTipoSolicitacao(s.tipo)})?\n\nEssa ação não pode ser desfeita.`)) return;
+
+    const { error } = await executarExclusaoReal(s.tipo, s.registro_id);
+    if(error){ alert('Erro ao excluir: ' + error.message); return; }
+
+    await supabase.from('solicitacoes_exclusao').update({
+      status: 'aprovado', revisado_por: currentUserId, revisado_em: new Date().toISOString(),
+    }).eq('id', id);
+    registrarLog('Aprovou e excluiu solicitação', `${labelTipoSolicitacao(s.tipo)}: ${s.registro_nome}`);
+    renderSolicitacoesExclusao();
+  }
+
+  async function rejeitarSolicitacaoExclusao(id){
+    if(!isSuperAdmin()) return;
+    const s = (window._solicitacoesCache || []).find(x => x.id === id);
+    if(!s) return;
+    if(!confirm(`Rejeitar a solicitação de exclusão de "${s.registro_nome}"?`)) return;
+
+    await supabase.from('solicitacoes_exclusao').update({
+      status: 'rejeitado', revisado_por: currentUserId, revisado_em: new Date().toISOString(),
+    }).eq('id', id);
+    registrarLog('Rejeitou solicitação de exclusão', `${labelTipoSolicitacao(s.tipo)}: ${s.registro_nome}`);
+    renderSolicitacoesExclusao();
+  }
+
+  // Administrador e Consultor não apagam nada diretamente — só registram um
+  // pedido, que fica pendente até o Super Administrador aprovar (e aí sim
+  // executar a exclusão de verdade) ou rejeitar.
+  async function criarSolicitacaoExclusao(tipo, registroId, registroNome, motivo){
+    const { error } = await supabase.from('solicitacoes_exclusao').insert({
+      tipo, registro_id: registroId, registro_nome: registroNome,
+      solicitado_por: currentUserId, solicitado_por_nome: currentUserFullName,
+      motivo: motivo || null, status: 'pendente',
+    });
+    if(error){ alert('Erro ao enviar solicitação de exclusão: ' + error.message); return false; }
+    registrarLog(`Solicitou exclusão (${tipo})`, registroNome);
+    return true;
+  }
+
   async function excluirCorretoraCadastrada(){
-    if(!isSuperAdmin()){ alert('Apenas o super administrador pode excluir corretoras.'); return; }
     if(!editingCorretoraGid) return;
     const g = GROUPS[editingCorretoraGid];
     if(!g) return;
+
+    if(!isSuperAdmin()){
+      if(!confirm(`Solicitar exclusão da corretora "${g.name}"?\n\nEla continua ativa normalmente até o Super Administrador revisar e aprovar o pedido.`)) return;
+      const ok = await criarSolicitacaoExclusao('corretora', editingCorretoraGid, g.name);
+      if(ok){ alert('Solicitação enviada! Acompanhe em "Solicitações de Exclusão".'); closeModal('modal-corretora'); }
+      return;
+    }
+
     if(!confirm(`Excluir a corretora "${g.name}"?\n\nEssa ação não pode ser desfeita. Os lançamentos de produção já registrados para ela permanecem no histórico, mas ela deixará de aparecer nas listas e filtros do sistema.`)) return;
 
     const { error } = await supabase.from('corretoras').delete().eq('id', editingCorretoraGid);
@@ -6864,11 +7136,8 @@
 
   function openFiltrosProducao(){
     // Populate selects from current hidden fields
-    const selCor = document.getElementById('filtros-producao-corretora');
     const selSeg = document.getElementById('filtros-producao-seguradora');
     const selFil = document.getElementById('filtros-producao-filial');
-    // Fill corretoras (multi-seleção — sem opção "Todas", basta não marcar nenhuma)
-    selCor.innerHTML = Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${esc(g.name)}</option>`).join('');
     // Fill seguradoras (multi-seleção — sem opção "Todas", basta não marcar nenhuma)
     selSeg.innerHTML = Object.values(SEGURADORAS).map(s => `<option value="${esc(s.nome)}">${esc(s.nome)}</option>`).join('');
     // Fill filiais (valores únicos de filial entre as corretoras cadastradas)
@@ -6884,15 +7153,19 @@
     try { curSegArray = JSON.parse(document.getElementById('producao-filtro-seguradora')?.value || '[]'); } catch(e){ curSegArray = []; }
     const curProd = document.getElementById('producao-filtro-produto')?.value || '';
     const fComp = document.getElementById('filtros-producao-competencia');
-    const fCor = document.getElementById('filtros-producao-corretora');
     const fFil = document.getElementById('filtros-producao-filial');
     const fSeg = document.getElementById('filtros-producao-seguradora');
     const fProd = document.getElementById('filtros-producao-produto');
     if(fComp) fComp.value = curComp;
-    if(fCor) Array.from(fCor.options).forEach(o => { o.selected = curCorArray.includes(o.value); });
     if(fFil) fFil.value = curFil;
     if(fSeg) Array.from(fSeg.options).forEach(o => { o.selected = curSegArray.includes(o.value); });
     if(fProd) fProd.value = curProd;
+
+    // Corretora: componente de busca com chips, em vez do select nativo
+    const opcoesCorretora = Object.entries(GROUPS)
+      .map(([gid,g]) => ({ value: gid, label: g.name }))
+      .sort((a,b) => a.label.localeCompare(b.label, 'pt-BR'));
+    msInit('prod-cor', opcoesCorretora, curCorArray);
     // Link the comp picker
     ligarCompetenciaPicker('filtros-producao-competencia');
     openModal('modal-filtros-producao');
@@ -6904,7 +7177,7 @@
 
   function aplicarFiltrosProducao(){
     const comp = document.getElementById('filtros-producao-competencia')?.value || '';
-    const corArray = Array.from(document.getElementById('filtros-producao-corretora')?.selectedOptions || []).map(o=>o.value);
+    const corArray = msGetSelecionados('prod-cor');
     const fil = document.getElementById('filtros-producao-filial')?.value || '';
     const segArray = Array.from(document.getElementById('filtros-producao-seguradora')?.selectedOptions || []).map(o=>o.value);
     const prod = document.getElementById('filtros-producao-produto')?.value || '';
@@ -8017,9 +8290,11 @@
   }
 
   async function renderRelatorios(){
-    const selCorretora = document.getElementById('relatorio-filtro-corretora');
-    if(selCorretora && selCorretora.options.length === 0){
-      selCorretora.innerHTML = Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${esc(g.name)}</option>`).join('');
+    if(!window._msRegistry['rel-cor']){
+      const opcoesCorretora = Object.entries(GROUPS)
+        .map(([gid,g]) => ({ value: gid, label: g.name }))
+        .sort((a,b) => a.label.localeCompare(b.label, 'pt-BR'));
+      msInit('rel-cor', opcoesCorretora, [], () => renderRelatorioBody());
     }
     const selFil = document.getElementById('relatorio-filtro-filial');
     if(selFil && selFil.options.length <= 1){
@@ -8037,7 +8312,7 @@
     document.getElementById('relatorio-competencia').value = '';
     document.getElementById('relatorio-filtro-data-ini').value = '';
     document.getElementById('relatorio-filtro-data-fim').value = '';
-    const selCorLimpar = document.getElementById('relatorio-filtro-corretora'); if(selCorLimpar) Array.from(selCorLimpar.options).forEach(o => o.selected = false);
+    msSetSelecionados('rel-cor', []);
     const rf = document.getElementById('relatorio-filtro-filial'); if(rf) rf.value='';
     const selSegLimpar = document.getElementById('relatorio-filtro-seguradora'); if(selSegLimpar) Array.from(selSegLimpar.options).forEach(o => o.selected = false);
     const rp = document.getElementById('relatorio-filtro-produto'); if(rp) rp.value='';
@@ -8052,7 +8327,7 @@
     const competencia = document.getElementById('relatorio-competencia').value;
     const dataIni = document.getElementById('relatorio-filtro-data-ini').value;
     const dataFim = document.getElementById('relatorio-filtro-data-fim').value;
-    const corretorasIds = Array.from(document.getElementById('relatorio-filtro-corretora').selectedOptions).map(o=>o.value);
+    const corretorasIds = msGetSelecionados('rel-cor');
     let filialNome = document.getElementById('relatorio-filtro-filial')?.value || '';
     // Administradores (não super) com filial definida SÓ enxergam a produção da própria filial
     if(!isSuperAdmin() && currentUserFilial){
@@ -8107,7 +8382,7 @@
     const competencia = document.getElementById('relatorio-competencia').value;
     const dataIni = document.getElementById('relatorio-filtro-data-ini').value;
     const dataFim = document.getElementById('relatorio-filtro-data-fim').value;
-    const corretorasIdsCheck = Array.from(document.getElementById('relatorio-filtro-corretora').selectedOptions).map(o=>o.value);
+    const corretorasIdsCheck = msGetSelecionados('rel-cor');
     const filialNome = document.getElementById('relatorio-filtro-filial')?.value || '';
     const seguradorasNomesCheck = Array.from(document.getElementById('relatorio-filtro-seguradora').selectedOptions).map(o=>o.value);
     const produtoNome = document.getElementById('relatorio-filtro-produto')?.value || '';
@@ -8231,12 +8506,7 @@
   }
 
   async function renderProducao(){
-    // popula corretora dropdown (uma vez) — multi-seleção, sem opção "todas"
-    // (basta não marcar nenhuma pra considerar todas)
     const selCorretora = document.getElementById('producao-filtro-corretora');
-    if(selCorretora && selCorretora.options.length === 0){
-      selCorretora.innerHTML = Object.keys(GROUPS).map(gid => `<option value="${gid}">${GROUPS[gid].name}</option>`).join('');
-    }
 
     const competenciaInput = document.getElementById('producao-competencia');
     if(!competenciaInput.value) competenciaInput.value = competenciaAtual();
@@ -8295,7 +8565,7 @@
   function limparFiltrosProducao(){
     ['producao-competencia','filtros-producao-competencia'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     const hiddenCor = document.getElementById('producao-filtro-corretora'); if(hiddenCor) hiddenCor.value = '[]';
-    const multiCor = document.getElementById('filtros-producao-corretora'); if(multiCor) Array.from(multiCor.options).forEach(o => o.selected = false);
+    msSetSelecionados('prod-cor', []);
     ['producao-filtro-filial','filtros-producao-filial'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     const hiddenSeg = document.getElementById('producao-filtro-seguradora'); if(hiddenSeg) hiddenSeg.value = '[]';
     const multiSeg = document.getElementById('filtros-producao-seguradora'); if(multiSeg) Array.from(multiSeg.options).forEach(o => o.selected = false);
@@ -9687,22 +9957,26 @@
       return;
     }
     USERS_CACHE = data;
-    tbody.innerHTML = data.length ? data.map(u => `
+    tbody.innerHTML = data.length ? data.map(u => {
+      const podeGerenciarEsta = isSuperAdmin() || u.id === currentUserId || u.role === 'consultor';
+      const acoes = podeGerenciarEsta ? `
+          ${isSuperAdmin() ? `<button class="access-btn" title="Permissões de acesso" onclick="openPermissoesModal('${u.id}')" style="display:inline-flex;align-items:center;gap:5px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+            Permissões
+          </button>` : ''}
+          <button class="access-btn" onclick="openUserModal('${u.id}')">Editar</button>
+          ${isSuperAdmin() ? `<button class="access-btn" onclick="toggleUserStatus('${u.id}')">${u.status==='ativo' ? 'Suspender' : 'Ativar'}</button>` : ''}
+          <button class="access-btn" onclick="excluirUsuario('${u.id}')">Excluir</button>
+        ` : `<span class="hint" style="margin:0;">Sem permissão</span>`;
+      return `
       <tr>
         <td><div class="row-avatar"><div class="av">${esc(initials(u.nome))}</div><div class="cell-strong">${esc(u.nome)}</div></div></td>
         <td class="col-email">${esc(u.email)}</td>
         <td>${ROLE_LABELS[u.role] || 'Administrador'}</td>
         <td><span class="chip ${u.status==='ativo'?'on':''}">${u.status==='ativo' ? 'Ativo' : 'Suspenso'}</span></td>
-        <td class="usuarios-actions-cell">
-          <button class="access-btn" title="Permissões de acesso" onclick="openPermissoesModal('${u.id}')" style="display:inline-flex;align-items:center;gap:5px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
-            Permissões
-          </button>
-          <button class="access-btn" onclick="openUserModal('${u.id}')">Editar</button>
-          <button class="access-btn" onclick="toggleUserStatus('${u.id}')">${u.status==='ativo' ? 'Suspender' : 'Ativar'}</button>
-          <button class="access-btn" onclick="excluirUsuario('${u.id}')">Excluir</button>
-        </td>
-      </tr>`).join('') : `<tr><td colspan="6" style="text-align:center; color:var(--gray-600);">Nenhum usuário cadastrado.</td></tr>`;
+        <td class="usuarios-actions-cell">${acoes}</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="6" style="text-align:center; color:var(--gray-600);">Nenhum usuário cadastrado.</td></tr>`;
   }
 
   function openPermissoesModal(userId){
@@ -9800,10 +10074,20 @@
   function setLogsTab(tab){
     LOGS_TAB = tab;
     LOGS_PAGE = 1;
-    document.querySelectorAll('.logs-tab-btn').forEach(b=>{
+    document.querySelectorAll('#view-logs > div > .logs-tab-btn').forEach(b=>{
       b.classList.toggle('active', b.id === 'logs-tab-'+tab);
     });
-    renderLogsBody();
+    const wrapTabela = document.getElementById('logs-filtros-tabela-wrap');
+    const wrapLixeira = document.getElementById('logs-lixeira-wrap');
+    if(tab === 'lixeira'){
+      if(wrapTabela) wrapTabela.classList.add('hidden');
+      if(wrapLixeira) wrapLixeira.classList.remove('hidden');
+      setSolicitacoesTab('pendente');
+    } else {
+      if(wrapTabela) wrapTabela.classList.remove('hidden');
+      if(wrapLixeira) wrapLixeira.classList.add('hidden');
+      renderLogsBody();
+    }
   }
 
   async function renderLogs(){
@@ -9953,11 +10237,12 @@
 
   let editingUserId = null;
   async function openUserModal(id){
-    // Allow admin role (any variant) OR editing own profile
+    // Super Administrador: gerencia qualquer conta. Administrador/Consultor: só
+    // conseguem CRIAR e editar contas de Consultor (e a própria conta).
     const isSelf = id && id === currentUserId;
-    const isAdmin = ['admin','super_admin','administrador','superadmin'].includes((currentRole||'').toLowerCase());
-    if(!isAdmin && !isSelf){
-      alert('Somente o Super Administrador pode criar ou editar usuários.');
+    const podeGerenciarUsuarios = isSuperAdmin() || ['gestor','consultor'].includes((currentRole||'').toLowerCase());
+    if(!podeGerenciarUsuarios && !isSelf){
+      alert('Você não tem permissão para criar ou editar usuários.');
       return;
     }
     editingUserId = id || null;
@@ -9975,6 +10260,13 @@
       }
     }
 
+    // Administrador/Consultor só pode editar contas de Consultor (e a própria) —
+    // não pode mexer em outro Administrador nem no Super Administrador.
+    if(!isSuperAdmin() && id && !isSelf && u && u.role !== 'consultor'){
+      alert('Você só pode gerenciar contas de Consultor.');
+      return;
+    }
+
     document.getElementById('user-modal-title').textContent = id ? 'Editar usuário' : 'Novo usuário';
     document.getElementById('user-nome').value = u ? (u.nome || '') : '';
     document.getElementById('user-email').value = u ? (u.email || '') : '';
@@ -9990,6 +10282,16 @@
     document.getElementById('user-mensagem-aniversario').value = u ? (u.mensagem_aniversario || '') : '';
 
     document.getElementById('user-role').value = u ? (u.role || 'gestor') : 'gestor';
+
+    // Administrador/Consultor só podem atribuir o papel "Consultor" — o seletor
+    // fica travado nessa opção pra quem não é Super Administrador.
+    const selRole = document.getElementById('user-role');
+    if(!isSuperAdmin()){
+      selRole.value = 'consultor';
+      selRole.disabled = true;
+    } else {
+      selRole.disabled = false;
+    }
 
     // Popula o select de filial a partir da tabela filiais cadastrada
     const selFilial = document.getElementById('user-filial');
@@ -10009,12 +10311,16 @@
 
   async function saveUser(){
     const isSelf = editingUserId && editingUserId === currentUserId;
-    const isAdmin = ['admin','super_admin','administrador','superadmin'].includes((currentRole||'').toLowerCase());
-    if(!isAdmin && !isSelf){ alert('Somente o Super Administrador pode salvar usuários.'); return; }
+    const podeGerenciarUsuarios = isSuperAdmin() || ['gestor','consultor'].includes((currentRole||'').toLowerCase());
+    if(!podeGerenciarUsuarios && !isSelf){ alert('Você não tem permissão para salvar usuários.'); return; }
     const nome = document.getElementById('user-nome').value.trim();
     const email = document.getElementById('user-email').value.trim().toLowerCase();
     const senha = document.getElementById('user-senha').value;
-    const role = document.getElementById('user-role').value;
+    // Reforço: quem não é Super Administrador só pode gravar papel "consultor",
+    // não importa o que o campo (travado na tela) esteja mostrando. A garantia
+    // de verdade contra alguém burlar isso pelo console do navegador é o SQL
+    // (política de RLS + trigger) que precisa ser rodado no Supabase.
+    const role = isSuperAdmin() ? document.getElementById('user-role').value : 'consultor';
     const filial = role === 'admin' ? null : (document.getElementById('user-filial')?.value || null);
     const nascimento = document.getElementById('user-nascimento').value || null;
     const telefone = document.getElementById('user-telefone').value.replace(/\D/g,'');
@@ -10122,12 +10428,21 @@
   // mas a remoção definitiva da conta de autenticação exige uma Edge Function com a
   // service role key, que não deve ficar exposta neste arquivo.
   async function excluirUsuario(id){
-    if(!isSuperAdmin()){ alert('Somente o Super Administrador pode excluir usuários.'); return; }
-    if(!confirm('Remover o acesso deste usuário? Ele não conseguirá mais entrar no sistema.')) return;
     const alvo = USERS_CACHE.find(u => u.id === id);
+    if(!alvo) return;
+
+    if(!isSuperAdmin()){
+      if(alvo.role !== 'consultor'){ alert('Você só pode gerenciar contas de Consultor.'); return; }
+      if(!confirm(`Solicitar exclusão do usuário "${alvo.nome}"?\n\nEle continua com acesso normal até o Super Administrador revisar e aprovar o pedido.`)) return;
+      const ok = await criarSolicitacaoExclusao('usuario', id, alvo.nome);
+      if(ok) alert('Solicitação enviada! Acompanhe em "Solicitações de Exclusão".');
+      return;
+    }
+
+    if(!confirm('Remover o acesso deste usuário? Ele não conseguirá mais entrar no sistema.')) return;
     const { error } = await supabase.from('profiles').delete().eq('id', id);
     if(error){ alert('Erro ao remover usuário: ' + error.message); return; }
-    registrarLog('Excluiu usuário', alvo ? alvo.nome : id);
+    registrarLog('Excluiu usuário', alvo.nome);
     renderUsuarios();
   }
 
@@ -10292,7 +10607,7 @@
     applyRoleVisibility();
     let viewParaAbrirLogin = 'home';
     try {
-      const salva = localStorage.getItem('ultimaViewAtiva');
+      const salva = sessionStorage.getItem('ultimaViewAtiva');
       if(salva && document.getElementById('view-'+salva) && !['corretora-form','seguradora-form'].includes(salva)){
         viewParaAbrirLogin = salva;
       }
@@ -10848,7 +11163,7 @@
           Object.keys(GROUPS).forEach(refreshGroupUI);
           let viewParaAbrir = 'home';
           try {
-            const salva = localStorage.getItem('ultimaViewAtiva');
+            const salva = sessionStorage.getItem('ultimaViewAtiva');
             // só usa a view salva se ela realmente existir na página e não for uma
             // tela de "edição" que não faz sentido abrir sozinha (ex: cadastro vazio)
             if(salva && document.getElementById('view-'+salva) && !['corretora-form','seguradora-form'].includes(salva)){
