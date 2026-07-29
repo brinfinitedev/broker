@@ -1341,6 +1341,17 @@
             <div class="today-pill" id="home-today-pill">quinta-feira, 9 de julho</div>
           </div>
 
+          <div id="home-notif-banner" class="hidden" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface-2);border:1.4px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+              <span style="font-size:13px;">Ativar avisos no navegador pra tarefas com prazo vencendo?</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-outline" style="padding:6px 12px;font-size:12px;" onclick="dispensarNotificacoesPush()">Agora não</button>
+              <button class="btn-dark" style="padding:6px 12px;font-size:12px;" onclick="ativarNotificacoesPush()">Ativar</button>
+            </div>
+          </div>
+
           <!-- ACESSOS RÁPIDOS -->
           <div class="card" style="padding:20px;margin-bottom:16px;">
             <div class="card-head" style="margin-bottom:14px;">
@@ -1363,6 +1374,13 @@
           </div>
 
           <div class="home-grid">
+            <div class="card">
+              <div class="card-head">
+                <h2>📋 Tarefas pendentes</h2>
+              </div>
+              <div id="home-tarefas-list"></div>
+            </div>
+
             <div class="card">
               <div class="card-head">
                 <h2>🎂 Aniversariantes</h2>
@@ -1899,7 +1917,7 @@
           <!-- Hidden fields mantidos para compatibilidade com renderProducao() -->
           <div style="display:none;">
             <input type="month" id="producao-competencia">
-            <select id="producao-filtro-corretora"><option value="todas">Todas</option></select>
+            <input id="producao-filtro-corretora" value="[]">
             <select id="producao-filtro-filial"><option value="">Todas</option></select>
             <input id="producao-filtro-seguradora">
             <datalist id="producao-seguradoras-datalist"></datalist>
@@ -2157,8 +2175,8 @@
                   <input type="date" id="relatorio-filtro-data-fim" onchange="renderRelatorioBody()" style="width:100%;">
                 </div>
                 <div class="f-field" style="margin:0;" id="relatorio-campo-corretora">
-                  <label>Corretora</label>
-                  <select id="relatorio-filtro-corretora" onchange="renderRelatorioBody()" style="width:100%;"><option value="">Todas</option></select>
+                  <label>Corretora <span style="font-weight:400;color:var(--gray-600);">(Ctrl/Cmd+clique p/ várias)</span></label>
+                  <select id="relatorio-filtro-corretora" multiple size="3" onchange="renderRelatorioBody()" style="width:100%;"></select>
                 </div>
                 <div class="f-field" style="margin:0;" id="relatorio-campo-filial">
                   <label>Filial</label>
@@ -2331,7 +2349,7 @@
 <!-- FAB removed -->
 
 <!-- ---------------- MODAL: CARD DO CRM (criar/editar) ---------------- -->
-<div class="modal-overlay" id="modal-card" onclick="if(event.target===this) closeModal('modal-card')">
+<div class="modal-overlay" id="modal-card" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-card')">
   <div class="modal-box modal-box-lg">
     <h3 id="card-modal-title">Novo card</h3>
 
@@ -2349,6 +2367,9 @@
           <select id="card-coluna">
             <option value="todo">A fazer</option><option value="doing">Fazendo</option><option value="done">Feito</option>
           </select>
+        </div>
+        <div class="f-field"><label>Data de prazo <span style="font-weight:400;color:var(--gray-600);">(opcional)</span></label>
+          <input type="date" id="card-prazo">
         </div>
       </div>
       <div class="f-field full" style="position:relative;">
@@ -2411,7 +2432,7 @@
 </div>
 
 <!-- ---------------- MODAL: NOVO COMUNICADO ---------------- -->
-<div class="modal-overlay" id="modal-comunicado" onclick="if(event.target===this) closeModal('modal-comunicado')">
+<div class="modal-overlay" id="modal-comunicado" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-comunicado')">
   <div class="modal-box">
     <h3>Novo comunicado interno</h3>
     <div class="f-field"><label>Mensagem</label><textarea id="comunicado-msg" rows="4" placeholder="Escreva o comunicado para a equipe interna..."></textarea></div>
@@ -2424,7 +2445,7 @@
 </div>
 
 <!-- ---------------- MODAL: ACESSOS RÁPIDOS ---------------- -->
-<div class="modal-overlay" id="modal-acessos-rapidos" onclick="if(event.target===this) closeModal('modal-acessos-rapidos')">
+<div class="modal-overlay" id="modal-acessos-rapidos" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-acessos-rapidos')">
   <div class="modal-box modal-box-lg">
     <h3>Acessos rápidos</h3>
     <p class="hint" style="margin-bottom:16px;">Adicione links úteis que aparecerão na tela inicial. Podem ser sistemas externos, portais de seguradoras, etc.</p>
@@ -2442,7 +2463,7 @@
 </div>
 
 <!-- ---------------- MODAL: HISTÓRICO COMUNICADOS ---------------- -->
-<div class="modal-overlay" id="modal-historico-comunicados" onclick="if(event.target===this) closeModal('modal-historico-comunicados')">
+<div class="modal-overlay" id="modal-historico-comunicados" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-historico-comunicados')">
   <div class="modal-box modal-box-lg">
     <h3>Histórico de comunicados</h3>
     <p class="hint">Todos os comunicados já publicados no sistema.</p>
@@ -2454,7 +2475,7 @@
 </div>
 
 <!-- ---------------- MODAL: NOVO USUÁRIO ---------------- -->
-<div class="modal-overlay" id="modal-user" onclick="if(event.target===this) closeModal('modal-user')">
+<div class="modal-overlay" id="modal-user" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-user')">
   <div class="modal-box">
     <h3 id="user-modal-title">Novo usuário</h3>
     <p class="hint" style="margin-top:-8px;">Somente o <b>Super Administrador</b> pode criar, editar e excluir usuários.</p>
@@ -2501,7 +2522,7 @@
 
 
 <!-- ---------------- MODAL: CADASTRAR FILIAL ---------------- -->
-<div class="modal-overlay" id="modal-filial" onclick="if(event.target===this) closeModal('modal-filial')">
+<div class="modal-overlay" id="modal-filial" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-filial')">
   <div class="modal-box">
     <h3>Cadastrar filial</h3>
     <div class="f-field"><label>Nome da filial</label><input id="filial-nome" placeholder="Ex: Filial Curitiba"></div>
@@ -2525,7 +2546,7 @@
 
 <!-- ---------------- MODAL: NOVO MATERIAL ---------------- -->
 <!-- ---------------- MODAL: EDITAR PERFIL DO USUÁRIO ---------------- -->
-<div class="modal-overlay" id="modal-perfil-usuario" onclick="if(event.target===this) closeModal('modal-perfil-usuario')">
+<div class="modal-overlay" id="modal-perfil-usuario" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-perfil-usuario')">
   <div class="modal-box">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <h3 style="margin:0;">Meu perfil</h3>
@@ -2558,7 +2579,7 @@
 </div>
 
 <!-- ---------------- MODAL: AJUSTAR FOTO DE PERFIL ---------------- -->
-<div class="modal-overlay" id="modal-crop-foto" onclick="if(event.target===this) closeModal('modal-crop-foto')">
+<div class="modal-overlay" id="modal-crop-foto" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-crop-foto')">
   <div class="modal-box">
     <h3>Ajustar foto</h3>
     <div class="crop-square-wrap"
@@ -2581,7 +2602,7 @@
 
 
 <!-- Modal: Ajustar logo da seguradora -->
-<div class="modal-overlay" id="modal-material" onclick="if(event.target===this) closeModal('modal-material')">
+<div class="modal-overlay" id="modal-material" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-material')">
   <div class="modal-box">
     <h3>Incluir material</h3>
     <div class="f-field"><label>Nome do material</label><input id="mat-nome" placeholder="Ex: Tabela de vigências Porto"></div>
@@ -2619,7 +2640,7 @@
 </script>
 
 <!-- ---------------- MODAL: NOVO CONTATO DE MARKETING ---------------- -->
-<div class="modal-overlay" id="modal-contato" onclick="if(event.target===this) closeModal('modal-contato')">
+<div class="modal-overlay" id="modal-contato" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-contato')">
   <div class="modal-box">
     <h3>Novo contato</h3>
     <div class="f-field"><label>Nome</label><input id="contato-nome" placeholder="Ex: João Ricardo"></div>
@@ -2634,7 +2655,7 @@
 </div>
 
 <!-- ---------------- MODAL: IMPORTAR RENOVAÇÕES (FUNIL) ---------------- -->
-<div class="modal-overlay" id="modal-importar-renovacoes" onclick="if(event.target===this) closeModal('modal-importar-renovacoes')">
+<div class="modal-overlay" id="modal-importar-renovacoes" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-importar-renovacoes')">
   <div class="modal-box">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
       <div style="width:42px;height:42px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -2676,7 +2697,7 @@
 </div>
 
 <!-- ---------------- MODAL: CARD DO FUNIL DE RENOVAÇÕES ---------------- -->
-<div class="modal-overlay" id="modal-funil-card" onclick="if(event.target===this) closeModal('modal-funil-card')">
+<div class="modal-overlay" id="modal-funil-card" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-funil-card')">
   <div class="modal-box">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
       <h3 id="funil-card-cliente" style="margin:0;">Cliente</h3>
@@ -2711,7 +2732,7 @@
 </div>
 
 <!-- ---------------- MODAL: NOVA/EDITAR CAMPANHA ---------------- -->
-<div class="modal-overlay" id="modal-campanha" onclick="if(event.target===this) closeModal('modal-campanha')">
+<div class="modal-overlay" id="modal-campanha" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-campanha')">
   <div class="modal-box" style="max-width:620px;">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
       <h3 id="campanha-modal-titulo" style="margin:0;">Nova campanha</h3>
@@ -2762,7 +2783,7 @@
 </div>
 
 <!-- ---------------- MODAL: NOVO LANÇAMENTO DE CAMPANHA ---------------- -->
-<div class="modal-overlay" id="modal-lancamento-campanha" onclick="if(event.target===this) closeModal('modal-lancamento-campanha')">
+<div class="modal-overlay" id="modal-lancamento-campanha" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-lancamento-campanha')">
   <div class="modal-box">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
       <h3 style="margin:0;">Novo lançamento</h3>
@@ -2783,7 +2804,7 @@
 </div>
 
 <!-- ---------------- MODAL: CADASTRO DE CORRETORA ---------------- -->
-<div class="modal-overlay" id="modal-corretora" onclick="if(event.target===this) closeModal('modal-corretora')">
+<div class="modal-overlay" id="modal-corretora" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-corretora')">
   <div class="modal-box modal-box-lg">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
       <h3 id="corretora-form-title" style="margin:0;">Cadastro da corretora</h3>
@@ -2874,7 +2895,7 @@
 </div>
 
 <!-- ---------------- MODAL: IMPORTAR CONTATOS ---------------- -->
-<div class="modal-overlay" id="modal-importar-contatos" onclick="if(event.target===this) closeModal('modal-importar-contatos')">
+<div class="modal-overlay" id="modal-importar-contatos" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-importar-contatos')">
   <div class="modal-box">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
       <div style="width:42px;height:42px;border-radius:12px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -2910,7 +2931,7 @@
 </div>
 
 <!-- ---------------- MODAL: IMPORTAR CORRETORAS EM LOTE ---------------- -->
-<div class="modal-overlay" id="modal-importar-corretoras" onclick="if(event.target===this) closeModal('modal-importar-corretoras')">
+<div class="modal-overlay" id="modal-importar-corretoras" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-importar-corretoras')">
   <div class="modal-box modal-box-lg">
     <h3>Importar corretoras via planilha</h3>
     <p class="hint" style="margin-bottom:14px;">
@@ -2955,7 +2976,7 @@
 </div>
 
 <!-- ---------------- MODAL: IMPORTAR EQUIPE/ANIVERSARIANTES EM LOTE ---------------- -->
-<div class="modal-overlay" id="modal-importar-equipe" onclick="if(event.target===this) closeModal('modal-importar-equipe')">
+<div class="modal-overlay" id="modal-importar-equipe" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-importar-equipe')">
   <div class="modal-box modal-box-lg">
     <h3>Importar equipe / aniversariantes</h3>
     <p class="hint" style="margin-bottom:14px;">
@@ -2991,7 +3012,7 @@
 </div>
 
 <!-- ---------------- MODAL: IMPORTAR CORRETORAS POR SEGURADORA ---------------- -->
-<div class="modal-overlay" id="modal-importar-vinculo-seguradora" onclick="if(event.target===this) closeModal('modal-importar-vinculo-seguradora')">
+<div class="modal-overlay" id="modal-importar-vinculo-seguradora" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-importar-vinculo-seguradora')">
   <div class="modal-box modal-box-lg">
     <h3>Importar corretoras por seguradora</h3>
     <p class="hint" style="margin-bottom:14px;">
@@ -3018,7 +3039,7 @@
 </div>
 
 <!-- ---------------- MODAL: SELECIONAR CONTATOS PARA DISPARO ---------------- -->
-<div class="modal-overlay" id="modal-selecionar-contatos" onclick="if(event.target===this) closeModal('modal-selecionar-contatos')">
+<div class="modal-overlay" id="modal-selecionar-contatos" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-selecionar-contatos')">
   <div class="modal-box modal-box-lg">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <div>
@@ -3039,8 +3060,8 @@
         <select id="seletor-filtro-seguradora" multiple size="4" onchange="onSeletorSeguradoraChange()" style="border:1.4px solid var(--border);border-radius:10px;padding:6px;font-size:13px;font-family:inherit;outline:none;"></select>
       </div>
       <div style="display:flex;flex-direction:column;gap:3px;">
-        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Corretora</label>
-        <select id="seletor-filtro-corretora" onchange="filtrarSeletor()" style="border:1.4px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;"><option value="">Todas</option></select>
+        <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Corretora <span style="font-weight:400;text-transform:none;">(Ctrl/Cmd+clique p/ várias)</span></label>
+        <select id="seletor-filtro-corretora" multiple size="4" onchange="filtrarSeletor()" style="border:1.4px solid var(--border);border-radius:10px;padding:6px;font-size:13px;font-family:inherit;outline:none;"></select>
       </div>
     </div>
 
@@ -3053,7 +3074,7 @@
 </div>
 
 <!-- ---------------- MODAL: HISTÓRICO DE DISPAROS ---------------- -->
-<div class="modal-overlay" id="modal-historico-disparos" onclick="if(event.target===this) closeModal('modal-historico-disparos')">
+<div class="modal-overlay" id="modal-historico-disparos" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-historico-disparos')">
   <div class="modal-box modal-box-lg">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <div>
@@ -3079,7 +3100,7 @@
 </div>
 
 <!-- ---------------- MODAL: LANÇAMENTO DE PRODUÇÃO ---------------- -->
-<div class="modal-overlay" id="modal-producao" onclick="if(event.target===this) closeModal('modal-producao')">
+<div class="modal-overlay" id="modal-producao" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-producao')">
   <div class="modal-box">
     <h3>Lançar produção do mês</h3>
     <p class="hint">O valor lançado <b>substitui</b> o valor atual para essa combinação de filtros na competência escolhida (não soma). Lance o total acumulado do mês.</p>
@@ -3123,9 +3144,8 @@
       <input type="month" id="filtros-producao-competencia" style="display:none;">
     </div>
     <div class="f-field">
-      <label>Corretora</label>
-      <select id="filtros-producao-corretora" style="width:100%;border:1.4px solid var(--border);border-radius:11px;padding:12px 14px;outline:none;font-size:13.5px;font-family:inherit;">
-        <option value="todas">Todas as corretoras</option>
+      <label>Corretora <span style="font-weight:400;color:var(--gray-600);">(Ctrl/Cmd+clique p/ várias; deixe sem marcar = todas)</span></label>
+      <select id="filtros-producao-corretora" multiple size="5" style="width:100%;border:1.4px solid var(--border);border-radius:11px;padding:8px;outline:none;font-size:13.5px;font-family:inherit;">
       </select>
     </div>
     <div class="f-field">
@@ -3158,7 +3178,7 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-historico-producao" onclick="if(event.target===this) closeModal('modal-historico-producao')">
+<div class="modal-overlay" id="modal-historico-producao" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-historico-producao')">
   <div class="modal-box modal-box-lg">
     <h3>Histórico de importações</h3>
     <p class="hint">Toda importação feita a partir de agora fica registrada aqui. Super administradores podem excluir qualquer uma — os dados voltam ao estado anterior. Importações feitas antes desta tela existir não aparecem, pois não haviam sido registradas ainda.</p>
@@ -3177,7 +3197,7 @@
 
 
 <!-- Modal: Confirmar importação -->
-<div class="modal-overlay" id="modal-confirmar-importacao" onclick="if(event.target===this) closeModal('modal-confirmar-importacao')">
+<div class="modal-overlay" id="modal-confirmar-importacao" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-confirmar-importacao')">
   <div class="modal-box" style="max-width:820px;width:100%;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
       <h3 style="margin:0;">Confirmar importação</h3>
@@ -3199,7 +3219,7 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-importar" onclick="if(event.target===this) closeModal('modal-importar')">
+<div class="modal-overlay" id="modal-importar" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-importar')">
   <div class="modal-box">
     <h3>Importar planilha de produção</h3>
 
@@ -3324,6 +3344,9 @@
     return s && Array.isArray(s.responsaveisIds) && s.responsaveisIds.includes(currentUserId);
   }
   let currentView = 'home';
+  // Usada pra resolver o bug de "selecionar texto dentro do modal fecha ele" — só
+  // fecha o modal se o mousedown TAMBÉM começou no fundo (overlay), não só o click.
+  let _ovMouseDownSelf = false;
 
   // abas que o Super Administrador desativou para este usuário
   // (carregado do perfil no login: profile.abas_bloqueadas, ex: ['marketing','material'])
@@ -3874,6 +3897,9 @@
       renderAniversariantes();
       renderQuickAccess();
       renderQuickAccessSeguradoras();
+      renderTarefasPendentesHome();
+      verificarBannerNotificacoes();
+      verificarTarefasParaNotificar();
     }
     if(id === 'crm'){
       renderKanban();
@@ -4143,6 +4169,45 @@
 
   let ALL_USERS_CACHE = [];
 
+  async function renderTarefasPendentesHome(){
+    const wrap = document.getElementById('home-tarefas-list');
+    if(!wrap) return;
+    wrap.innerHTML = `<p class="hint">Carregando...</p>`;
+
+    if(!ALL_USERS_CACHE.length){
+      const { data: perfis } = await supabase.from('profiles').select('*');
+      ALL_USERS_CACHE = perfis || [];
+    }
+    const { data, error } = await supabase.from('crm_cards').select('*').neq('coluna', 'done').order('created_at', { ascending: false });
+    if(error){ wrap.innerHTML = `<p class="hint" style="color:#dc2626;">Erro ao carregar tarefas: ${esc(error.message)}</p>`; return; }
+    if(!data || !data.length){ wrap.innerHTML = `<p class="hint">Nenhuma tarefa pendente. 🎉</p>`; return; }
+
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    // Ordena: com prazo primeiro (mais próximo/atrasado no topo), depois sem prazo
+    const lista = [...data].sort((a,b) => {
+      if(a.prazo && b.prazo) return a.prazo.localeCompare(b.prazo);
+      if(a.prazo) return -1;
+      if(b.prazo) return 1;
+      return 0;
+    }).slice(0, 8);
+
+    const colunaLabel = { todo: 'A fazer', doing: 'Fazendo' };
+    wrap.innerHTML = lista.map(c => {
+      const membros = (c.membros || []).map(uid => ALL_USERS_CACHE.find(u => u.id === uid)).filter(Boolean);
+      let prazoTxt = '';
+      if(c.prazo){
+        const dataPrazo = new Date(c.prazo+'T00:00:00');
+        const atrasado = dataPrazo < hoje;
+        prazoTxt = `<span style="font-size:11px;font-weight:700;color:${atrasado?'#dc2626':'var(--gray-600)'};">${atrasado?'Atrasado: ':''}${dataPrazo.toLocaleDateString('pt-BR')}</span>`;
+      }
+      return `<div class="bday-row" onclick="showView('crm'); setTimeout(()=>openEditCard('${c.id}'), 150);" style="cursor:pointer;">
+        <div class="av">${esc(initials(c.titulo))}</div>
+        <div class="info"><div class="n">${esc(c.titulo)}</div><div class="d">${colunaLabel[c.coluna] || c.coluna}${membros.length ? ' · ' + membros.map(m=>m.nome.split(' ')[0]).join(', ') : ''}</div></div>
+        <div class="bday-actions">${prazoTxt}</div>
+      </div>`;
+    }).join('');
+  }
+
   async function renderKanban(){
     const kanban = document.getElementById('kanban');
     if(!kanban) return;
@@ -4166,12 +4231,24 @@
     const anexos = c.anexos || [];
     const membros = (c.membros || []).map(uid => ALL_USERS_CACHE.find(u => u.id === uid)).filter(Boolean);
     const comentarios = c.comentarios || [];
+    let prazoHtml = '';
+    if(c.prazo){
+      const hoje = new Date(); hoje.setHours(0,0,0,0);
+      const dataPrazo = new Date(c.prazo+'T00:00:00');
+      const atrasado = dataPrazo < hoje && c.coluna !== 'done';
+      const dataFmt = dataPrazo.toLocaleDateString('pt-BR');
+      prazoHtml = `<div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;margin-top:4px;color:${atrasado ? '#dc2626' : 'var(--gray-600)'};">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:11px;height:11px;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        ${atrasado ? 'Atrasado: ' : ''}${dataFmt}
+      </div>`;
+    }
     return `
       <div class="kcard" draggable="true" data-id="${c.id}" ondragstart="dragCard(event)" onclick="openEditCard('${c.id}')">
         <div class="t">${esc(c.titulo)}</div>
         ${c.campo_livre ? `<div class="m">${esc(c.campo_livre)}</div>` : ''}
         <div class="attach-list">${anexos.map(a=>`<span>📎 ${esc(a)}</span>`).join('')}</div>
         ${comentarios.length ? `<div style="font-size:11px;color:var(--gray-600);margin-top:4px;">💬 ${comentarios.length} comentário${comentarios.length>1?'s':''}</div>` : ''}
+        ${prazoHtml}
         ${membros.length ? `<div class="kcard-membros">${membros.map(m => `<span class="kcard-avatar" title="${esc(m.nome)}">${esc(initials(m.nome))}</span>`).join('')}</div>` : ''}
       </div>`;
   }
@@ -4995,6 +5072,66 @@
     return new Date().toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
   }
 
+  // ---- Notificações push (Web Notifications API) ----
+  // Funciona enquanto o navegador está aberto (mesmo em outra aba). Notificação
+  // "de verdade" com o app fechado precisaria de um service worker + servidor
+  // próprio — isso fica como próxima etapa se um dia for necessário.
+  function verificarBannerNotificacoes(){
+    const banner = document.getElementById('home-notif-banner');
+    if(!banner) return;
+    if(!('Notification' in window)){ banner.classList.add('hidden'); return; }
+    const jaDispensou = localStorage.getItem('notifPushDispensado') === '1';
+    if(Notification.permission === 'default' && !jaDispensou){
+      banner.classList.remove('hidden');
+    } else {
+      banner.classList.add('hidden');
+    }
+  }
+
+  function dispensarNotificacoesPush(){
+    localStorage.setItem('notifPushDispensado', '1');
+    document.getElementById('home-notif-banner').classList.add('hidden');
+  }
+
+  async function ativarNotificacoesPush(){
+    if(!('Notification' in window)){ alert('Seu navegador não suporta notificações.'); return; }
+    const permissao = await Notification.requestPermission();
+    document.getElementById('home-notif-banner').classList.add('hidden');
+    if(permissao === 'granted'){
+      new Notification('Infinite Broker', { body: 'Notificações ativadas! Vamos te avisar sobre tarefas com prazo vencendo.' });
+      verificarTarefasParaNotificar();
+    } else {
+      alert('Permissão não concedida. Você pode ativar depois nas configurações do navegador, se mudar de ideia.');
+    }
+  }
+
+  // Roda uma vez por sessão (e no máximo 1x por dia por tarefa, guardado no
+  // localStorage) — avisa sobre tarefas atrasadas ou que vencem hoje.
+  async function verificarTarefasParaNotificar(){
+    if(!('Notification' in window) || Notification.permission !== 'granted') return;
+    const hojeStr = new Date().toISOString().slice(0,10);
+    const { data, error } = await supabase.from('crm_cards').select('id, titulo, prazo, coluna').neq('coluna', 'done');
+    if(error || !data) return;
+
+    const jaAvisadasHoje = JSON.parse(localStorage.getItem('notifTarefasAvisadas') || '{}');
+    if(jaAvisadasHoje._dia !== hojeStr){
+      // vira o dia — reseta o controle de "já avisei essa hoje"
+      Object.keys(jaAvisadasHoje).forEach(k => delete jaAvisadasHoje[k]);
+      jaAvisadasHoje._dia = hojeStr;
+    }
+
+    const pendentes = data.filter(c => c.prazo && c.prazo <= hojeStr && !jaAvisadasHoje[c.id]);
+    pendentes.slice(0, 5).forEach(c => {
+      const atrasado = c.prazo < hojeStr;
+      new Notification(atrasado ? '⚠️ Tarefa atrasada' : '📋 Tarefa vence hoje', {
+        body: c.titulo,
+        tag: 'tarefa-' + c.id, // evita empilhar notificação repetida da mesma tarefa
+      });
+      jaAvisadasHoje[c.id] = true;
+    });
+    localStorage.setItem('notifTarefasAvisadas', JSON.stringify(jaAvisadasHoje));
+  }
+
   async function openCardModal(coluna){
     // Garante que os usuários estejam carregados para o seletor de membros
     if(!ALL_USERS_CACHE.length){
@@ -5010,6 +5147,7 @@
     document.getElementById('card-delete-btn').style.display = 'none';
     ['card-titulo','card-campo-livre','card-novo-comentario','card-contato','card-whats','card-obs','card-seguradora','card-valor','card-cliente-doc','card-cliente-email','card-cliente-endereco'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
     document.getElementById('card-coluna').value = coluna;
+    document.getElementById('card-prazo').value = '';
     document.getElementById('card-anexo-input').value = '';
     renderAttachChips();
     renderHistoricoList();
@@ -5036,6 +5174,7 @@
     document.getElementById('card-titulo').value = c.titulo || '';
     document.getElementById('card-campo-livre').value = c.campo_livre || '';
     document.getElementById('card-coluna').value = c.coluna;
+    document.getElementById('card-prazo').value = c.prazo || '';
     document.getElementById('card-novo-comentario').value = '';
     document.getElementById('card-anexo-input').value = '';
     renderAttachChips();
@@ -5054,12 +5193,14 @@
     e.target.value = '';
     renderAttachChips();
     renderHistoricoList();
+    autoSalvarCampoCard('anexos', pendingAttachments.slice());
   }
   function removeAttachment(i){
     const [removed] = pendingAttachments.splice(i,1);
     if(removed) pendingHistorico.unshift({when: nowLabel(), text:`Anexo removido: ${removed}`});
     renderAttachChips();
     renderHistoricoList();
+    autoSalvarCampoCard('anexos', pendingAttachments.slice());
   }
   function renderAttachChips(){
     const wrap = document.getElementById('card-anexo-list');
@@ -5101,6 +5242,19 @@
     }).join('');
   }
 
+  // Salva um campo do card IMEDIATAMENTE no banco (comentário, membro, anexo) —
+  // sem depender do botão "Salvar alterações". Só funciona editando um card que já
+  // existe (editingCardId definido); num card novo ainda não criado, continua como
+  // rascunho local até o primeiro "Salvar".
+  async function autoSalvarCampoCard(campo, valor){
+    if(!editingCardId) return;
+    const { error } = await supabase.from('crm_cards').update({ [campo]: valor }).eq('id', editingCardId);
+    if(error){ console.error(`autoSalvarCampoCard (${campo}):`, error.message); return; }
+    const c = CARDS_CACHE.find(x => x.id === editingCardId);
+    if(c) c[campo] = valor;
+    renderKanban();
+  }
+
   function adicionarComentarioCard(){
     const txt = document.getElementById('card-novo-comentario').value.trim();
     if(!txt) return;
@@ -5114,6 +5268,7 @@
     });
     document.getElementById('card-novo-comentario').value = '';
     renderCardComentarios();
+    autoSalvarCampoCard('comentarios', pendingComentarios.slice());
   }
 
   function renderCardMembrosChecklist(selecionados){
@@ -5171,6 +5326,7 @@
       chip.innerHTML = `<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.2);font-size:9px;">${initials(user.nome)}</span>${user.nome.split(' ')[0]}`;
       display.insertBefore(chip, placeholder);
     });
+    autoSalvarCampoCard('membros', checked.map(inp => inp.value));
   }
 
   async function saveCard(){
@@ -5182,6 +5338,7 @@
       anexos: pendingAttachments.slice(),
       comentarios: pendingComentarios.slice(),
       membros: Array.from(document.querySelectorAll('#card-membros-list input:checked')).map(el => el.value),
+      prazo: document.getElementById('card-prazo').value || null,
       coluna,
     };
 
@@ -5646,11 +5803,11 @@
 
     // populate corretora with all initially
     const selCorr = document.getElementById('seletor-filtro-corretora');
-    selCorr.innerHTML = '<option value="">Todas</option>' + Object.values(GROUPS).map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
+    selCorr.innerHTML = Object.values(GROUPS).map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
 
     document.getElementById('seletor-filtro-texto').value = '';
     Array.from(selSeg.options).forEach(o => o.selected = false);
-    selCorr.value = '';
+    Array.from(selCorr.options).forEach(o => o.selected = false);
 
     filtrarSeletor();
     atualizarContadorSeletor();
@@ -5664,20 +5821,18 @@
     if(segsFiltro.length){
       // Show only corretoras linked a QUALQUER uma das seguradoras marcadas
       const corrsFiltradas = Object.values(GROUPS).filter(g => (g.seguradoras||[]).some(s => segsFiltro.includes(s)));
-      selCorr.innerHTML = '<option value="">Todas as vinculadas</option>' +
-        corrsFiltradas.map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
+      selCorr.innerHTML = corrsFiltradas.map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
     } else {
       // Reset to all corretoras
-      selCorr.innerHTML = '<option value="">Todas</option>' +
-        Object.values(GROUPS).map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
+      selCorr.innerHTML = Object.values(GROUPS).map(g=>`<option value="${esc(g.name)}">${esc(g.name)}</option>`).join('');
     }
-    selCorr.value = '';
+    Array.from(selCorr.options).forEach(o => o.selected = false);
     filtrarSeletor();
   }
 
   function filtrarSeletor(){
     const texto = normalizarBusca(document.getElementById('seletor-filtro-texto').value||'');
-    const corrFiltro = document.getElementById('seletor-filtro-corretora').value;
+    const corrsFiltro = Array.from(document.getElementById('seletor-filtro-corretora').selectedOptions).map(o=>o.value);
     const segsFiltro = Array.from(document.getElementById('seletor-filtro-seguradora').selectedOptions).map(o=>o.value);
 
     let lista = _seletorTodosContatos;
@@ -5689,10 +5844,10 @@
         .map(([id]) => id);
       lista = lista.filter(c => corrIdsVinculadas.includes(c.corretora_id));
     }
-    if(corrFiltro){
+    if(corrsFiltro.length){
       lista = lista.filter(c => {
         const g = c.corretora_id && GROUPS[c.corretora_id];
-        return g && g.name === corrFiltro;
+        return g && corrsFiltro.includes(g.name);
       });
     }
 
@@ -6709,9 +6864,8 @@
     const selCor = document.getElementById('filtros-producao-corretora');
     const selSeg = document.getElementById('filtros-producao-seguradora');
     const selFil = document.getElementById('filtros-producao-filial');
-    // Fill corretoras
-    selCor.innerHTML = '<option value="todas">Todas as corretoras</option>' +
-      Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${esc(g.name)}</option>`).join('');
+    // Fill corretoras (multi-seleção — sem opção "Todas", basta não marcar nenhuma)
+    selCor.innerHTML = Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${esc(g.name)}</option>`).join('');
     // Fill seguradoras (multi-seleção — sem opção "Todas", basta não marcar nenhuma)
     selSeg.innerHTML = Object.values(SEGURADORAS).map(s => `<option value="${esc(s.nome)}">${esc(s.nome)}</option>`).join('');
     // Fill filiais (valores únicos de filial entre as corretoras cadastradas)
@@ -6720,7 +6874,8 @@
       filiaisUnicas.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
     // Sync current values
     const curComp = document.getElementById('producao-competencia')?.value || '';
-    const curCor = document.getElementById('producao-filtro-corretora')?.value || 'todas';
+    let curCorArray = [];
+    try { curCorArray = JSON.parse(document.getElementById('producao-filtro-corretora')?.value || '[]'); } catch(e){ curCorArray = []; }
     const curFil = document.getElementById('producao-filtro-filial')?.value || '';
     let curSegArray = [];
     try { curSegArray = JSON.parse(document.getElementById('producao-filtro-seguradora')?.value || '[]'); } catch(e){ curSegArray = []; }
@@ -6731,7 +6886,7 @@
     const fSeg = document.getElementById('filtros-producao-seguradora');
     const fProd = document.getElementById('filtros-producao-produto');
     if(fComp) fComp.value = curComp;
-    if(fCor) fCor.value = curCor;
+    if(fCor) Array.from(fCor.options).forEach(o => { o.selected = curCorArray.includes(o.value); });
     if(fFil) fFil.value = curFil;
     if(fSeg) Array.from(fSeg.options).forEach(o => { o.selected = curSegArray.includes(o.value); });
     if(fProd) fProd.value = curProd;
@@ -6746,7 +6901,7 @@
 
   function aplicarFiltrosProducao(){
     const comp = document.getElementById('filtros-producao-competencia')?.value || '';
-    const cor = document.getElementById('filtros-producao-corretora')?.value || 'todas';
+    const corArray = Array.from(document.getElementById('filtros-producao-corretora')?.selectedOptions || []).map(o=>o.value);
     const fil = document.getElementById('filtros-producao-filial')?.value || '';
     const segArray = Array.from(document.getElementById('filtros-producao-seguradora')?.selectedOptions || []).map(o=>o.value);
     const prod = document.getElementById('filtros-producao-produto')?.value || '';
@@ -6757,14 +6912,14 @@
     const hSeg = document.getElementById('producao-filtro-seguradora');
     const hProd = document.getElementById('producao-filtro-produto');
     if(hComp) hComp.value = comp;
-    if(hCor) hCor.value = cor;
+    if(hCor) hCor.value = JSON.stringify(corArray);
     if(hFil) hFil.value = fil;
     if(hSeg) hSeg.value = JSON.stringify(segArray);
     if(hProd) hProd.value = prod;
     // Update active filters badge
     const partes = [];
     if(comp){ partes.push(labelCompetencia(comp)); }
-    if(cor && cor !== 'todas'){ partes.push(GROUPS[cor]?.name || cor); }
+    if(corArray.length){ partes.push(corArray.map(gid => GROUPS[gid]?.name || gid).join(', ')); }
     if(fil){ partes.push('Filial: ' + fil); }
     if(segArray.length){ partes.push(segArray.join(', ')); }
     if(prod){ partes.push(prod); }
@@ -7860,8 +8015,8 @@
 
   async function renderRelatorios(){
     const selCorretora = document.getElementById('relatorio-filtro-corretora');
-    if(selCorretora && selCorretora.options.length <= 1){
-      selCorretora.innerHTML = `<option value="">Todas</option>` + Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${esc(g.name)}</option>`).join('');
+    if(selCorretora && selCorretora.options.length === 0){
+      selCorretora.innerHTML = Object.entries(GROUPS).map(([gid,g]) => `<option value="${gid}">${esc(g.name)}</option>`).join('');
     }
     const selFil = document.getElementById('relatorio-filtro-filial');
     if(selFil && selFil.options.length <= 1){
@@ -7879,7 +8034,7 @@
     document.getElementById('relatorio-competencia').value = '';
     document.getElementById('relatorio-filtro-data-ini').value = '';
     document.getElementById('relatorio-filtro-data-fim').value = '';
-    document.getElementById('relatorio-filtro-corretora').value = '';
+    const selCorLimpar = document.getElementById('relatorio-filtro-corretora'); if(selCorLimpar) Array.from(selCorLimpar.options).forEach(o => o.selected = false);
     const rf = document.getElementById('relatorio-filtro-filial'); if(rf) rf.value='';
     const selSegLimpar = document.getElementById('relatorio-filtro-seguradora'); if(selSegLimpar) Array.from(selSegLimpar.options).forEach(o => o.selected = false);
     const rp = document.getElementById('relatorio-filtro-produto'); if(rp) rp.value='';
@@ -7894,7 +8049,7 @@
     const competencia = document.getElementById('relatorio-competencia').value;
     const dataIni = document.getElementById('relatorio-filtro-data-ini').value;
     const dataFim = document.getElementById('relatorio-filtro-data-fim').value;
-    const corretoraId = document.getElementById('relatorio-filtro-corretora').value;
+    const corretorasIds = Array.from(document.getElementById('relatorio-filtro-corretora').selectedOptions).map(o=>o.value);
     let filialNome = document.getElementById('relatorio-filtro-filial')?.value || '';
     // Administradores (não super) com filial definida SÓ enxergam a produção da própria filial
     if(!isSuperAdmin() && currentUserFilial){
@@ -7905,7 +8060,7 @@
 
     let query = supabase.from('producao_mensal').select('*');
     if(competencia) query = query.eq('competencia', competencia);
-    if(corretoraId) query = query.eq('corretora_id', corretoraId);
+    if(corretorasIds.length) query = query.in('corretora_id', corretorasIds);
     if(seguradorasNomes.length) query = query.in('seguradora', seguradorasNomes);
     if(produtoNome) query = query.eq('produto', produtoNome);
     const { data } = await query;
@@ -7932,7 +8087,7 @@
 
     const resumoFiltros = [
       competencia ? `Competência: ${labelCompetencia(competencia)}` : 'Todas as competências',
-      `Corretora: ${corretoraId ? (GROUPS[corretoraId]?.name||'—') : 'Todas'}`,
+      `Corretora: ${corretorasIds.length ? corretorasIds.map(gid=>GROUPS[gid]?.name||'—').join(', ') : 'Todas'}`,
       filialNome ? `Filial: ${filialNome}` : null,
       `Seguradora: ${seguradorasNomes.length ? seguradorasNomes.join(', ') : 'Todas'}`,
       `Produto: ${produtoNome || 'Todos'}`,
@@ -7949,12 +8104,12 @@
     const competencia = document.getElementById('relatorio-competencia').value;
     const dataIni = document.getElementById('relatorio-filtro-data-ini').value;
     const dataFim = document.getElementById('relatorio-filtro-data-fim').value;
-    const corretoraId = document.getElementById('relatorio-filtro-corretora').value;
+    const corretorasIdsCheck = Array.from(document.getElementById('relatorio-filtro-corretora').selectedOptions).map(o=>o.value);
     const filialNome = document.getElementById('relatorio-filtro-filial')?.value || '';
     const seguradorasNomesCheck = Array.from(document.getElementById('relatorio-filtro-seguradora').selectedOptions).map(o=>o.value);
     const produtoNome = document.getElementById('relatorio-filtro-produto')?.value || '';
 
-    const algumFiltro = !!(competencia || dataIni || dataFim || corretoraId || filialNome || seguradorasNomesCheck.length || produtoNome);
+    const algumFiltro = !!(competencia || dataIni || dataFim || corretorasIdsCheck.length || filialNome || seguradorasNomesCheck.length || produtoNome);
     if(!algumFiltro){
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray-600);padding:40px 20px;">Defina os filtros acima e clique em <b>Pesquisar</b>.</td></tr>`;
       document.getElementById('relatorio-kpis').style.display='none';
@@ -8073,10 +8228,11 @@
   }
 
   async function renderProducao(){
-    // popula corretora dropdown (uma vez)
+    // popula corretora dropdown (uma vez) — multi-seleção, sem opção "todas"
+    // (basta não marcar nenhuma pra considerar todas)
     const selCorretora = document.getElementById('producao-filtro-corretora');
-    if(selCorretora && selCorretora.options.length <= 1){
-      selCorretora.innerHTML = `<option value="todas">Todas</option>` + Object.keys(GROUPS).map(gid => `<option value="${gid}">${GROUPS[gid].name}</option>`).join('');
+    if(selCorretora && selCorretora.options.length === 0){
+      selCorretora.innerHTML = Object.keys(GROUPS).map(gid => `<option value="${gid}">${GROUPS[gid].name}</option>`).join('');
     }
 
     const competenciaInput = document.getElementById('producao-competencia');
@@ -8086,8 +8242,9 @@
       document.getElementById('producao-sub').textContent = `Produção de ${labelCompetencia(competencia)}`;
 
     let query = supabase.from('producao_mensal').select('*').eq('competencia', competencia);
-    const gidFiltro = selCorretora ? selCorretora.value : 'todas';
-    if(gidFiltro !== 'todas') query = query.eq('corretora_id', gidFiltro);
+    let gidsFiltro = [];
+    try { gidsFiltro = JSON.parse(selCorretora?.value || '[]'); } catch(e){ gidsFiltro = []; }
+    if(gidsFiltro.length) query = query.in('corretora_id', gidsFiltro);
 
     const { data, error } = await query;
     if(error){ console.error('renderProducao:', error.message); return; }
@@ -8134,7 +8291,8 @@
 
   function limparFiltrosProducao(){
     ['producao-competencia','filtros-producao-competencia'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
-    ['producao-filtro-corretora','filtros-producao-corretora'].forEach(id => { const el = document.getElementById(id); if(el) el.value='todas'; });
+    const hiddenCor = document.getElementById('producao-filtro-corretora'); if(hiddenCor) hiddenCor.value = '[]';
+    const multiCor = document.getElementById('filtros-producao-corretora'); if(multiCor) Array.from(multiCor.options).forEach(o => o.selected = false);
     ['producao-filtro-filial','filtros-producao-filial'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     const hiddenSeg = document.getElementById('producao-filtro-seguradora'); if(hiddenSeg) hiddenSeg.value = '[]';
     const multiSeg = document.getElementById('filtros-producao-seguradora'); if(multiSeg) Array.from(multiSeg.options).forEach(o => o.selected = false);
