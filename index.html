@@ -1588,13 +1588,8 @@
             <button class="add-card-btn" onclick="addTeamRow('seguradora-team-rows')">+ Adicionar colaborador</button>
           </div>
 
-          <div class="form-section hidden" id="seguradora-historico-section">
-            <h3>Histórico de alterações</h3>
-            <p class="hint">Quem mexeu, quando, e o que mudou nesse cadastro.</p>
-            <div id="seguradora-historico-lista" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;"></div>
-          </div>
-
           <div class="form-actions">
+            <button class="btn-outline hidden" id="btn-historico-seguradora" onclick="carregarHistoricoSeguradora(editingSeguradoraId)">Ver histórico</button>
             <button class="btn-outline" onclick="showView('seguradoras')">Cancelar</button>
             <button class="btn-dark" onclick="saveSeguradoraForm()">Salvar cadastro</button>
           </div>
@@ -2065,6 +2060,8 @@
             <div id="auditoria-seg-resultado"><p class="hint">Selecione uma seguradora acima pra começar.</p></div>
           </div>
 
+          <!-- Área do relatório de Corretoras Duplicadas -->
+          <div id="relatorio-duplicatas-area" style="display:none;">
             <div class="relatorio-header-bar" style="display:flex;align-items:center;justify-content:space-between;background:var(--black);color:#fff;border-radius:14px;padding:14px 20px;margin-bottom:20px;">
               <div style="display:flex;align-items:center;gap:10px;">
                 <button onclick="voltarRelatorioDuplicatas()" style="background:rgba(255,255,255,.12);border:none;color:#fff;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;">
@@ -2876,15 +2873,11 @@
       <div id="team-rows"></div>
       <button class="add-card-btn" onclick="addTeamRow()">+ Adicionar colaborador</button>
     </div>
-    <div class="form-section hidden" id="corretora-historico-section">
-      <h3>Histórico de alterações</h3>
-      <p class="hint">Quem mexeu, quando, e o que mudou nesse cadastro.</p>
-      <div id="corretora-historico-lista" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;"></div>
-    </div>
     <div class="modal-actions" style="justify-content:space-between;">
       <div style="display:flex;gap:10px;">
         <button class="btn-outline hidden" id="btn-excluir-corretora" onclick="excluirCorretoraCadastrada()" style="color:#dc2626;border-color:#fecaca;">Excluir corretora</button>
         <button class="btn-outline hidden" id="btn-exportar-corretora" onclick="exportarCorretoraAtual()">Exportar dados</button>
+        <button class="btn-outline hidden" id="btn-historico-corretora" onclick="carregarHistoricoCorretora(editingCorretoraGid)">Ver histórico</button>
       </div>
       <div style="display:flex;gap:10px;">
         <button class="btn-outline" onclick="closeModal('modal-corretora')">Cancelar</button>
@@ -3197,6 +3190,17 @@
 
 
 <!-- Modal: Confirmar importação -->
+<div class="modal-overlay" id="modal-historico-generico" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-historico-generico')">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <h3 style="margin:0;">Histórico de alterações</h3>
+      <button onclick="closeModal('modal-historico-generico')" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-600);">✕</button>
+    </div>
+    <p class="hint" style="margin-bottom:14px;">Quem mexeu, quando, e o que mudou nesse cadastro.</p>
+    <div id="modal-historico-lista" style="max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-confirmar-importacao" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-confirmar-importacao')">
   <div class="modal-box" style="max-width:820px;width:100%;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
@@ -5503,11 +5507,11 @@
     return `<span style="display:inline-block; padding:3px 9px; border-radius:999px; background:${esc(bg)}; color:#fff; font-size:11px; font-weight:700; flex-shrink:0; white-space:nowrap;">${esc(nome)}</span>`;
   }
 
-  const CONTATOS_PAGE_SIZE = 50;
+  const CONTATOS_PAGE_SIZE = 20;
   let CONTATOS_PAGE = 1;
   let _todosContatosCache = null;
 
-  function onContatoFiltro(){ CONTATOS_PAGE = 1; renderContatosTab(); }
+  function onContatoFiltro(){ CONTATOS_PAGE = 1; renderContatosTabBody(_todosContatosCache || []); }
   function irPaginaContatos(p){ CONTATOS_PAGE = p; renderContatosTabBody(_todosContatosCache || []); }
 
   async function renderContatosTab(){
@@ -6179,11 +6183,8 @@
     const btnExportar = document.getElementById('btn-exportar-corretora');
     if(btnExportar) btnExportar.classList.toggle('hidden', !gid);
 
-    const historicoSection = document.getElementById('corretora-historico-section');
-    if(historicoSection){
-      historicoSection.classList.toggle('hidden', !gid);
-      if(gid) carregarHistoricoCorretora(gid);
-    }
+    const btnHistoricoCor = document.getElementById('btn-historico-corretora');
+    if(btnHistoricoCor) btnHistoricoCor.classList.toggle('hidden', !gid);
 
     const fieldMap = {
       'corretora-razao-social': g ? g.name : '',
@@ -6438,9 +6439,11 @@
   }
 
   async function carregarHistoricoCorretora(gid){
-    const lista = document.getElementById('corretora-historico-lista');
+    if(!gid) return;
+    const lista = document.getElementById('modal-historico-lista');
     if(!lista) return;
     lista.innerHTML = `<p class="hint">Carregando histórico...</p>`;
+    openModal('modal-historico-generico');
 
     const nomeAtual = GROUPS[gid]?.name || '';
     // Filtra por corretora_id (mais confiável) OU pelo nome atual (cobre registros
@@ -10608,9 +10611,11 @@
   }
 
   async function carregarHistoricoSeguradora(id){
-    const lista = document.getElementById('seguradora-historico-lista');
+    if(!id) return;
+    const lista = document.getElementById('modal-historico-lista');
     if(!lista) return;
     lista.innerHTML = `<p class="hint">Carregando histórico...</p>`;
+    openModal('modal-historico-generico');
 
     const nomeAtual = SEGURADORAS[id]?.nome || '';
     const { data, error } = await supabase
@@ -10660,11 +10665,8 @@
     renderLogoPreview();
     atualizarPreviewCor();
     renderResponsaveisPicker(s ? (s.responsaveisIds || []) : []);
-    const historicoSection = document.getElementById('seguradora-historico-section');
-    if(historicoSection){
-      historicoSection.classList.toggle('hidden', !id);
-      if(id) carregarHistoricoSeguradora(id);
-    }
+    const btnHistoricoSeg = document.getElementById('btn-historico-seguradora');
+    if(btnHistoricoSeg) btnHistoricoSeg.classList.toggle('hidden', !id);
     showView('seguradora-form');
   }
 
