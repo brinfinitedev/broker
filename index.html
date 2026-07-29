@@ -463,14 +463,18 @@
   }
   .add-card-btn:hover{ border-color: var(--black); color: var(--black); }
 
-  /* ---- FUNIL DE RENOVAÇÕES ---- */
+  /* ---- FUNIL DE RENOVAÇÕES (pipeline) ---- */
   .kanban-funil{
     display:grid; grid-auto-flow:column; grid-auto-columns:minmax(230px,1fr);
     gap:14px; align-items:start; overflow-x:auto; padding-bottom:6px;
   }
-  .kanban-funil .kcol{ min-width:230px; }
+  .kanban-funil .kcol{ min-width:230px; border-top:4px solid var(--kcol-cor, var(--border)); }
+  .kanban-funil .kcol-head .count{ background: color-mix(in srgb, var(--kcol-cor, var(--gray-600)) 15%, #fff); color: var(--kcol-cor, var(--gray-600)); border-color: color-mix(in srgb, var(--kcol-cor, var(--gray-600)) 30%, #fff); }
+  .kcol-total{ font-size:11px; font-weight:700; color:var(--kcol-cor, var(--gray-600)); padding:0 4px; margin:-8px 0 12px; }
+  .kanban-funil .kcard{ border-left:3px solid var(--kcol-cor, var(--border)); }
   .kanban-funil .kcard .m{ margin-top:2px; }
   .kanban-funil .kcard .tags span{ background:transparent; padding:0; font-weight:800; }
+  .kcard-valor{ display:inline-block; font-size:11px; font-weight:800; background:var(--surface-2); padding:2px 8px; border-radius:999px; margin-top:8px; }
 
   /* ---- CAMPANHAS ---- */
   .campanha-card{
@@ -1668,28 +1672,34 @@
           <div id="funil-counters" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;"></div>
 
           <div class="kanban kanban-funil" id="funil-board">
-            <div class="kcol" data-col="a_vencer_90" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
+            <div class="kcol" data-col="a_vencer_90" style="--kcol-cor:#64748b;" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
               <div class="kcol-head"><h3>A vencer · 90 dias</h3><span class="count">0</span></div>
+              <div class="kcol-total"></div>
               <div class="kcol-cards"></div>
             </div>
-            <div class="kcol" data-col="a_vencer_60" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
+            <div class="kcol" data-col="a_vencer_60" style="--kcol-cor:#ca8a04;" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
               <div class="kcol-head"><h3>A vencer · 60 dias</h3><span class="count">0</span></div>
+              <div class="kcol-total"></div>
               <div class="kcol-cards"></div>
             </div>
-            <div class="kcol" data-col="a_vencer_30" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
+            <div class="kcol" data-col="a_vencer_30" style="--kcol-cor:#ea580c;" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
               <div class="kcol-head"><h3>A vencer · 30 dias</h3><span class="count">0</span></div>
+              <div class="kcol-total"></div>
               <div class="kcol-cards"></div>
             </div>
-            <div class="kcol" data-col="negociacao" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
+            <div class="kcol" data-col="negociacao" style="--kcol-cor:#2563eb;" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
               <div class="kcol-head"><h3>Em negociação</h3><span class="count">0</span></div>
+              <div class="kcol-total"></div>
               <div class="kcol-cards"></div>
             </div>
-            <div class="kcol" data-col="renovado" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
+            <div class="kcol" data-col="renovado" style="--kcol-cor:#16a34a;" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
               <div class="kcol-head"><h3>Renovado</h3><span class="count">0</span></div>
+              <div class="kcol-total"></div>
               <div class="kcol-cards"></div>
             </div>
-            <div class="kcol" data-col="perdido" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
+            <div class="kcol" data-col="perdido" style="--kcol-cor:#dc2626;" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropFunilCard(event,this)">
               <div class="kcol-head"><h3>Perdido</h3><span class="count">0</span></div>
+              <div class="kcol-total"></div>
               <div class="kcol-cards"></div>
             </div>
           </div>
@@ -1848,10 +1858,13 @@
             <div id="whats-perm-aviso" style="display:none;"></div>
 
             <h3 style="margin-top:24px;">Mensagem do disparo</h3>
+            <p class="hint">Cadastre até 3 variações — o sistema alterna entre elas a cada contato (1, 2, 3, 1, 2, 3...), pra não mandar o texto idêntico pra todo mundo seguido. Isso reduz bastante o risco de bloqueio do WhatsApp. Só a Mensagem 1 é obrigatória.</p>
             <div class="form-grid">
-              <div class="f-field full"><label>Mensagem</label><textarea id="whats-msg" rows="5" placeholder="Escreva a mensagem que será enviada a cada contato selecionado..."></textarea></div>
+              <div class="f-field full"><label>Mensagem 1</label><textarea id="whats-msg" rows="4" placeholder="Escreva a mensagem que será enviada aos contatos selecionados..."></textarea></div>
+              <div class="f-field full"><label>Mensagem 2 <span style="font-weight:400;color:var(--gray-600);">(opcional — mesma ideia, com outras palavras)</span></label><textarea id="whats-msg-2" rows="4" placeholder="Deixe em branco pra usar só a Mensagem 1 sempre."></textarea></div>
+              <div class="f-field full"><label>Mensagem 3 <span style="font-weight:400;color:var(--gray-600);">(opcional)</span></label><textarea id="whats-msg-3" rows="4" placeholder="Deixe em branco se não quiser uma terceira variação."></textarea></div>
             </div>
-            <p class="hint">Ao clicar em disparar, uma aba do WhatsApp Web será aberta automaticamente para <b>cada contato selecionado</b>, já com a mensagem preenchida. Seu navegador pode pedir permissão para abrir múltiplas abas: clique em "permitir".</p>
+            <p class="hint">Ao clicar em disparar, uma aba do WhatsApp Web será aberta automaticamente para <b>cada contato selecionado</b>, já com a mensagem preenchida (alternando entre as variações cadastradas). Seu navegador pode pedir permissão para abrir múltiplas abas: clique em "permitir".</p>
             <div class="form-actions"><button class="btn-dark" onclick="dispatchWhatsapp()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Disparar para selecionados</button></div>
           </div>
         </section>
@@ -2204,8 +2217,12 @@
                   <select id="relatorio-filtro-filial" onchange="renderRelatorioBody()" style="width:100%;"><option value="">Todas</option></select>
                 </div>
                 <div class="f-field" style="margin:0;" id="relatorio-campo-seguradora">
-                  <label>Seguradora <span style="font-weight:400;color:var(--gray-600);">(Ctrl/Cmd+clique p/ várias)</span></label>
-                  <select id="relatorio-filtro-seguradora" multiple size="3" onchange="renderRelatorioBody()" style="width:100%;"></select>
+                  <label>Seguradora</label>
+                  <div class="ms-box" id="ms-box-rel-seg">
+                    <div class="ms-chips" id="ms-chips-rel-seg"></div>
+                    <input class="ms-search" id="ms-search-rel-seg" placeholder="Digite pra buscar...">
+                    <div class="ms-dropdown hidden" id="ms-dropdown-rel-seg"></div>
+                  </div>
                 </div>
                 <div class="f-field" style="margin:0;" id="relatorio-campo-produto">
                   <label>Produto</label>
@@ -2713,6 +2730,7 @@
         <span style="background:#fff;border:1.2px solid var(--border);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;">Produto</span>
         <span style="background:#fff;border:1.2px solid var(--border);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;">Seguradora</span>
         <span style="background:#fff;border:1.2px solid var(--border);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;">Data fim vigência</span>
+        <span style="background:#fff;border:1.2px solid var(--border);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;">Valor <span style="font-weight:400;color:var(--gray-600);">(opcional)</span></span>
       </div>
       <p style="font-size:11.5px;color:var(--gray-600);margin:8px 0 0;">* Apenas Cliente é obrigatório. Clientes já existentes no funil (mesma combinação de cliente/corretora/produto/seguradora) são <b>atualizados</b>, mantendo o estágio atual — não duplicam.</p>
     </div>
@@ -2746,6 +2764,10 @@
       <div class="f-field"><label>Produto</label><div id="funil-card-produto" style="padding:9px 0;font-size:13.5px;font-weight:600;">—</div></div>
       <div class="f-field"><label>Seguradora</label><div id="funil-card-seguradora" style="padding:9px 0;font-size:13.5px;font-weight:600;">—</div></div>
       <div class="f-field"><label>Fim da vigência</label><div id="funil-card-vigencia" style="padding:9px 0;font-size:13.5px;font-weight:600;">—</div></div>
+    </div>
+    <div class="f-field full">
+      <label>Valor estimado <span style="font-weight:400;color:var(--gray-600);">(opcional — usado pra somar o total de cada coluna do pipeline)</span></label>
+      <input type="number" id="funil-card-valor" step="0.01" placeholder="Ex: 2500.00">
     </div>
     <div class="f-field full">
       <label>Estágio</label>
@@ -3094,7 +3116,11 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
       <div style="display:flex;flex-direction:column;gap:3px;">
         <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Seguradora</label>
-        <select id="seletor-filtro-seguradora" multiple size="4" onchange="onSeletorSeguradoraChange()" style="border:1.4px solid var(--border);border-radius:10px;padding:6px;font-size:13px;font-family:inherit;outline:none;"></select>
+        <div class="ms-box" id="ms-box-sel-seg">
+          <div class="ms-chips" id="ms-chips-sel-seg"></div>
+          <input class="ms-search" id="ms-search-sel-seg" placeholder="Digite pra buscar...">
+          <div class="ms-dropdown hidden" id="ms-dropdown-sel-seg"></div>
+        </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:3px;">
         <label style="font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Corretora</label>
@@ -3106,6 +3132,10 @@
       </div>
     </div>
 
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <button class="btn-outline" style="font-size:12px;padding:6px 12px;" onclick="marcarTodosFiltradosSeletor()">Marcar todos os filtrados</button>
+      <button class="btn-outline" style="font-size:12px;padding:6px 12px;" onclick="desmarcarTodosSeletor()">Desmarcar todos</button>
+    </div>
     <div id="seletor-contatos-list" class="perm-list" style="max-height:300px;overflow-y:auto;border:1.4px solid var(--border);border-radius:12px;padding:4px;"></div>
     <div class="modal-actions">
       <button class="btn-outline" onclick="closeModal('modal-selecionar-contatos')">Cancelar</button>
@@ -3199,9 +3229,12 @@
       </select>
     </div>
     <div class="f-field">
-      <label>Seguradora <span style="font-weight:400;color:var(--gray-600);">(Ctrl/Cmd+clique pra marcar várias)</span></label>
-      <select id="filtros-producao-seguradora" multiple size="4" style="width:100%;border:1.4px solid var(--border);border-radius:11px;padding:8px;outline:none;font-size:13.5px;font-family:inherit;">
-      </select>
+      <label>Seguradora</label>
+      <div class="ms-box" id="ms-box-prod-seg">
+        <div class="ms-chips" id="ms-chips-prod-seg"></div>
+        <input class="ms-search" id="ms-search-prod-seg" placeholder="Digite pra buscar...">
+        <div class="ms-dropdown hidden" id="ms-dropdown-prod-seg"></div>
+      </div>
     </div>
     <div class="f-field">
       <label>Produto</label>
@@ -4467,18 +4500,23 @@
       if(!col) return;
       const cardsWrap = col.querySelector('.kcol-cards');
       const countEl = col.querySelector('.count');
+      const totalEl = col.querySelector('.kcol-total');
       const itens = linhas.filter(r => r.estagio === estagio)
         .sort((a,b) => (a.vigencia_fim||'9999').localeCompare(b.vigencia_fim||'9999'));
       countEl.textContent = itens.length;
+      const totalValor = itens.reduce((s,r) => s + Number(r.valor||0), 0);
+      if(totalEl) totalEl.textContent = totalValor > 0 ? `R$ ${totalValor.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}` : '';
       cardsWrap.innerHTML = itens.map(r => {
         const dias = diasRestantesVigencia(r.vigencia_fim);
         const corretoraNome = r.corretora_id ? (GROUPS[r.corretora_id]?.name || r.corretora_nome || '—') : (r.corretora_nome || '—');
         const corDias = dias === null ? 'var(--gray-600)' : (dias <= 30 ? '#dc2626' : (dias <= 60 ? '#b45309' : 'var(--gray-600)'));
+        const valorBadge = r.valor ? `<span class="kcard-valor">R$ ${Number(r.valor).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}</span>` : '';
         return `<div class="kcard" draggable="true" data-id="${r.id}" ondragstart="dragFunilCard(event)" onclick="openFunilCard('${r.id}')">
           <div class="t">${esc(r.cliente)}</div>
           <div class="m">${esc(corretoraNome)}</div>
           <div class="m">${esc(r.produto) || '—'} · ${esc(r.seguradora) || '—'}</div>
           <div class="tags"><span style="color:${corDias};">${labelDiasVigencia(dias)}</span></div>
+          ${valorBadge}
         </div>`;
       }).join('');
     });
@@ -4486,6 +4524,7 @@
     const countersEl = document.getElementById('funil-counters');
     if(countersEl){
       const total = linhas.length;
+      const valorTotalPipeline = linhas.filter(r => !['renovado','perdido'].includes(r.estagio)).reduce((s,r)=>s+Number(r.valor||0),0);
       const criticos = linhas.filter(r => {
         const d = diasRestantesVigencia(r.vigencia_fim);
         return d !== null && d <= 30 && !['renovado','perdido'].includes(r.estagio);
@@ -4494,6 +4533,7 @@
       const perdidas = linhas.filter(r => r.estagio === 'perdido').length;
       countersEl.innerHTML = `
         <div class="kpi-mini"><div class="l">Total no funil</div><div class="v">${total}</div></div>
+        <div class="kpi-mini"><div class="l">Valor em aberto no pipeline</div><div class="v">R$ ${valorTotalPipeline.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}</div></div>
         <div class="kpi-mini"><div class="l">Vencendo em 30 dias</div><div class="v">${criticos}</div></div>
         <div class="kpi-mini"><div class="l">Renovadas</div><div class="v">${renovadas}</div></div>
         <div class="kpi-mini"><div class="l">Perdidas</div><div class="v">${perdidas}</div></div>
@@ -4539,6 +4579,7 @@
     document.getElementById('funil-card-vigencia').textContent = r.vigencia_fim
       ? new Date(r.vigencia_fim + 'T00:00:00').toLocaleDateString('pt-BR') + ` (${labelDiasVigencia(diasRestantesVigencia(r.vigencia_fim))})`
       : '—';
+    document.getElementById('funil-card-valor').value = r.valor || '';
     document.getElementById('funil-card-estagio').value = r.estagio;
     openModal('modal-funil-card');
   }
@@ -4546,15 +4587,20 @@
   async function salvarEstagioFunilCard(){
     if(!editingRenovacaoId) return;
     const novoEstagio = document.getElementById('funil-card-estagio').value;
+    const novoValor = document.getElementById('funil-card-valor').value;
     const r = RENOVACOES_CACHE.find(x => x.id === editingRenovacaoId);
     if(!r) return;
     const btn = document.querySelector('#modal-funil-card .btn-dark');
     btn.disabled = true; btn.textContent = 'Salvando...';
-    const { error } = await supabase.from('renovacoes').update({ estagio: novoEstagio, estagio_manual: true }).eq('id', editingRenovacaoId);
+    const { error } = await supabase.from('renovacoes').update({
+      estagio: novoEstagio, estagio_manual: true,
+      valor: novoValor ? Number(novoValor) : null,
+    }).eq('id', editingRenovacaoId);
     btn.disabled = false; btn.textContent = 'Salvar';
     if(error){ alert('Erro ao salvar: ' + error.message); return; }
     r.estagio = novoEstagio;
     r.estagio_manual = true;
+    r.valor = novoValor ? Number(novoValor) : null;
     closeModal('modal-funil-card');
     renderFunil();
   }
@@ -4577,6 +4623,7 @@
       Produto: 'Auto',
       Seguradora: 'Tokio Marine',
       'Data fim vigência': '31/12/2026',
+      Valor: 2500.00,
     }];
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(modelo);
@@ -4651,6 +4698,8 @@
           const vigenciaFim = normalizarDataPlanilha(
             linha['Data fim vigência'] ?? linha['Data fim de vigência'] ?? linha['Vigência fim'] ?? linha['Vigencia fim'] ?? linha['Fim de vigência']
           );
+          const valorBruto = linha['Valor'] ?? linha['Valor estimado'] ?? linha['Prêmio'] ?? linha['Premio'];
+          const valor = valorBruto !== undefined && valorBruto !== '' ? parseValorMonetario(valorBruto) : null;
 
           if(!cliente){ ignorados++; return; }
 
@@ -4662,12 +4711,12 @@
             paraAtualizar.push({
               id: existente.id,
               cliente, corretora_id: corretoraId, corretora_nome: corretoraTexto,
-              produto, seguradora, vigencia_fim: vigenciaFim,
+              produto, seguradora, vigencia_fim: vigenciaFim, valor,
             });
           } else {
             paraInserir.push({
               cliente, corretora_id: corretoraId, corretora_nome: corretoraTexto,
-              produto, seguradora, vigencia_fim: vigenciaFim,
+              produto, seguradora, vigencia_fim: vigenciaFim, valor,
               estagio: calcularEstagioAutomatico(vigenciaFim), estagio_manual: false,
               chave_importacao: chave,
             });
@@ -6012,8 +6061,8 @@
     const segs = new Set();
     Object.values(SEGURADORAS).forEach(s => segs.add(s.nome));
     Object.values(GROUPS).forEach(g => (g.seguradoras||[]).forEach(s => segs.add(s)));
-    const selSeg = document.getElementById('seletor-filtro-seguradora');
-    selSeg.innerHTML = [...segs].sort().map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    const opcoesSegTodas = [...segs].sort().map(s => ({ value: s, label: s }));
+    msInit('sel-seg', opcoesSegTodas, [], () => onSeletorSeguradoraChange());
 
     // populate corretora com o componente de busca (valor = nome da corretora,
     // mesmo padrão já usado nesse seletor)
@@ -6021,7 +6070,6 @@
     msInit('sel-cor', opcoesCorrTodas, [], () => filtrarSeletor());
 
     document.getElementById('seletor-filtro-texto').value = '';
-    Array.from(selSeg.options).forEach(o => o.selected = false);
 
     filtrarSeletor();
     atualizarContadorSeletor();
@@ -6030,7 +6078,7 @@
 
   // Quando seleciona seguradora(s): restringe corretoras vinculadas a elas
   function onSeletorSeguradoraChange(){
-    const segsFiltro = Array.from(document.getElementById('seletor-filtro-seguradora').selectedOptions).map(o=>o.value);
+    const segsFiltro = msGetSelecionados('sel-seg');
     let opcoesCorr;
     if(segsFiltro.length){
       // Mostra só corretoras vinculadas a QUALQUER uma das seguradoras marcadas
@@ -6047,7 +6095,7 @@
   function filtrarSeletor(){
     const texto = normalizarBusca(document.getElementById('seletor-filtro-texto').value||'');
     const corrsFiltro = msGetSelecionados('sel-cor');
-    const segsFiltro = Array.from(document.getElementById('seletor-filtro-seguradora').selectedOptions).map(o=>o.value);
+    const segsFiltro = msGetSelecionados('sel-seg');
 
     let lista = _seletorTodosContatos;
     if(texto) lista = lista.filter(c => normalizarBusca(c.nome).includes(texto) || (c.whatsapp||'').includes(texto));
@@ -6081,6 +6129,35 @@
     document.getElementById('seletor-contador').textContent = `(${marcados}/${LIMITE_CONTATOS_DISPARO})`;
   }
 
+  // Marca de uma vez todos os contatos que estão aparecendo com o filtro atual
+  // (ex: filtrou por uma corretora ou seguradora — marca todo mundo dela).
+  // Respeita o limite de contatos por disparo.
+  function marcarTodosFiltradosSeletor(){
+    const checkboxes = Array.from(document.querySelectorAll('#seletor-contatos-list input[type="checkbox"]'));
+    const naoMarcados = checkboxes.filter(el => !el.checked);
+    const jaMarcados = checkboxes.length - naoMarcados.length;
+    let vagas = LIMITE_CONTATOS_DISPARO - jaMarcados;
+    if(vagas <= 0){
+      alert(`Você já atingiu o limite de ${LIMITE_CONTATOS_DISPARO} contatos por disparo.`);
+      return;
+    }
+    let marcados = 0;
+    for(const el of naoMarcados){
+      if(marcados >= vagas) break;
+      el.checked = true;
+      marcados++;
+    }
+    if(marcados < naoMarcados.length){
+      alert(`Marquei ${marcados} contato(s) — parei aí porque o limite é de ${LIMITE_CONTATOS_DISPARO} por disparo. Ainda ficaram ${naoMarcados.length - marcados} de fora deste filtro.`);
+    }
+    atualizarContadorSeletor();
+  }
+
+  function desmarcarTodosSeletor(){
+    document.querySelectorAll('#seletor-contatos-list input[type="checkbox"]').forEach(el => el.checked = false);
+    atualizarContadorSeletor();
+  }
+
   function onSeletorContatoChange(el){
     const marcados = document.querySelectorAll('#seletor-contatos-list input:checked');
     if(marcados.length > LIMITE_CONTATOS_DISPARO){
@@ -6092,11 +6169,27 @@
 
   function confirmarSelecaoContatos(){
     const marcados = Array.from(document.querySelectorAll('#seletor-contatos-list input:checked'));
-    WHATS_SELECIONADOS = marcados.map(el => ({ id: el.value, nome: el.dataset.nome, whatsapp: el.dataset.whats }));
+    const todos = marcados.map(el => ({ id: el.value, nome: el.dataset.nome, whatsapp: el.dataset.whats }));
+
+    // Nunca deixa o mesmo número de WhatsApp entrar duas vezes no mesmo disparo
+    // (pode acontecer de a mesma pessoa aparecer como "equipe" e como "manual",
+    // por exemplo — o número é o que importa, não o registro de origem).
+    const vistos = new Set();
+    WHATS_SELECIONADOS = todos.filter(c => {
+      const numeroLimpo = (c.whatsapp || '').replace(/\D/g, '');
+      if(!numeroLimpo || vistos.has(numeroLimpo)) return false;
+      vistos.add(numeroLimpo);
+      return true;
+    });
+
+    const duplicadosRemovidos = todos.length - WHATS_SELECIONADOS.length;
     const resumo = document.getElementById('whats-selecionados-resumo');
     resumo.textContent = WHATS_SELECIONADOS.length
       ? `${WHATS_SELECIONADOS.length} contato(s) selecionado(s): ${WHATS_SELECIONADOS.map(s => s.nome).join(', ')}`
       : 'Nenhum contato selecionado ainda.';
+    if(duplicadosRemovidos > 0){
+      resumo.textContent += ` (${duplicadosRemovidos} repetido(s) com o mesmo número foram removidos automaticamente)`;
+    }
     closeModal('modal-selecionar-contatos');
   }
 
@@ -6131,8 +6224,11 @@
   }
 
   async function dispatchWhatsapp(){
-    const msg = document.getElementById('whats-msg').value.trim();
-    if(!msg){ alert('Escreva a mensagem antes de disparar.'); return; }
+    const msg1 = document.getElementById('whats-msg').value.trim();
+    const msg2 = document.getElementById('whats-msg-2').value.trim();
+    const msg3 = document.getElementById('whats-msg-3').value.trim();
+    const mensagens = [msg1, msg2, msg3].filter(Boolean);
+    if(!mensagens.length){ alert('Escreva ao menos a Mensagem 1 antes de disparar.'); return; }
     if(WHATS_SELECIONADOS.length === 0){ alert('Selecione ao menos um contato.'); return; }
     // Verificar permissão por seguradora
     const selSeg = document.getElementById('whats-seguradora-sel');
@@ -6153,21 +6249,37 @@
       if(!continuar) return;
     }
 
+    // Alterna entre as variações cadastradas (1, 2, 3, 1, 2, 3...) e usa um
+    // intervalo com uma variação aleatória entre cada abertura de aba — os dois
+    // juntos ajudam a não parecer um disparo automatizado idêntico pro WhatsApp.
+    let acumulado = 0;
+    const mensagensEnviadas = [];
     WHATS_SELECIONADOS.forEach((c, i) => {
-      if(c.whatsapp) setTimeout(() => openWhats(c.whatsapp, msg), i * 300); // pequeno intervalo entre aberturas de aba
+      const mensagemDaVez = mensagens[i % mensagens.length];
+      mensagensEnviadas.push(mensagemDaVez);
+      if(c.whatsapp){
+        acumulado += 300 + Math.floor(Math.random() * 400); // 300–700ms entre cada, variando
+        setTimeout(() => openWhats(c.whatsapp, mensagemDaVez), acumulado);
+      }
     });
+
+    const resumoMensagem = mensagens.length > 1
+      ? `[Rodízio de ${mensagens.length} mensagens]\n\n` + mensagens.map((m,i) => `Variação ${i+1}: ${m}`).join('\n\n')
+      : mensagens[0];
 
     await supabase.from('marketing_disparos').insert({
-      tipo:'whatsapp', mensagem: msg, enviado_por: currentUserId,
+      tipo:'whatsapp', mensagem: resumoMensagem, enviado_por: currentUserId,
       quantidade_contatos: WHATS_SELECIONADOS.length,
-      contatos: WHATS_SELECIONADOS.map(c => ({ nome: c.nome, whatsapp: c.whatsapp })),
+      contatos: WHATS_SELECIONADOS.map((c,i) => ({ nome: c.nome, whatsapp: c.whatsapp, mensagem: mensagensEnviadas[i] })),
     });
-    registrarLog('Disparo de WhatsApp', `${WHATS_SELECIONADOS.length} contato(s)`);
+    registrarLog('Disparo de WhatsApp', `${WHATS_SELECIONADOS.length} contato(s)${mensagens.length > 1 ? ` · ${mensagens.length} variações` : ''}`);
 
-    alert(`Disparo enviado para ${WHATS_SELECIONADOS.length} contato(s).`);
+    alert(`Disparo enviado para ${WHATS_SELECIONADOS.length} contato(s)${mensagens.length > 1 ? `, alternando entre ${mensagens.length} variações de mensagem` : ''}.`);
     WHATS_SELECIONADOS = [];
     document.getElementById('whats-selecionados-resumo').textContent = 'Nenhum contato selecionado ainda.';
     document.getElementById('whats-msg').value = '';
+    document.getElementById('whats-msg-2').value = '';
+    document.getElementById('whats-msg-3').value = '';
     renderHistoricoDisparos();
   }
 
@@ -7225,10 +7337,7 @@
 
   function openFiltrosProducao(){
     // Populate selects from current hidden fields
-    const selSeg = document.getElementById('filtros-producao-seguradora');
     const selFil = document.getElementById('filtros-producao-filial');
-    // Fill seguradoras (multi-seleção — sem opção "Todas", basta não marcar nenhuma)
-    selSeg.innerHTML = Object.values(SEGURADORAS).map(s => `<option value="${esc(s.nome)}">${esc(s.nome)}</option>`).join('');
     // Fill filiais (valores únicos de filial entre as corretoras cadastradas)
     const filiaisUnicas = [...new Set(Object.values(GROUPS).map(g => g.filial).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
     selFil.innerHTML = '<option value="">Todas as filiais</option>' +
@@ -7243,14 +7352,15 @@
     const curProd = document.getElementById('producao-filtro-produto')?.value || '';
     const fComp = document.getElementById('filtros-producao-competencia');
     const fFil = document.getElementById('filtros-producao-filial');
-    const fSeg = document.getElementById('filtros-producao-seguradora');
     const fProd = document.getElementById('filtros-producao-produto');
     if(fComp) fComp.value = curComp;
     if(fFil) fFil.value = curFil;
-    if(fSeg) Array.from(fSeg.options).forEach(o => { o.selected = curSegArray.includes(o.value); });
     if(fProd) fProd.value = curProd;
 
-    // Corretora: componente de busca com chips, em vez do select nativo
+    // Seguradora e Corretora: componente de busca com chips, em vez do select nativo
+    const opcoesSeguradora = Object.values(SEGURADORAS).map(s => ({ value: s.nome, label: s.nome })).sort((a,b)=>a.label.localeCompare(b.label,'pt-BR'));
+    msInit('prod-seg', opcoesSeguradora, curSegArray);
+
     const opcoesCorretora = Object.entries(GROUPS)
       .map(([gid,g]) => ({ value: gid, label: g.name }))
       .sort((a,b) => a.label.localeCompare(b.label, 'pt-BR'));
@@ -7268,7 +7378,7 @@
     const comp = document.getElementById('filtros-producao-competencia')?.value || '';
     const corArray = msGetSelecionados('prod-cor');
     const fil = document.getElementById('filtros-producao-filial')?.value || '';
-    const segArray = Array.from(document.getElementById('filtros-producao-seguradora')?.selectedOptions || []).map(o=>o.value);
+    const segArray = msGetSelecionados('prod-seg');
     const prod = document.getElementById('filtros-producao-produto')?.value || '';
     // Apply to hidden fields
     const hComp = document.getElementById('producao-competencia');
@@ -8417,9 +8527,9 @@
       const filiaisUnicas = [...new Set(Object.values(GROUPS).map(g => g.filial).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
       selFil.innerHTML = `<option value="">Todas</option>` + filiaisUnicas.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
     }
-    const selSeg = document.getElementById('relatorio-filtro-seguradora');
-    if(selSeg && selSeg.options.length === 0){
-      selSeg.innerHTML = Object.values(SEGURADORAS).map(s=>`<option value="${esc(s.nome)}">${esc(s.nome)}</option>`).join('');
+    if(!window._msRegistry['rel-seg']){
+      const opcoesSeguradora = Object.values(SEGURADORAS).map(s => ({ value: s.nome, label: s.nome })).sort((a,b)=>a.label.localeCompare(b.label,'pt-BR'));
+      msInit('rel-seg', opcoesSeguradora, [], () => renderRelatorioBody());
     }
     // do NOT auto-render table — wait for user to apply filters
   }
@@ -8430,7 +8540,7 @@
     document.getElementById('relatorio-filtro-data-fim').value = '';
     msSetSelecionados('rel-cor', []);
     const rf = document.getElementById('relatorio-filtro-filial'); if(rf) rf.value='';
-    const selSegLimpar = document.getElementById('relatorio-filtro-seguradora'); if(selSegLimpar) Array.from(selSegLimpar.options).forEach(o => o.selected = false);
+    msSetSelecionados('rel-seg', []);
     const rp = document.getElementById('relatorio-filtro-produto'); if(rp) rp.value='';
     const ro = document.getElementById('relatorio-ordenar-valor'); if(ro) ro.value='';
     document.getElementById('relatorio-tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray-600);padding:40px 20px;">Defina os filtros acima e clique em <b>Pesquisar</b>.</td></tr>`;
@@ -8449,7 +8559,7 @@
     if(!isSuperAdmin() && currentUserFilial){
       filialNome = currentUserFilial;
     }
-    const seguradorasNomes = Array.from(document.getElementById('relatorio-filtro-seguradora').selectedOptions).map(o=>o.value);
+    const seguradorasNomes = msGetSelecionados('rel-seg');
     const produtoNome = document.getElementById('relatorio-filtro-produto')?.value || '';
 
     let query = supabase.from('producao_mensal').select('*');
@@ -8500,7 +8610,7 @@
     const dataFim = document.getElementById('relatorio-filtro-data-fim').value;
     const corretorasIdsCheck = msGetSelecionados('rel-cor');
     const filialNome = document.getElementById('relatorio-filtro-filial')?.value || '';
-    const seguradorasNomesCheck = Array.from(document.getElementById('relatorio-filtro-seguradora').selectedOptions).map(o=>o.value);
+    const seguradorasNomesCheck = msGetSelecionados('rel-seg');
     const produtoNome = document.getElementById('relatorio-filtro-produto')?.value || '';
 
     const algumFiltro = !!(competencia || dataIni || dataFim || corretorasIdsCheck.length || filialNome || seguradorasNomesCheck.length || produtoNome);
@@ -8684,7 +8794,7 @@
     msSetSelecionados('prod-cor', []);
     ['producao-filtro-filial','filtros-producao-filial'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     const hiddenSeg = document.getElementById('producao-filtro-seguradora'); if(hiddenSeg) hiddenSeg.value = '[]';
-    const multiSeg = document.getElementById('filtros-producao-seguradora'); if(multiSeg) Array.from(multiSeg.options).forEach(o => o.selected = false);
+    msSetSelecionados('prod-seg', []);
     ['producao-filtro-produto','filtros-producao-produto'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     const badge = document.getElementById('producao-filtros-ativos');
     if(badge) badge.style.display = 'none';
@@ -10916,10 +11026,14 @@
         : `<p class="hint" style="margin:0;">Nenhuma seguradora cadastrada ainda.</p>`;
     }
 
-    ['prod-seguradora','importar-seguradora','mat-seguradora','relatorio-filtro-seguradora'].forEach(id => {
+    ['prod-seguradora','importar-seguradora','mat-seguradora'].forEach(id => {
       const el = document.getElementById(id);
       if(el && el.tagName === 'SELECT') el.innerHTML = nomes.map(n => `<option value="${n}">${n}</option>`).join('');
     });
+
+    // Mantém os componentes de busca com chips (seguradora) atualizados também
+    const opcoesSegAtualizadas = nomes.map(n => ({ value: n, label: n }));
+    ['rel-seg','prod-seg','sel-seg'].forEach(id => { if(window._msRegistry[id]) msSetOpcoes(id, opcoesSegAtualizadas); });
 
     const datalist = document.getElementById('producao-seguradoras-datalist');
     if(datalist) datalist.innerHTML = nomes.map(n => `<option value="${n}">`).join('');
