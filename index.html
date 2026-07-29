@@ -5364,7 +5364,8 @@
     pendingComentarios = (c.comentarios || []).slice();
     document.getElementById('card-modal-title').textContent = 'Editar tarefa';
     document.getElementById('card-save-btn').textContent = 'Salvar alterações';
-    document.getElementById('card-delete-btn').style.display = 'inline-flex';
+    const souCriadorDoCard = c.criado_por === currentUserId;
+    document.getElementById('card-delete-btn').style.display = (souCriadorDoCard || isSuperAdmin()) ? 'inline-flex' : 'none';
     document.getElementById('card-titulo').value = c.titulo || '';
     document.getElementById('card-campo-livre').value = c.campo_livre || '';
     document.getElementById('card-coluna').value = c.coluna;
@@ -5549,6 +5550,8 @@
     } else {
       pendingHistorico.unshift({when: nowLabel(), text:'Card criado.'});
       payload.historico = pendingHistorico;
+      payload.criado_por = currentUserId;
+      payload.criado_por_nome = currentUserFullName;
       const { error } = await supabase.from('crm_cards').insert(payload);
       if(error){ alert('Erro ao criar card: ' + error.message); return; }
     }
@@ -5558,7 +5561,14 @@
   }
 
   async function deleteCard(){
-    if(editingCardId && confirm('Excluir este card?')){
+    if(!editingCardId) return;
+    const c = CARDS_CACHE.find(x => x.id === editingCardId);
+    const souCriador = c && c.criado_por === currentUserId;
+    if(!souCriador && !isSuperAdmin()){
+      alert('Só quem criou este card (ou o Super Administrador) pode excluí-lo.');
+      return;
+    }
+    if(confirm('Excluir este card?')){
       const { error } = await supabase.from('crm_cards').delete().eq('id', editingCardId);
       if(error){ alert('Erro ao excluir: ' + error.message); return; }
       renderKanban();
