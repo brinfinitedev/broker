@@ -1361,7 +1361,7 @@
           <div id="home-notif-banner" class="hidden" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface-2);border:1.4px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:16px;">
             <div style="display:flex;align-items:center;gap:10px;">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-              <span style="font-size:13px;">Ativar avisos no navegador pra tarefas com prazo vencendo?</span>
+              <span style="font-size:13px;">Ativar avisos no navegador pra tarefas, aniversários e comunicados internos?</span>
             </div>
             <div style="display:flex;gap:8px;">
               <button class="btn-outline" style="padding:6px 12px;font-size:12px;" onclick="dispensarNotificacoesPush()">Agora não</button>
@@ -4035,7 +4035,7 @@
       renderQuickAccessSeguradoras();
       renderTarefasPendentesHome();
       verificarBannerNotificacoes();
-      verificarTarefasParaNotificar();
+      verificarTodasNotificacoes();
     }
     if(id === 'crm'){
       renderKanban();
@@ -5234,11 +5234,66 @@
     const permissao = await Notification.requestPermission();
     document.getElementById('home-notif-banner').classList.add('hidden');
     if(permissao === 'granted'){
-      new Notification('Infinite Broker', { body: 'Notificações ativadas! Vamos te avisar sobre tarefas com prazo vencendo.' });
-      verificarTarefasParaNotificar();
+      new Notification('Infinite Broker', { body: 'Notificações ativadas! Vamos te avisar sobre tarefas, aniversários e comunicados internos.' });
+      verificarTodasNotificacoes();
     } else {
       alert('Permissão não concedida. Você pode ativar depois nas configurações do navegador, se mudar de ideia.');
     }
+  }
+
+  // Roda uma vez por sessão (e no máximo 1x por dia por pessoa, guardado no
+  // localStorage) — avisa sobre quem faz aniversário hoje.
+  async function verificarAniversariantesParaNotificar(){
+    if(!('Notification' in window) || Notification.permission !== 'granted') return;
+    const hojeStr = new Date().toISOString().slice(0,10);
+    const todos = await coletarAniversariantes();
+    const hoje = todos.filter(p => p.dias === 0);
+    if(!hoje.length) return;
+
+    const jaAvisadosHoje = JSON.parse(localStorage.getItem('notifAniversariosAvisados') || '{}');
+    if(jaAvisadosHoje._dia !== hojeStr){
+      Object.keys(jaAvisadosHoje).forEach(k => delete jaAvisadosHoje[k]);
+      jaAvisadosHoje._dia = hojeStr;
+    }
+
+    hoje.forEach(p => {
+      const chave = p.nome + '|' + p.origem;
+      if(jaAvisadosHoje[chave]) return;
+      new Notification('🎂 Aniversário hoje!', {
+        body: `${p.nome} (${p.origem}) faz aniversário hoje.`,
+        tag: 'aniversario-' + chave,
+      });
+      jaAvisadosHoje[chave] = true;
+    });
+    localStorage.setItem('notifAniversariosAvisados', JSON.stringify(jaAvisadosHoje));
+  }
+
+  // Comunicados não são diários — uma vez avisado, nunca mais repete o mesmo
+  // (guarda os IDs já avisados pra sempre, não reseta por dia).
+  async function verificarComunicadosParaNotificar(){
+    if(!('Notification' in window) || Notification.permission !== 'granted') return;
+    const { data, error } = await supabase.from('comunicados').select('id, mensagem, validade, created_at').order('created_at', { ascending: false }).limit(20);
+    if(error || !data) return;
+
+    const ativos = data.filter(isCommAtivo);
+    const jaAvisados = JSON.parse(localStorage.getItem('notifComunicadosAvisados') || '[]');
+    const novos = ativos.filter(c => !jaAvisados.includes(c.id));
+    if(!novos.length) return;
+
+    novos.slice(0, 5).forEach(c => {
+      const resumo = (c.mensagem || '').slice(0, 100) + ((c.mensagem||'').length > 100 ? '…' : '');
+      new Notification('📣 Novo comunicado interno', { body: resumo, tag: 'comunicado-' + c.id });
+      jaAvisados.push(c.id);
+    });
+    localStorage.setItem('notifComunicadosAvisados', JSON.stringify(jaAvisados.slice(-200))); // não deixa crescer pra sempre
+  }
+
+  // Chama todas as checagens de notificação de uma vez — tarefas, aniversários
+  // e comunicados internos.
+  async function verificarTodasNotificacoes(){
+    verificarTarefasParaNotificar();
+    verificarAniversariantesParaNotificar();
+    verificarComunicadosParaNotificar();
   }
 
   // Roda uma vez por sessão (e no máximo 1x por dia por tarefa, guardado no
