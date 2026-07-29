@@ -1460,7 +1460,7 @@
               <button class="btn-outline" onclick="filtrarCorretoras('')">Limpar</button>
             </div>
             <table>
-              <thead><tr><th>Corretora</th><th>Filial</th><th>CNPJ</th><th class="col-cidade">Cidade</th><th>Status</th><th></th></tr></thead>
+              <thead><tr><th>Corretora</th><th>Filial</th><th>CNPJ</th><th class="col-cidade">Cidade</th><th>Dados</th><th>Status</th><th></th></tr></thead>
               <tbody id="corretoras-tbody"></tbody>
             </table>
             <div id="corretoras-paginacao" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:14px;"></div>
@@ -2267,7 +2267,7 @@
         <section class="view hidden" id="view-usuarios" data-role="admin gestor consultor">
           <div class="page-head"><div><h1>Usuários</h1><p>Controle de acesso da equipe interna</p></div>
             <div style="display:flex; gap:10px;">
-              <button class="btn-outline" onclick="openModal('modal-filial')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>Cadastrar filial</button>
+              <button class="btn-outline" data-role="admin" onclick="openFilialModal(null)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>Cadastrar filial</button>
               <button class="btn-dark" onclick="openUserModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Novo usuário</button>
             </div>
           </div>
@@ -2559,7 +2559,7 @@
 <!-- ---------------- MODAL: CADASTRAR FILIAL ---------------- -->
 <div class="modal-overlay" id="modal-filial" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-filial')">
   <div class="modal-box">
-    <h3>Cadastrar filial</h3>
+    <h3 id="filial-modal-title">Cadastrar filial</h3>
     <div class="f-field"><label>Nome da filial</label><input id="filial-nome" placeholder="Ex: Filial Curitiba"></div>
     <div class="form-grid">
       <div class="f-field"><label>Cidade</label><input id="filial-cidade" placeholder="Ex: Curitiba"></div>
@@ -2572,9 +2572,12 @@
     <div class="f-field"><label>E-mail</label><input id="filial-email" type="email" placeholder="filial@empresa.com.br"></div>
     <div class="f-field"><label>Endereço</label><input id="filial-endereco" placeholder="Rua, número, bairro"></div>
     <div id="filial-error" class="login-error hidden" style="margin-top:6px;"></div>
-    <div class="modal-actions">
-      <button class="btn-outline" onclick="closeModal('modal-filial')">Cancelar</button>
-      <button class="btn-dark" onclick="saveFilial()">Salvar filial</button>
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button class="btn-outline hidden" id="btn-excluir-filial" onclick="excluirFilial(editingFilialId); closeModal('modal-filial');" style="color:#dc2626;border-color:#fecaca;">Excluir filial</button>
+      <div style="display:flex;gap:10px;margin-left:auto;">
+        <button class="btn-outline" onclick="closeModal('modal-filial')">Cancelar</button>
+        <button class="btn-dark" onclick="saveFilial()">Salvar filial</button>
+      </div>
     </div>
   </div>
 </div>
@@ -6264,6 +6267,18 @@
     renderCorretorasList();
   }
 
+  // Calcula o quanto do cadastro dessa corretora está preenchido (CNPJ, SUSEP,
+  // e-mail, telefone, endereço, cidade, estado, filial e ao menos 1 seguradora
+  // vinculada) — dá uma ideia rápida de quem precisa de cadastro completado.
+  function calcularCompletudeCorretora(g){
+    const campos = [
+      g.cnpj, g.susep, g.email, g.telefone, g.endereco, g.cidade, g.estado, g.filial,
+      (g.seguradoras && g.seguradoras.length) ? 'ok' : '',
+    ];
+    const preenchidos = campos.filter(v => v && String(v).trim()).length;
+    return Math.round((preenchidos / campos.length) * 100);
+  }
+
   function renderCorretorasList(){
     const tbody = document.getElementById('corretoras-tbody');
     if(!tbody) return;
@@ -6298,7 +6313,7 @@
     }).sort((a, b) => (GROUPS[a].name||'').localeCompare(GROUPS[b].name||'', 'pt-BR'));
 
     if(gids.length === 0){
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--gray-600);">${query || statusFiltro ? 'Nenhuma corretora encontrada para este filtro.' : 'Nenhuma corretora cadastrada ainda.'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--gray-600);">${query || statusFiltro ? 'Nenhuma corretora encontrada para este filtro.' : 'Nenhuma corretora cadastrada ainda.'}</td></tr>`;
       const pagBoxVazio = document.getElementById('corretoras-paginacao');
       if(pagBoxVazio) pagBoxVazio.innerHTML = '';
       return;
@@ -6314,6 +6329,14 @@
       const g = GROUPS[gid];
       const iniciais = initials(g.name);
       const status = g.status || 'ativa';
+      const pctDados = calcularCompletudeCorretora(g);
+      const corBarra = pctDados >= 80 ? '#15803d' : (pctDados >= 40 ? '#b45309' : '#dc2626');
+      const dadosCell = `<div style="display:flex;align-items:center;gap:8px;min-width:90px;">
+        <div style="flex:1;height:6px;background:var(--surface-2);border-radius:99px;overflow:hidden;">
+          <div style="height:100%;width:${pctDados}%;background:${corBarra};border-radius:99px;"></div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:${corBarra};white-space:nowrap;">${pctDados}%</span>
+      </div>`;
       const statusBadge = status === 'ativa'
         ? `<span class="chip on" style="font-size:11px;cursor:pointer;" onclick="event.stopPropagation(); toggleCorretoraStatus('${gid}')" title="Clique para desativar">Ativa</span>`
         : `<span class="chip" style="font-size:11px;color:var(--gray-400);cursor:pointer;" onclick="event.stopPropagation(); toggleCorretoraStatus('${gid}')" title="Clique para ativar">Inativa</span>`;
@@ -6323,6 +6346,7 @@
         <td onclick="openCorretoraForm('${gid}')">${esc(g.filial) || '—'}</td>
         <td onclick="openCorretoraForm('${gid}')">${esc(g.cnpj) || 'A preencher'}</td>
         <td class="col-cidade" onclick="openCorretoraForm('${gid}')">${esc(g.cidade) || 'A preencher'}</td>
+        <td onclick="openCorretoraForm('${gid}')" title="${pctDados}% dos dados principais preenchidos">${dadosCell}</td>
         <td>${statusBadge}</td>
         <td><button class="access-btn" onclick="openCorretoraForm('${gid}')">Editar</button></td>
       </tr>`;
@@ -8025,11 +8049,35 @@
         if(grupo.size > 1) grupos.push([...grupo]);
       });
 
-      renderResultadoDuplicatas(grupos);
+      // Remove grupos que o usuário já desconsiderou antes (confirmou que não
+      // eram duplicata de verdade) — a decisão fica salva mesmo depois de
+      // rodar a análise de novo.
+      const descartados = new Set(JSON.parse(localStorage.getItem('duplicatasDescartadas') || '[]'));
+      const gruposFiltrados = grupos.filter(g => !descartados.has(fingerprintGrupoDuplicata(g)));
+
+      renderResultadoDuplicatas(gruposFiltrados);
     }, 30);
   }
 
   let DUPLICATAS_SELECIONADAS = new Set();
+
+  // Identifica um grupo de forma estável (independente da ordem), pra lembrar
+  // se o usuário já desconsiderou ele antes.
+  function fingerprintGrupoDuplicata(grupo){
+    return [...grupo].sort().join('|');
+  }
+
+  function descartarGrupoDuplicata(indice){
+    const grupos = window._duplicatasGrupos || [];
+    const grupo = grupos[indice];
+    if(!grupo) return;
+    const descartados = new Set(JSON.parse(localStorage.getItem('duplicatasDescartadas') || '[]'));
+    descartados.add(fingerprintGrupoDuplicata(grupo));
+    localStorage.setItem('duplicatasDescartadas', JSON.stringify([...descartados]));
+    grupo.forEach(gid => DUPLICATAS_SELECIONADAS.delete(gid));
+    const novosGrupos = grupos.filter((_, i) => i !== indice);
+    renderResultadoDuplicatas(novosGrupos);
+  }
 
   function renderResultadoDuplicatas(grupos){
     const box = document.getElementById('duplicatas-resultado');
@@ -8048,7 +8096,10 @@
       </div>
       ${grupos.map((grupo, i) => `
         <div class="card" style="padding:16px;margin-bottom:12px;">
-          <div style="font-size:11.5px;font-weight:800;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;">Grupo ${i+1} · ${grupo.length} corretoras</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
+            <div style="font-size:11.5px;font-weight:800;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;">Grupo ${i+1} · ${grupo.length} corretoras</div>
+            <button class="access-btn" onclick="descartarGrupoDuplicata(${i})" title="Confirma que essas corretoras NÃO são duplicatas — some da lista e não volta a aparecer">Desconsiderar</button>
+          </div>
           ${grupo.map(gid => {
             const g = GROUPS[gid];
             if(!g) return '';
@@ -9969,8 +10020,31 @@
         <td>${esc(f.cidade)||''}${f.estado?' – '+esc(f.estado):''}</td>
         <td>${esc(f.responsavel)||'—'}</td>
         <td>${esc(f.telefone)||'—'}</td>
-        <td><button class="btn-sm" onclick="excluirFilial('${f.id}')">Excluir</button></td>
+        <td>
+          ${isSuperAdmin() ? `<button class="btn-sm" onclick="openFilialModal('${f.id}')">Editar</button>
+          <button class="btn-sm" onclick="excluirFilial('${f.id}')">Excluir</button>` : `<span class="hint" style="margin:0;">Somente Super Admin</span>`}
+        </td>
       </tr>`).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--gray-600);">Nenhuma filial cadastrada ainda.</td></tr>`;
+  }
+
+  let editingFilialId = null;
+
+  function openFilialModal(id){
+    if(!isSuperAdmin()){ alert('Somente o Super Administrador pode cadastrar ou editar filiais.'); return; }
+    editingFilialId = id || null;
+    const f = id ? (_filiaisCache || []).find(x => x.id === id) : null;
+    document.getElementById('filial-modal-title').textContent = id ? 'Editar filial' : 'Cadastrar filial';
+    document.getElementById('filial-nome').value = f ? (f.nome || '') : '';
+    document.getElementById('filial-cidade').value = f ? (f.cidade || '') : '';
+    document.getElementById('filial-estado').value = f ? (f.estado || '') : '';
+    document.getElementById('filial-responsavel').value = f ? (f.responsavel || '') : '';
+    document.getElementById('filial-telefone').value = f ? (f.telefone || '') : '';
+    document.getElementById('filial-email').value = f ? (f.email || '') : '';
+    document.getElementById('filial-endereco').value = f ? (f.endereco || '') : '';
+    document.getElementById('filial-error').classList.add('hidden');
+    const btnExcluir = document.getElementById('btn-excluir-filial');
+    if(btnExcluir) btnExcluir.classList.toggle('hidden', !id);
+    openModal('modal-filial');
   }
 
   async function saveFilial(){
@@ -9985,18 +10059,28 @@
       email: document.getElementById('filial-email').value.trim(),
       endereco: document.getElementById('filial-endereco').value.trim(),
     };
-    const { error } = await supabase.from('filiais').insert(payload);
-    if(error){ document.getElementById('filial-error').textContent='Erro: '+error.message; document.getElementById('filial-error').classList.remove('hidden'); return; }
+    if(editingFilialId){
+      const { error } = await supabase.from('filiais').update(payload).eq('id', editingFilialId);
+      if(error){ document.getElementById('filial-error').textContent='Erro: '+error.message; document.getElementById('filial-error').classList.remove('hidden'); return; }
+      registrarLog('Editou filial', nome);
+    } else {
+      const { error } = await supabase.from('filiais').insert(payload);
+      if(error){ document.getElementById('filial-error').textContent='Erro: '+error.message; document.getElementById('filial-error').classList.remove('hidden'); return; }
+      registrarLog('Criou filial', nome);
+    }
     ['filial-nome','filial-cidade','filial-estado','filial-responsavel','filial-telefone','filial-email','filial-endereco'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('filial-error').classList.add('hidden');
+    editingFilialId = null;
     closeModal('modal-filial');
     renderFiliais();
-    registrarLog('Cadastrou filial', nome);
   }
 
   async function excluirFilial(id){
+    if(!isSuperAdmin()){ alert('Somente o Super Administrador pode excluir filiais.'); return; }
     if(!confirm('Excluir esta filial?')) return;
+    const f = (_filiaisCache || []).find(x => x.id === id);
     await supabase.from('filiais').delete().eq('id', id);
+    registrarLog('Excluiu filial', f ? f.nome : id);
     renderFiliais();
   }
 
