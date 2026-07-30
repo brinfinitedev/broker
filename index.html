@@ -415,6 +415,8 @@
   .toggle-row input:disabled{ opacity:.5; cursor:not-allowed; }
 
   .team-row{ display:grid; grid-template-columns: 1.4fr 1fr 1.4fr 1fr 1fr auto; gap:14px; align-items:center; margin-bottom:12px; }
+  .team-row.team-row-seguradora{ grid-template-columns: 1.2fr 1fr 1.2fr 1fr 1fr 1fr auto; }
+  .team-row-header.team-row-seguradora{ grid-template-columns: 1.2fr 1fr 1.2fr 1fr 1fr 1fr auto; }
   .team-row input{ min-width:0; }
   .team-row-header{ display:grid; grid-template-columns: 1.4fr 1fr 1.4fr 1fr 1fr auto; gap:14px; margin-bottom:8px; }
   .team-row-header span{ font-size:11px; font-weight:700; color:var(--gray-600); text-transform:uppercase; letter-spacing:.3px; }
@@ -648,6 +650,9 @@
   .ms-option:hover{ background:var(--surface-2); }
   .ms-option-empty{ padding:9px 14px; font-size:12.5px; color:var(--gray-600); }
   .tab-strip{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:20px; }
+  /* Mantém o tamanho da janela fixo ao trocar de aba (Tarefas/Pipeline) — sem
+     isso, a aba "Anexos"/"Histórico" (mais curtas) faziam o modal encolher. */
+  .tab-pane{ min-height:420px; }
   .tab-strip button{
     padding:9px 14px; font-size:12.5px; font-weight:700; color:var(--gray-600);
     border-bottom:2px solid transparent; margin-bottom:-1px; transition: color .15s, border-color .15s;
@@ -966,6 +971,7 @@
       overflow-y:auto;
     }
     .modal-box-lg{ max-width:100% !important; width:100% !important; }
+    .tab-pane{ min-height:0; }
     .modal-box h3{ font-size:15px; }
     .modal-actions{ flex-wrap:wrap; gap:8px; margin-top:14px; }
     .modal-actions button,
@@ -1595,17 +1601,18 @@
 
           <div class="form-section">
             <h3>Equipe de relacionamento</h3>
-            <p class="hint">Nome, nascimento, e-mail, telefone e cargo de cada colaborador</p>
-            <div class="team-row-header">
-              <span>Nome</span><span>Aniversário</span><span>E-mail</span><span>Telefone</span><span>Cargo</span><span></span>
+            <p class="hint">Nome, nascimento, e-mail, telefone, cargo e produto de cada colaborador (ex: Ricardo é responsável pelo produto Agrícola)</p>
+            <div class="team-row-header team-row-seguradora">
+              <span>Nome</span><span>Aniversário</span><span>E-mail</span><span>Telefone</span><span>Cargo</span><span>Produto</span><span></span>
             </div>
             <div id="seguradora-team-rows">
-              <div class="team-row">
+              <div class="team-row team-row-seguradora">
                 <input placeholder="Nome">
                 <input type="date">
                 <input placeholder="E-mail">
                 <input placeholder="Telefone">
                 <input placeholder="Cargo">
+                <input placeholder="Produto (ex: Agrícola)">
                 <button class="icon-x" onclick="this.closest('.team-row').remove()">✕</button>
               </div>
             </div>
@@ -1624,6 +1631,10 @@
           <div class="page-head">
             <div><h1>Tarefas</h1><p>Clique em uma tarefa do quadro para editar</p></div>
             <button class="btn-dark" onclick="openCardModal('todo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nova tarefa</button>
+          </div>
+          <div class="f-field" style="margin:0 0 16px;max-width:280px;">
+            <label>Filtrar por responsável</label>
+            <select id="crm-filtro-membro" onchange="renderKanban()"><option value="">Todos</option></select>
           </div>
           <div class="kanban" id="kanban">
             <div class="kcol" data-col="todo" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropCard(event,this)">
@@ -1649,6 +1660,10 @@
           <div class="page-head">
             <div><h1>Pipeline</h1><p>Acompanhe as renovações de apólices, por seguradora, até o vencimento</p></div>
             <div style="display:flex;gap:10px;">
+              <button class="btn-outline" onclick="abrirBancoRenovacoes()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                Banco de Renovações
+              </button>
               <button class="btn-outline" onclick="abrirNovoCardPipeline()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
                 Novo negócio
@@ -2064,6 +2079,18 @@
                 </div>
               </div>
 
+              <!-- Renovações dos próximos meses (pipeline) -->
+              <div class="card" style="padding:20px;cursor:pointer;transition:box-shadow .2s,transform .15s;" onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='';this.style.transform=''" onclick="abrirRelatorioRenovacoesFuturas()">
+                <div style="width:42px;height:42px;border-radius:12px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                </div>
+                <div style="font-size:13.5px;font-weight:800;margin-bottom:4px;">Renovações dos Próximos Meses</div>
+                <div style="font-size:12px;color:var(--gray-600);line-height:1.5;">Quantas renovações do pipeline vencem em cada mês, num período que você escolher (até 1 ano).</div>
+                <div style="margin-top:14px;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--gray-400);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Abrir relatório
+                </div>
+              </div>
+
             </div>
           </div>
 
@@ -2087,6 +2114,40 @@
             </div>
 
             <div id="auditoria-seg-resultado"><p class="hint">Selecione uma seguradora acima pra começar.</p></div>
+          </div>
+
+          <!-- Área do relatório de Renovações dos Próximos Meses -->
+          <div id="relatorio-renovacoes-futuras-area" style="display:none;">
+            <div class="relatorio-header-bar" style="display:flex;align-items:center;justify-content:space-between;background:var(--black);color:#fff;border-radius:14px;padding:14px 20px;margin-bottom:20px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <button onclick="voltarRelatorioRenovacoesFuturas()" style="background:rgba(255,255,255,.12);border:none;color:#fff;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                  Modelos
+                </button>
+                <span style="font-size:15px;font-weight:800;">Renovações dos Próximos Meses</span>
+              </div>
+            </div>
+
+            <div class="card" style="padding:20px;margin-bottom:16px;">
+              <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+                <div class="f-field" style="margin:0;">
+                  <label>De</label>
+                  <input type="date" id="renovfut-data-ini" onchange="analisarRenovacoesFuturas()">
+                </div>
+                <div class="f-field" style="margin:0;">
+                  <label>Até</label>
+                  <input type="date" id="renovfut-data-fim" onchange="analisarRenovacoesFuturas()">
+                </div>
+                <div class="f-field" style="margin:0;min-width:220px;">
+                  <label>Seguradora</label>
+                  <select id="renovfut-seguradora" onchange="analisarRenovacoesFuturas()"><option value="">Todas</option></select>
+                </div>
+                <button class="btn-outline" style="padding:9px 16px;" onclick="definirPeriodoRenovacoesFuturas(12)">Próximos 12 meses</button>
+              </div>
+            </div>
+
+            <div id="renovfut-resumo" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"></div>
+            <div id="renovfut-resultado"></div>
           </div>
 
           <!-- Área do relatório de Corretoras Duplicadas -->
@@ -2544,6 +2605,13 @@
       <textarea id="user-mensagem-aniversario" rows="3" placeholder="Deixe em branco para usar a mensagem padrão do sistema" style="width:100%;border:1.4px solid var(--border);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
       <p class="hint" style="margin-top:6px;margin-bottom:0;">Use <code>{nome}</code> onde quiser que o primeiro nome do usuário apareça.</p>
     </div>
+    <div class="f-field full hidden" id="user-pode-excluir-field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="user-pode-excluir" style="width:16px;height:16px;accent-color:var(--black);">
+        Pode excluir dados diretamente (corretoras, produção, etc.)
+      </label>
+      <p class="hint" style="margin-top:6px;margin-bottom:0;">Se desmarcado (padrão), esse usuário só consegue <b>solicitar</b> exclusão — o pedido fica pendente até você aprovar em "Solicitações de Exclusão".</p>
+    </div>
     <div class="f-field"><label>Perfil</label>
       <select id="user-role" onchange="onUserRoleChange()">
         <option value="gestor">Administrador</option>
@@ -2773,7 +2841,7 @@
       </div>
       <div class="f-field full">
         <label>Estágio</label>
-        <select id="funil-card-estagio">
+        <select id="funil-card-estagio" onchange="atualizarBotaoBancoRenovacoes()">
           <option value="a_vencer">A vencer</option>
           <option value="negociacao">Em negociação</option>
           <option value="renovado">Renovado</option>
@@ -2813,7 +2881,10 @@
     </div>
 
     <div class="modal-actions" style="justify-content:space-between;">
-      <button class="btn-outline hidden" id="funil-card-delete-btn" onclick="excluirRenovacao()" style="color:#dc2626;border-color:#fecaca;">Excluir</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-outline hidden" id="funil-card-delete-btn" onclick="excluirRenovacao()" style="color:#dc2626;border-color:#fecaca;">Excluir</button>
+        <button class="btn-outline hidden" id="funil-card-banco-btn" onclick="guardarNoBancoRenovacoes()">Guardar no banco de renovações</button>
+      </div>
       <div style="display:flex;gap:10px;margin-left:auto;">
         <button class="btn-outline" onclick="closeModal('modal-funil-card')">Cancelar</button>
         <button class="btn-dark" id="funil-card-save-btn" onclick="salvarEstagioFunilCard()">Salvar</button>
@@ -2822,7 +2893,17 @@
   </div>
 </div>
 
-<!-- ---------------- MODAL: NOVA/EDITAR CAMPANHA ---------------- -->
+<!-- ---------------- MODAL: BANCO DE RENOVAÇÕES (perdidos guardados) ---------------- -->
+<div class="modal-overlay" id="modal-banco-renovacoes" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-banco-renovacoes')">
+  <div class="modal-box modal-box-lg">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+      <h3 style="margin:0;">Banco de Renovações</h3>
+      <button onclick="closeModal('modal-banco-renovacoes')" style="background:none; border:none; font-size:22px; cursor:pointer; color:var(--gray-600);">✕</button>
+    </div>
+    <p class="hint" style="margin-bottom:14px;">Negócios perdidos guardados aqui pra reconsiderar na próxima renovação — não aparecem mais no quadro do Pipeline até você reativar.</p>
+    <div id="banco-renovacoes-lista" style="max-height:480px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;"></div>
+  </div>
+</div>
 <div class="modal-overlay" id="modal-campanha" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) closeModal('modal-campanha')">
   <div class="modal-box" style="max-width:620px;">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
@@ -2922,6 +3003,12 @@
     </div>
     <div class="form-section">
       <h3>Endereço</h3>
+      <div class="form-grid">
+        <div class="f-field"><label>CEP</label>
+          <input type="text" id="corretora-cep" placeholder="00000-000" maxlength="9" oninput="mascaraCep(this)" onblur="buscarEnderecoPorCep('corretora')">
+          <p class="hint" id="corretora-cep-status" style="margin-top:4px;"></p>
+        </div>
+      </div>
       <div class="form-grid">
         <div class="f-field full"><label>Rua / Logradouro</label><input type="text" id="corretora-rua" placeholder="Ex: Rua das Flores"></div>
         <div class="f-field"><label>Número</label><input type="text" id="corretora-numero" placeholder="Ex: 100"></div>
@@ -3451,6 +3538,11 @@
 
   let currentRole = 'admin';
   let currentUserFilial = null; // filial do usuário logado — se preenchida e não for super admin, restringe a visão de produção só a essa filial
+  let currentUserPodeExcluir = false; // Super Admin decide, por usuário, se ele exclui direto ou só solicita
+
+  function podeExcluirDiretamente(){
+    return isSuperAdmin() || currentUserPodeExcluir === true;
+  }
 
   function isSuperAdmin(){
     const r = (currentRole||'').toLowerCase().trim();
@@ -3769,6 +3861,18 @@
       if(s.comercial && s.comercialNascimento){
         lista.push({ nome: s.comercial, origem: s.nome, whatsapp: s.telefone || '', nascimento: s.comercialNascimento, seguradoraId: sid });
       }
+    });
+
+    // 2.1) equipe de relacionamento cadastrada de verdade na seguradora
+    const { data: eqSegNasc } = await supabase.from('marketing_contatos').select('*').eq('origem', 'equipe-seguradora');
+    (eqSegNasc || []).forEach(c => {
+      if(!c.nascimento) return;
+      const m = c.nome.match(/^(.+?)\s*\((.+)\)\s*$/);
+      const s = c.seguradora_id ? SEGURADORAS[c.seguradora_id] : null;
+      lista.push({
+        nome: m ? m[1] : c.nome, origem: s ? s.nome : 'Equipe da seguradora',
+        whatsapp: c.whatsapp || '', nascimento: c.nascimento, seguradoraId: c.seguradora_id || null,
+      });
     });
 
     // 3) usuários do sistema
@@ -4124,11 +4228,9 @@
       renderRankings();
     }
     if(id === 'relatorios'){
-      // sempre mostra painel de modelos ao entrar na aba
+      esconderTodasAreasRelatorio();
       const painelMod = document.getElementById('relatorio-painel-modelos');
-      const consultaArea = document.getElementById('relatorio-consulta-area');
       if(painelMod) painelMod.style.display = 'block';
-      if(consultaArea) consultaArea.style.display = 'none';
       renderRelatorios();
     }
     renderSidebar();
@@ -4172,16 +4274,65 @@
     });
   }
 
+  async function loadSeguradoraTeam(id){
+    const wrap = document.getElementById('seguradora-team-rows');
+    wrap.innerHTML = '';
+    if(!id) return;
+    const { data } = await supabase.from('marketing_contatos').select('*').eq('seguradora_id', id).eq('origem', 'equipe-seguradora');
+    (data || []).forEach(c => {
+      const m = c.nome.match(/^(.+?)\s*\((.+)\)\s*$/);
+      const nomeLimpo = m ? m[1] : c.nome;
+      const cargo = m ? m[2] : '';
+      const row = document.createElement('div');
+      row.className = 'team-row team-row-seguradora';
+      row.innerHTML = `
+        <input placeholder="Nome" value="${esc(nomeLimpo)}">
+        <input type="date" value="${c.nascimento || ''}">
+        <input placeholder="E-mail" value="${esc(c.email || '')}">
+        <input placeholder="Telefone" value="${esc(c.whatsapp || '')}">
+        <input placeholder="Cargo" value="${esc(cargo)}">
+        <input placeholder="Produto (ex: Agrícola)" value="${esc(c.produto || '')}">
+        <button class="icon-x" onclick="this.closest('.team-row').remove()">✕</button>`;
+      wrap.appendChild(row);
+    });
+  }
+
+  async function salvarEquipeSeguradora(id){
+    const rows = Array.from(document.querySelectorAll('#seguradora-team-rows .team-row'));
+    const membros = rows.map(row => {
+      const inputs = row.querySelectorAll('input');
+      return {
+        nome: inputs[0].value.trim(),
+        nascimento: inputs[1].value || null,
+        email: inputs[2].value.trim(),
+        telefone: (inputs[3].value || '').replace(/\D/g,''),
+        cargo: inputs[4].value.trim(),
+        produto: inputs[5].value.trim(),
+      };
+    }).filter(m => m.nome);
+
+    await supabase.from('marketing_contatos').delete().eq('seguradora_id', id).eq('origem', 'equipe-seguradora');
+    if(membros.length){
+      await supabase.from('marketing_contatos').insert(membros.map(m => ({
+        nome: m.nome + (m.cargo ? ` (${m.cargo})` : ''),
+        whatsapp: m.telefone, email: m.email, nascimento: m.nascimento, produto: m.produto || null,
+        seguradora_id: id, origem: 'equipe-seguradora',
+      })));
+    }
+  }
+
   function addTeamRow(targetId){
     const wrap = document.getElementById(targetId || 'team-rows');
     const row = document.createElement('div');
-    row.className = 'team-row';
+    const ehSeguradora = targetId === 'seguradora-team-rows';
+    row.className = ehSeguradora ? 'team-row team-row-seguradora' : 'team-row';
     row.innerHTML = `
       <input placeholder="Nome">
       <input type="date">
       <input placeholder="E-mail">
       <input placeholder="Telefone">
       <input placeholder="Cargo">
+      ${ehSeguradora ? `<input placeholder="Produto (ex: Agrícola)">` : ''}
       <button class="icon-x" onclick="this.closest('.team-row').remove()">✕</button>`;
     wrap.appendChild(row);
   }
@@ -4416,15 +4567,25 @@
     if(!kanban) return;
     const { data: perfis } = await supabase.from('profiles').select('*');
     ALL_USERS_CACHE = perfis || [];
+
+    const selMembro = document.getElementById('crm-filtro-membro');
+    if(selMembro && selMembro.options.length <= 1){
+      selMembro.innerHTML = '<option value="">Todos</option>' +
+        ALL_USERS_CACHE.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(u => `<option value="${u.id}">${esc(u.nome)}</option>`).join('');
+    }
+    const membroFiltro = selMembro ? selMembro.value : '';
+
     let query = supabase.from('crm_cards').select('*').order('created_at', {ascending:false});
     const { data, error } = await query;
     if(error){ console.error('Erro ao carregar CRM:', error); return; }
     CARDS_CACHE = data;
 
+    const dataFiltrada = membroFiltro ? data.filter(c => (c.membros||[]).includes(membroFiltro)) : data;
+
     ['todo','doing','done'].forEach(coluna=>{
       const col = document.querySelector(`.kcol[data-col="${coluna}"] .kcol-cards`);
       const count = document.querySelector(`.kcol[data-col="${coluna}"] .count`);
-      const cards = data.filter(c => c.coluna === coluna);
+      const cards = dataFiltrada.filter(c => c.coluna === coluna);
       count.textContent = cards.length;
       col.innerHTML = cards.map(c => buildCardOuterHTML(c)).join('');
     });
@@ -4524,6 +4685,7 @@
     document.getElementById('funil-card-modal-title').textContent = 'Novo negócio';
     document.getElementById('funil-card-save-btn').textContent = 'Criar negócio';
     document.getElementById('funil-card-delete-btn').classList.add('hidden');
+    document.getElementById('funil-card-banco-btn').classList.add('hidden');
     ['funil-card-cliente','funil-card-corretora','funil-card-produto','funil-card-seguradora','funil-card-vigencia','funil-card-valor','funil-card-novo-comentario'].forEach(id => {
       const el = document.getElementById(id); if(el) el.value = '';
     });
@@ -4721,7 +4883,7 @@
     const corFiltro = selCor ? selCor.value : '';
     const buscaFiltro = normalizarBusca(document.getElementById('funil-busca')?.value || '');
 
-    let linhas = RENOVACOES_CACHE.slice();
+    let linhas = RENOVACOES_CACHE.filter(r => !r.no_banco_renovacao);
     if(segFiltro) linhas = linhas.filter(r => r.seguradora === segFiltro);
     if(corFiltro) linhas = linhas.filter(r => r.corretora_id === corFiltro);
     if(buscaFiltro) linhas = linhas.filter(r => normalizarBusca(r.cliente).includes(buscaFiltro));
@@ -4742,12 +4904,20 @@
         const corretoraNome = r.corretora_id ? (GROUPS[r.corretora_id]?.name || r.corretora_nome || '—') : (r.corretora_nome || '—');
         const corDias = dias === null ? 'var(--gray-600)' : (dias <= 30 ? '#dc2626' : (dias <= 60 ? '#b45309' : 'var(--gray-600)'));
         const valorBadge = r.valor ? `<span class="kcard-valor">R$ ${Number(r.valor).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}</span>` : '';
+        let paradoBadge = '';
+        if(estagio === 'negociacao' && r.entrou_negociacao_em){
+          const diasParado = Math.floor((Date.now() - new Date(r.entrou_negociacao_em).getTime()) / 86400000);
+          if(diasParado >= LIMITE_DIAS_NEGOCIACAO_PARADA){
+            paradoBadge = `<div style="font-size:10.5px;font-weight:700;color:#dc2626;margin-top:4px;">⏳ Parado há ${diasParado} dias</div>`;
+          }
+        }
         return `<div class="kcard" draggable="true" data-id="${r.id}" ondragstart="dragFunilCard(event)" onclick="openFunilCard('${r.id}')">
           <div class="t">${esc(r.cliente)}</div>
           <div class="m">${esc(corretoraNome)}</div>
           <div class="m">${esc(r.produto) || '—'} · ${esc(r.seguradora) || '—'}</div>
           <div class="tags"><span style="color:${corDias};">${labelDiasVigencia(dias)}</span></div>
           ${valorBadge}
+          ${paradoBadge}
         </div>`;
       }).join('');
     });
@@ -4789,13 +4959,73 @@
     const eraManual = r.estagio_manual;
     r.estagio = novoEstagio;
     r.estagio_manual = true;
+    const payloadMove = { estagio: novoEstagio, estagio_manual: true };
+    // Marca quando entrou em "negociação" — é isso que o alerta de "parado há
+    // mais de 5 dias" usa como referência.
+    if(novoEstagio === 'negociacao' && estagioAnterior !== 'negociacao'){
+      payloadMove.entrou_negociacao_em = new Date().toISOString();
+      r.entrou_negociacao_em = payloadMove.entrou_negociacao_em;
+    }
     renderFunil();
-    const { error } = await supabase.from('renovacoes').update({ estagio: novoEstagio, estagio_manual: true }).eq('id', r.id);
+    const { error } = await supabase.from('renovacoes').update(payloadMove).eq('id', r.id);
     if(error){
       alert('Erro ao mover o card: ' + error.message);
       r.estagio = estagioAnterior; r.estagio_manual = eraManual;
       renderFunil();
     }
+  }
+
+  // Mostra o botão "Guardar no banco de renovações" só quando o negócio já
+  // existe e está com estágio Perdido.
+  function atualizarBotaoBancoRenovacoes(){
+    const btn = document.getElementById('funil-card-banco-btn');
+    const estagio = document.getElementById('funil-card-estagio').value;
+    btn.classList.toggle('hidden', !(editingRenovacaoId && estagio === 'perdido'));
+  }
+
+  async function guardarNoBancoRenovacoes(){
+    if(!editingRenovacaoId) return;
+    if(!confirm('Guardar este negócio no banco de renovações?\n\nEle sai do quadro do Pipeline, mas fica salvo pra você reconsiderar na próxima renovação (ex: no próximo ano).')) return;
+    const { error } = await supabase.from('renovacoes').update({ no_banco_renovacao: true }).eq('id', editingRenovacaoId);
+    if(error){ alert('Erro ao guardar: ' + error.message); return; }
+    const r = RENOVACOES_CACHE.find(x => x.id === editingRenovacaoId);
+    if(r) r.no_banco_renovacao = true;
+    registrarLog('Guardou negócio no banco de renovações', r ? r.cliente : '');
+    closeModal('modal-funil-card');
+    renderFunil();
+  }
+
+  async function abrirBancoRenovacoes(){
+    const wrap = document.getElementById('banco-renovacoes-lista');
+    wrap.innerHTML = `<p class="hint">Carregando...</p>`;
+    openModal('modal-banco-renovacoes');
+    const { data, error } = await supabase.from('renovacoes').select('*').eq('no_banco_renovacao', true).order('cliente');
+    if(error){ wrap.innerHTML = `<p class="hint" style="color:#dc2626;">Erro: ${esc(error.message)}</p>`; return; }
+    if(!data || !data.length){
+      wrap.innerHTML = `<p class="hint">Nenhum negócio guardado no banco de renovações ainda.</p>`;
+      return;
+    }
+    wrap.innerHTML = data.map(r => {
+      const corretoraNome = r.corretora_id ? (GROUPS[r.corretora_id]?.name || r.corretora_nome || '—') : (r.corretora_nome || '—');
+      return `<div class="card" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700;font-size:13.5px;">${esc(r.cliente)}</div>
+          <div style="font-size:11.5px;color:var(--gray-600);margin-top:2px;">${esc(corretoraNome)} · ${esc(r.produto)||'—'} · ${esc(r.seguradora)||'—'}${r.vigencia_fim ? ' · venceu em ' + new Date(r.vigencia_fim+'T00:00:00').toLocaleDateString('pt-BR') : ''}</div>
+        </div>
+        <button class="access-btn" onclick="reativarDoBancoRenovacoes('${r.id}')">Reativar no Pipeline</button>
+      </div>`;
+    }).join('');
+  }
+
+  async function reativarDoBancoRenovacoes(id){
+    if(!confirm('Reativar este negócio no Pipeline? Ele volta pra coluna "A vencer".')) return;
+    const { error } = await supabase.from('renovacoes').update({
+      no_banco_renovacao: false, estagio: 'a_vencer', estagio_manual: false,
+    }).eq('id', id);
+    if(error){ alert('Erro ao reativar: ' + error.message); return; }
+    registrarLog('Reativou negócio do banco de renovações', id);
+    abrirBancoRenovacoes();
+    renderFunil();
   }
 
   async function openFunilCard(id){
@@ -4820,6 +5050,7 @@
     document.getElementById('funil-card-vigencia').value = r.vigencia_fim || '';
     document.getElementById('funil-card-valor').value = r.valor || '';
     document.getElementById('funil-card-estagio').value = r.estagio;
+    atualizarBotaoBancoRenovacoes();
     document.getElementById('funil-card-anexo-input').value = '';
 
     const souCriador = r.criado_por === currentUserId;
@@ -4863,6 +5094,9 @@
       const r = RENOVACOES_CACHE.find(x => x.id === editingRenovacaoId);
       if(r && r.estagio !== novoEstagio){
         pendingFunilHistorico.unshift({when: nowLabel(), text:'Movido de estágio.'});
+        if(novoEstagio === 'negociacao'){
+          payload.entrou_negociacao_em = new Date().toISOString();
+        }
       } else {
         pendingFunilHistorico.unshift({when: nowLabel(), text:'Informações atualizadas.'});
       }
@@ -4877,6 +5111,7 @@
       payload.chave_importacao = null;
       payload.criado_por = currentUserId;
       payload.criado_por_nome = currentUserFullName;
+      if(novoEstagio === 'negociacao') payload.entrou_negociacao_em = new Date().toISOString();
       const { data, error } = await supabase.from('renovacoes').insert(payload).select().single();
       btn.disabled = false; btn.textContent = 'Criar negócio';
       if(error){ alert('Erro ao criar: ' + error.message); return; }
@@ -5630,10 +5865,46 @@
 
   // Chama todas as checagens de notificação de uma vez — tarefas, aniversários
   // e comunicados internos.
+  const LIMITE_DIAS_NEGOCIACAO_PARADA = 5;
+
+  // Roda 1x por dia por negócio (guardado no localStorage) — avisa quando um
+  // card fica parado em "Em negociação" por mais de 5 dias sem se mover.
+  async function verificarNegociacoesParadasParaNotificar(){
+    if(!('Notification' in window) || Notification.permission !== 'granted') return;
+    const hojeStr = new Date().toISOString().slice(0,10);
+    const { data, error } = await supabase.from('renovacoes').select('id, cliente, entrou_negociacao_em').eq('estagio', 'negociacao');
+    if(error || !data) return;
+
+    const agora = Date.now();
+    const paradas = data.filter(r => {
+      if(!r.entrou_negociacao_em) return false;
+      const dias = Math.floor((agora - new Date(r.entrou_negociacao_em).getTime()) / 86400000);
+      return dias >= LIMITE_DIAS_NEGOCIACAO_PARADA;
+    });
+    if(!paradas.length) return;
+
+    const jaAvisadasHoje = JSON.parse(localStorage.getItem('notifNegociacoesParadasAvisadas') || '{}');
+    if(jaAvisadasHoje._dia !== hojeStr){
+      Object.keys(jaAvisadasHoje).forEach(k => delete jaAvisadasHoje[k]);
+      jaAvisadasHoje._dia = hojeStr;
+    }
+    paradas.slice(0, 5).forEach(r => {
+      if(jaAvisadasHoje[r.id]) return;
+      const dias = Math.floor((agora - new Date(r.entrou_negociacao_em).getTime()) / 86400000);
+      new Notification('⏳ Negociação parada', {
+        body: `"${r.cliente}" está em negociação há ${dias} dias, sem se mover.`,
+        tag: 'negociacao-parada-' + r.id,
+      });
+      jaAvisadasHoje[r.id] = true;
+    });
+    localStorage.setItem('notifNegociacoesParadasAvisadas', JSON.stringify(jaAvisadasHoje));
+  }
+
   async function verificarTodasNotificacoes(){
     verificarTarefasParaNotificar();
     verificarAniversariantesParaNotificar();
     verificarComunicadosParaNotificar();
+    verificarNegociacoesParadasParaNotificar();
   }
 
   // Roda uma vez por sessão (e no máximo 1x por dia por tarefa, guardado no
@@ -6013,7 +6284,7 @@
       seguradoraNome: '', origem: 'equipe-corretora', editavel: false,
     }));
 
-    // 3) equipe de relacionamento das seguradoras (comercial responsável direto do cadastro)
+    // 3) comercial responsável direto do cadastro da seguradora
     Object.entries(SEGURADORAS).forEach(([sid, s]) => {
       if(s.comercial || s.email || s.telefone){
         lista.push({
@@ -6023,6 +6294,18 @@
           origem: 'equipe-seguradora', editavel: false,
         });
       }
+    });
+
+    // 3.1) equipe de relacionamento cadastrada de verdade na seguradora (com produto)
+    const { data: eqSeguradoras } = await fetchAllRows((from,to) => supabase.from('marketing_contatos').select('*').eq('origem', 'equipe-seguradora').range(from,to));
+    (eqSeguradoras || []).forEach(c => {
+      const m = c.nome.match(/^(.+?)\s*\((.+)\)\s*$/);
+      const s = c.seguradora_id ? SEGURADORAS[c.seguradora_id] : null;
+      lista.push({
+        id: c.id, nome: m ? m[1] : c.nome, whatsapp: c.whatsapp || '', email: c.email || '',
+        corretoraNome: '', seguradoraNome: s ? s.nome : '', seguradoraCor: s ? s.cor : null,
+        produto: c.produto || '', origem: 'equipe-seguradora', editavel: false,
+      });
     });
 
     // 4) usuários do sistema
@@ -6105,7 +6388,7 @@
 
     tbody.innerHTML = pagina.length ? pagina.map(c => {
       const chip = c.seguradoraNome ? chipSeguradora(c.seguradoraNome, c.seguradoraCor) : '';
-      const corretoraInline = c.corretoraNome ? `<div class="hint" style="margin:2px 0 0;">${esc(c.corretoraNome)}</div>` : '';
+      const corretoraInline = c.corretoraNome ? `<div class="hint" style="margin:2px 0 0;">${esc(c.corretoraNome)}</div>` : (c.produto ? `<div class="hint" style="margin:2px 0 0;">Produto: ${esc(c.produto)}</div>` : '');
       const textoCopiaTudo = [c.nome, c.whatsapp, c.email].filter(Boolean).join(' | ');
       return `
       <tr>
@@ -6848,7 +7131,7 @@
     const btnExcluir = document.getElementById('btn-excluir-corretora');
     if(btnExcluir){
       btnExcluir.classList.toggle('hidden', !gid);
-      btnExcluir.textContent = isSuperAdmin() ? 'Excluir corretora' : 'Solicitar exclusão';
+      btnExcluir.textContent = podeExcluirDiretamente() ? 'Excluir corretora' : 'Solicitar exclusão';
     }
 
     const btnExportar = document.getElementById('btn-exportar-corretora');
@@ -6856,6 +7139,9 @@
 
     const btnHistoricoCor = document.getElementById('btn-historico-corretora');
     if(btnHistoricoCor) btnHistoricoCor.classList.toggle('hidden', !gid);
+
+    const cepStatusEl = document.getElementById('corretora-cep-status');
+    if(cepStatusEl) cepStatusEl.textContent = '';
 
     const fieldMap = {
       'corretora-razao-social': g ? g.name : '',
@@ -6867,6 +7153,7 @@
       'corretora-endereco': g ? g.endereco : '',
       'corretora-cidade': g ? g.cidade : '',
       'corretora-estado': g ? g.estado : '',
+      'corretora-cep': g ? (g.cep || '') : '',
       'corretora-rua': g ? (g.rua || '') : '',
       'corretora-numero': g ? (g.numero || '') : '',
       'corretora-bairro': g ? (g.bairro || '') : '',
@@ -7179,7 +7466,7 @@
     const g = GROUPS[editingCorretoraGid];
     if(!g) return;
 
-    if(!isSuperAdmin()){
+    if(!podeExcluirDiretamente()){
       if(!confirm(`Solicitar exclusão da corretora "${g.name}"?\n\nEla continua ativa normalmente até o Super Administrador revisar e aprovar o pedido.`)) return;
       const ok = await criarSolicitacaoExclusao('corretora', editingCorretoraGid, g.name);
       if(ok){ alert('Solicitação enviada! Acompanhe em "Solicitações de Exclusão".'); closeModal('modal-corretora'); }
@@ -7334,6 +7621,7 @@
     // histórico de mudanças campo a campo (só existe quando já é uma edição).
     const dadosAntes = editingCorretoraGid && GROUPS[editingCorretoraGid] ? { ...GROUPS[editingCorretoraGid] } : null;
 
+    const cep = document.getElementById('corretora-cep').value.trim();
     const rua = document.getElementById('corretora-rua').value.trim();
     const numero = document.getElementById('corretora-numero').value.trim();
     const bairro = document.getElementById('corretora-bairro').value.trim();
@@ -7349,7 +7637,7 @@
       email: document.getElementById('corretora-email').value.trim(),
       telefone: document.getElementById('corretora-telefone').value.trim(),
       endereco: enderecoComposto,
-      rua, numero, bairro, complemento,
+      cep, rua, numero, bairro, complemento,
       cidade: document.getElementById('corretora-cidade').value.trim(),
       estado: document.getElementById('corretora-estado').value.trim(),
       seguradoras_permitidas: Array.from(document.querySelectorAll('#seg-checklist input:checked')).map(i=>i.value),
@@ -7769,7 +8057,7 @@
     tbody.innerHTML = data.map(h => {
       const ts = h.created_at || h.atualizado_em;
       const quando = ts ? new Date(ts).toLocaleString('pt-BR') : '—';
-      const podeExcluir = isSuperAdmin();
+      const podeExcluir = podeExcluirDiretamente();
       return `<tr>
         <td class="cell-strong">${h.seguradora || '—'}</td>
         <td>${h.competencia ? labelCompetencia(h.competencia) : '—'}</td>
@@ -7819,7 +8107,7 @@
   }
 
   async function excluirHistorico(id, seguradora, competencia, tipo){
-    if(!isSuperAdmin()){ alert('Apenas super administradores podem apagar importações.'); return; }
+    if(!podeExcluirDiretamente()){ alert('Você não tem permissão para excluir importações de produção. Peça ao Super Administrador pra liberar essa permissão.'); return; }
     if(!confirm(`Apagar a importação de ${seguradora} (${labelCompetencia(competencia)})?\n\nOs dados de produção deste período serão removidos. Se houver uma importação anterior, ela voltará a valer.`)) return;
 
     // Buscar registro anterior para o mesmo seguradora+competencia
@@ -8198,11 +8486,18 @@
   ========================================================== */
   let RELATORIO_MODELO_ATIVO = null;
 
+  // Esconde TODAS as áreas de relatório (usa querySelectorAll, não uma lista
+  // fixa) — assim, um relatório novo que a gente adicionar depois já entra
+  // automaticamente nessa regra, sem risco de esquecer de atualizar em algum
+  // lugar (foi exatamente isso que causou bug de layout algumas vezes).
+  function esconderTodasAreasRelatorio(){
+    document.querySelectorAll('[id^="relatorio-"][id$="-area"]').forEach(el => { el.style.display = 'none'; });
+    const painelMod = document.getElementById('relatorio-painel-modelos');
+    if(painelMod) painelMod.style.display = 'none';
+  }
+
   function abrirRelatorioVinculo(){
-    document.getElementById('relatorio-painel-modelos').style.display = 'none';
-    document.getElementById('relatorio-consulta-area').style.display = 'none';
-    document.getElementById('relatorio-duplicatas-area').style.display = 'none';
-    document.getElementById('relatorio-auditoria-seg-area').style.display = 'none';
+    esconderTodasAreasRelatorio();
     document.getElementById('relatorio-vinculo-area').style.display = 'block';
 
     const nomes = Object.values(SEGURADORAS).map(s => s.nome).sort((a,b)=>a.localeCompare(b));
@@ -8218,10 +8513,7 @@
   }
 
   function abrirRelatorioDuplicatas(){
-    document.getElementById('relatorio-painel-modelos').style.display = 'none';
-    document.getElementById('relatorio-consulta-area').style.display = 'none';
-    document.getElementById('relatorio-vinculo-area').style.display = 'none';
-    document.getElementById('relatorio-auditoria-seg-area').style.display = 'none';
+    esconderTodasAreasRelatorio();
     document.getElementById('relatorio-duplicatas-area').style.display = 'block';
   }
 
@@ -8231,10 +8523,7 @@
   }
 
   function abrirRelatorioAuditoriaSeguradora(){
-    document.getElementById('relatorio-painel-modelos').style.display = 'none';
-    document.getElementById('relatorio-consulta-area').style.display = 'none';
-    document.getElementById('relatorio-vinculo-area').style.display = 'none';
-    document.getElementById('relatorio-duplicatas-area').style.display = 'none';
+    esconderTodasAreasRelatorio();
     document.getElementById('relatorio-auditoria-seg-area').style.display = 'block';
 
     const sel = document.getElementById('auditoria-seg-select');
@@ -8245,7 +8534,87 @@
 
   function voltarRelatorioAuditoriaSeguradora(){
     document.getElementById('relatorio-auditoria-seg-area').style.display = 'none';
+    document.getElementById('relatorio-renovacoes-futuras-area').style.display = 'none';
     document.getElementById('relatorio-painel-modelos').style.display = 'block';
+  }
+
+  function definirPeriodoRenovacoesFuturas(meses){
+    const hoje = new Date();
+    const fim = new Date(hoje.getFullYear(), hoje.getMonth() + meses, hoje.getDate());
+    document.getElementById('renovfut-data-ini').value = hoje.toISOString().slice(0,10);
+    document.getElementById('renovfut-data-fim').value = fim.toISOString().slice(0,10);
+    analisarRenovacoesFuturas();
+  }
+
+  function abrirRelatorioRenovacoesFuturas(){
+    esconderTodasAreasRelatorio();
+    document.getElementById('relatorio-renovacoes-futuras-area').style.display = 'block';
+
+    const sel = document.getElementById('renovfut-seguradora');
+    const nomes = Object.values(SEGURADORAS).map(s => s.nome).sort((a,b)=>a.localeCompare(b));
+    sel.innerHTML = '<option value="">Todas</option>' + nomes.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    definirPeriodoRenovacoesFuturas(12);
+  }
+
+  function voltarRelatorioRenovacoesFuturas(){
+    document.getElementById('relatorio-renovacoes-futuras-area').style.display = 'none';
+    document.getElementById('relatorio-painel-modelos').style.display = 'block';
+  }
+
+  async function analisarRenovacoesFuturas(){
+    const dataIni = document.getElementById('renovfut-data-ini').value;
+    const dataFim = document.getElementById('renovfut-data-fim').value;
+    const seguradoraFiltro = document.getElementById('renovfut-seguradora').value;
+    const resumoEl = document.getElementById('renovfut-resumo');
+    const resultEl = document.getElementById('renovfut-resultado');
+    if(!dataIni || !dataFim){ resultEl.innerHTML = `<p class="hint">Escolha o período acima.</p>`; return; }
+
+    resultEl.innerHTML = `<p class="hint">Analisando...</p>`;
+    let query = supabase.from('renovacoes').select('*').gte('vigencia_fim', dataIni).lte('vigencia_fim', dataFim);
+    if(seguradoraFiltro) query = query.eq('seguradora', seguradoraFiltro);
+    const { data, error } = await query;
+    if(error){ resultEl.innerHTML = `<p class="hint" style="color:#dc2626;">Erro: ${esc(error.message)}</p>`; return; }
+
+    const pendentes = (data || []).filter(r => !['renovado','perdido'].includes(r.estagio));
+    const totalValor = pendentes.reduce((s,r) => s + Number(r.valor||0), 0);
+    const jaRenovadas = (data || []).filter(r => r.estagio === 'renovado').length;
+    const jaPerdidas = (data || []).filter(r => r.estagio === 'perdido').length;
+
+    resumoEl.innerHTML = `
+      <div class="kpi-mini"><div class="l">Renovações no período</div><div class="v">${data.length}</div></div>
+      <div class="kpi-mini"><div class="l">Ainda pendentes</div><div class="v">${pendentes.length}</div></div>
+      <div class="kpi-mini"><div class="l">Valor em aberto</div><div class="v">R$ ${totalValor.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}</div></div>
+      <div class="kpi-mini"><div class="l">Já renovadas</div><div class="v">${jaRenovadas}</div></div>
+      <div class="kpi-mini"><div class="l">Já perdidas</div><div class="v">${jaPerdidas}</div></div>
+    `;
+
+    // Agrupa por mês (YYYY-MM) só as pendentes, pra saber a carga de trabalho de cada mês
+    const porMes = {};
+    pendentes.forEach(r => {
+      if(!r.vigencia_fim) return;
+      const mes = r.vigencia_fim.slice(0,7);
+      if(!porMes[mes]) porMes[mes] = { qtd: 0, valor: 0 };
+      porMes[mes].qtd++;
+      porMes[mes].valor += Number(r.valor||0);
+    });
+    const mesesOrdenados = Object.keys(porMes).sort();
+
+    resultEl.innerHTML = mesesOrdenados.length ? `
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>Mês</th><th>Renovações pendentes</th><th>Valor em aberto</th></tr></thead>
+          <tbody>
+            ${mesesOrdenados.map(mes => `
+              <tr>
+                <td class="cell-strong">${labelCompetencia(mes)}</td>
+                <td>${porMes[mes].qtd}</td>
+                <td>R$ ${porMes[mes].valor.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : `<p class="hint">Nenhuma renovação pendente encontrada nesse período/seguradora.</p>`;
   }
 
   async function analisarAuditoriaSeguradora(){
@@ -8654,7 +9023,7 @@
   }
 
   async function excluirDuplicatasSelecionadas(){
-    if(!isSuperAdmin()){ alert('Apenas o Super Administrador pode excluir corretoras.'); return; }
+    if(!podeExcluirDiretamente()){ alert('Você não tem permissão para excluir corretoras diretamente. Peça ao Super Administrador pra liberar essa permissão, ou solicite a exclusão pelo cadastro da corretora.'); return; }
     const gids = [...DUPLICATAS_SELECIONADAS];
     if(!gids.length) return;
     const nomes = gids.map(gid => GROUPS[gid]?.name || '(corretora removida)').join('\n- ');
@@ -8758,10 +9127,7 @@
   function aplicarModeloRelatorio(modelo) {
     RELATORIO_MODELO_ATIVO = modelo;
     // Mostrar área de consulta, ocultar painel de modelos
-    document.getElementById('relatorio-painel-modelos').style.display = 'none';
-    document.getElementById('relatorio-vinculo-area').style.display = 'none';
-    document.getElementById('relatorio-duplicatas-area').style.display = 'none';
-    document.getElementById('relatorio-auditoria-seg-area').style.display = 'none';
+    esconderTodasAreasRelatorio();
     document.getElementById('relatorio-consulta-area').style.display = 'block';
 
     // Limpar filtros
@@ -10876,6 +11242,15 @@
       selRole.disabled = false;
     }
 
+    // Permissão de exclusão direta — só o Super Administrador vê e mexe nisso,
+    // e só faz sentido pra quem não é Super Admin (ele já pode excluir tudo).
+    const podeExcluirField = document.getElementById('user-pode-excluir-field');
+    if(podeExcluirField){
+      const mostrar = isSuperAdmin() && id && u && u.role !== 'admin';
+      podeExcluirField.classList.toggle('hidden', !mostrar);
+      document.getElementById('user-pode-excluir').checked = u ? (u.pode_excluir === true) : false;
+    }
+
     // Popula o select de filial a partir da tabela filiais cadastrada
     const selFilial = document.getElementById('user-filial');
     if(selFilial){
@@ -10926,9 +11301,11 @@
     saveBtn.disabled = true; saveBtn.textContent = editingUserId ? 'Salvando...' : 'Criando...';
 
     if(editingUserId){
-      let { error: updError } = await supabase.from('profiles').update({
-        nome, role, nascimento, telefone, filial, mensagem_aniversario,
-      }).eq('id', editingUserId);
+      const payloadUpdate = { nome, role, nascimento, telefone, filial, mensagem_aniversario };
+      if(isSuperAdmin()){
+        payloadUpdate.pode_excluir = document.getElementById('user-pode-excluir').checked;
+      }
+      let { error: updError } = await supabase.from('profiles').update(payloadUpdate).eq('id', editingUserId);
       if(updError && updError.code === '42703'){
         ({ error: updError } = await supabase.from('profiles').update({ nome, role, nascimento, telefone, mensagem_aniversario }).eq('id', editingUserId));
       }
@@ -11014,8 +11391,9 @@
     const alvo = USERS_CACHE.find(u => u.id === id);
     if(!alvo) return;
 
-    if(!isSuperAdmin()){
-      if(alvo.role !== 'consultor'){ alert('Você só pode gerenciar contas de Consultor.'); return; }
+    if(!isSuperAdmin() && alvo.role !== 'consultor'){ alert('Você só pode gerenciar contas de Consultor.'); return; }
+
+    if(!podeExcluirDiretamente()){
       if(!confirm(`Solicitar exclusão do usuário "${alvo.nome}"?\n\nEle continua com acesso normal até o Super Administrador revisar e aprovar o pedido.`)) return;
       const ok = await criarSolicitacaoExclusao('usuario', id, alvo.nome);
       if(ok) alert('Solicitação enviada! Acompanhe em "Solicitações de Exclusão".');
@@ -11162,6 +11540,7 @@
     currentUserId = profile.id;
     currentRole = profile.role;
     currentUserFilial = profile.filial || null;
+    currentUserPodeExcluir = profile.pode_excluir === true;
     LOGGED_USER_ABAS_BLOQUEADAS = Array.isArray(profile.abas_bloqueadas) ? profile.abas_bloqueadas : [];
     currentUserFirstName = profile.nome.split(' ')[0];
     currentUserFullName = profile.nome;
@@ -11205,6 +11584,50 @@
   // observação etc., e isso rodar no navegador de outra pessoa depois).
   // IMPORTANTE: só usar em texto puro. Nunca aplicar em cima de HTML que
   // o próprio sistema gera (ex: chips, ícones) — só no dado do usuário.
+  // Máscara simples de CEP (00000-000) enquanto digita
+  function mascaraCep(input){
+    let v = input.value.replace(/\D/g, '').slice(0, 8);
+    if(v.length > 5) v = v.slice(0,5) + '-' + v.slice(5);
+    input.value = v;
+  }
+
+  // Busca o endereço automaticamente a partir do CEP (API pública ViaCEP,
+  // gratuita e sem necessidade de chave) — preenche rua, bairro, cidade e estado.
+  async function buscarEnderecoPorCep(prefixo){
+    const cepInput = document.getElementById(`${prefixo}-cep`);
+    const statusEl = document.getElementById(`${prefixo}-cep-status`);
+    if(!cepInput) return;
+    const cep = cepInput.value.replace(/\D/g, '');
+    if(cep.length !== 8){
+      if(statusEl && cep.length > 0) statusEl.textContent = 'CEP incompleto — digite os 8 números.';
+      return;
+    }
+    if(statusEl){ statusEl.textContent = 'Buscando endereço...'; statusEl.style.color = 'var(--gray-600)'; }
+    try {
+      const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const dados = await resp.json();
+      if(dados.erro){
+        if(statusEl){ statusEl.textContent = 'CEP não encontrado — preencha o endereço manualmente.'; statusEl.style.color = '#b45309'; }
+        return;
+      }
+      const setIfEmpty = (id, valor) => {
+        const el = document.getElementById(id);
+        if(el && valor) el.value = valor;
+      };
+      setIfEmpty(`${prefixo}-rua`, dados.logradouro);
+      setIfEmpty(`${prefixo}-bairro`, dados.bairro);
+      setIfEmpty(`${prefixo}-cidade`, dados.localidade);
+      setIfEmpty(`${prefixo}-estado`, dados.uf);
+      if(statusEl){ statusEl.textContent = '✓ Endereço encontrado e preenchido automaticamente.'; statusEl.style.color = '#15803d'; }
+      // já manda o foco pro número, já que o resto veio pronto
+      const numeroEl = document.getElementById(`${prefixo}-numero`);
+      if(numeroEl) numeroEl.focus();
+    } catch(e){
+      if(statusEl){ statusEl.textContent = 'Não foi possível buscar o CEP agora — preencha manualmente.'; statusEl.style.color = '#dc2626'; }
+      console.error('buscarEnderecoPorCep:', e.message);
+    }
+  }
+
   function esc(valor){
     if(valor === null || valor === undefined) return '';
     return String(valor)
@@ -11291,6 +11714,7 @@
         email: row.email || '',
         telefone: row.telefone || '',
         endereco: row.endereco || '',
+        cep: row.cep || '',
         rua: row.rua || '',
         numero: row.numero || '',
         bairro: row.bairro || '',
@@ -11569,6 +11993,7 @@
     renderResponsaveisPicker(s ? (s.responsaveisIds || []) : []);
     const btnHistoricoSeg = document.getElementById('btn-historico-seguradora');
     if(btnHistoricoSeg) btnHistoricoSeg.classList.toggle('hidden', !id);
+    loadSeguradoraTeam(id);
     showView('seguradora-form');
   }
 
@@ -11661,6 +12086,7 @@
     const savedId = editingSeguradoraId || result.data?.id;
     if(savedId){
       SEGURADORAS[savedId] = { ...fullPayload, ...credenciais, responsaveisIds };
+      await salvarEquipeSeguradora(savedId);
     }
 
     if(editingSeguradoraId){
@@ -11722,6 +12148,7 @@
           currentUserId = session.user.id;
           currentRole = profile.role || 'gestor';
           currentUserFilial = profile.filial || null;
+    currentUserPodeExcluir = profile.pode_excluir === true;
           currentUserFirstName = (profile.nome||'').split(' ')[0];
           currentUserFullName = profile.nome || '';
           editingCorretoraGid = null;
