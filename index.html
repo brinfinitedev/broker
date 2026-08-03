@@ -4140,12 +4140,33 @@
     if (banner) banner.style.display = 'flex';
   }, 900);
 
-  function abrirAssessoriaAutoLogin(nome, url, login, senha, codigo){
-    if(!url) return;
+  async function abrirAssessoriaAutoLogin(seguradoraId){
+    const s = SEGURADORAS[seguradoraId];
+    if(!s || !s.link_assessoria) return;
+
+    // Busca login/senha/código só agora, no instante do clique — nunca ficam
+    // guardados em nenhuma variável da página nem aparecem em tela nenhuma.
+    // A função get_credenciais_assessoria roda no banco (RLS) e devolve isso
+    // pra qualquer usuário autenticado, mas sem nunca listar/expor o valor
+    // em uma tela — só é usado pra preencher o formulário da seguradora.
+    const { data, error } = await supabase.rpc('get_credenciais_assessoria', {
+      p_seguradora_id: seguradoraId,
+    });
+    if(error){
+      console.error('Erro ao buscar credenciais da assessoria:', error);
+      window.open(s.link_assessoria, '_blank', 'noopener');
+      return;
+    }
+    const cred = Array.isArray(data) ? data[0] : data;
+    const url = cred?.link_assessoria || s.link_assessoria;
+    const login = cred?.login_assessoria || '';
+    const senha = cred?.senha_assessoria || '';
+    const codigo = cred?.codigo_assessoria || '';
+
     if(_extensaoAutoLoginPresente){
       window.postMessage({
         type: 'AUTOLOGIN_SEGURADORA',
-        payload: { nome, url, login, senha, codigo: codigo || '' }
+        payload: { nome: s.nome, url, login, senha, codigo }
       }, '*');
     } else {
       // Extensão não instalada: comportamento de sempre, só abre o link.
@@ -4153,15 +4174,13 @@
     }
   }
 
-  // Acessos das seguradoras: puxa direto do cadastro (link/login/senha/código
-  // da assessoria) — não precisa cadastrar de novo em lugar nenhum, e sempre
-  // reflete o que está salvo na tela de Seguradoras.
+  // Acessos das seguradoras: toda seguradora com link de assessoria
+  // cadastrado entra automaticamente aqui. Login/senha/código NUNCA chegam
+  // nesse card nem em nenhuma variável da página — só existem no instante
+  // entre o clique e o preenchimento do formulário da seguradora.
   function renderQuickAccessSeguradoras(){
     const grid = document.getElementById('quick-access-seguradoras-grid');
     if(!grid) return;
-    // Regra: toda seguradora que tiver LINK de assessoria cadastrado entra
-    // automaticamente aqui. Login/senha/código são complementos opcionais
-    // (nem toda seguradora pede código, por exemplo).
     const entradas = Object.values(SEGURADORAS).filter(s => s.link_assessoria);
     if(!entradas.length){
       grid.innerHTML = `<p class="hint" style="margin:0;grid-column:1/-1;">Nenhuma seguradora com link de assessoria cadastrado ainda. Preencha isso no cadastro da seguradora.</p>`;
@@ -4174,14 +4193,7 @@
           <div class="av" style="width:28px;height:28px;font-size:10px;flex-shrink:0;overflow:hidden;${s.cor ? `background:${esc(s.cor)};color:#fff;` : ''}">${s.logo ? `<img src="${esc(s.logo)}" style="width:100%;height:100%;object-fit:contain;">` : esc(initials(s.nome))}</div>
           <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(s.nome)}</div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <button class="btn-sm" style="text-align:center;" onclick="abrirAssessoriaAutoLogin(${JSON.stringify(s.nome)}, ${JSON.stringify(s.link_assessoria)}, ${JSON.stringify(s.login_assessoria||'')}, ${JSON.stringify(s.senha_assessoria||'')}, ${JSON.stringify(s.codigo_assessoria||'')})">Abrir assessoria</button>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            ${s.login_assessoria ? `<button class="btn-sm" style="flex:1;" data-copiar="${esc(s.login_assessoria)}" onclick="copiarTexto(this.dataset.copiar,this)">Copiar login</button>` : ''}
-            ${s.senha_assessoria ? `<button class="btn-sm" style="flex:1;" data-copiar="${esc(s.senha_assessoria)}" onclick="copiarTexto(this.dataset.copiar,this)">Copiar senha</button>` : ''}
-            ${s.codigo_assessoria ? `<button class="btn-sm" style="flex:1;" data-copiar="${esc(s.codigo_assessoria)}" onclick="copiarTexto(this.dataset.copiar,this)">Copiar código</button>` : ''}
-          </div>
-        </div>
+        <button class="btn-sm" style="width:100%;text-align:center;" onclick="abrirAssessoriaAutoLogin('${s.id}')">Abrir assessoria</button>
       </div>`).join('');
   }
 
@@ -11905,9 +11917,8 @@
     if(error){ console.error('Erro ao carregar seguradoras:', error); return; }
     Object.keys(SEGURADORAS).forEach(k => delete SEGURADORAS[k]);
     data.forEach(row => {
-      // Lê credenciais de JSONB ou colunas individuais (retrocompatível)
-      const cred = row.credenciais || {};
       SEGURADORAS[row.id] = {
+        id: row.id,
         nome: row.nome || '',
         comercial: row.comercial || '',
         comercialNascimento: row.comercialNascimento || null,
@@ -11917,11 +11928,11 @@
         cor: row.cor || '#132728',
         assistencia_24h: row.assistencia_24h || '',
         meses_inatividade: row.meses_inatividade || null,
-        link_corretor: cred.link_corretor || row.link_corretor || '',
-        link_assessoria: cred.link_assessoria || row.link_assessoria || '',
-        login_assessoria: cred.login_assessoria || row.login_assessoria || '',
-        senha_assessoria: cred.senha_assessoria || row.senha_assessoria || '',
-        codigo_assessoria: cred.codigo_assessoria || row.codigo_assessoria || '',
+        // Só o link fica aqui (não é sigiloso — é o que decide quem aparece
+        // no acesso rápido). Login/senha/código NÃO vêm mais nessa consulta:
+        // moram em "seguradora_credenciais", protegida por RLS (só admin lê
+        // direto; o auto-login busca via RPC no instante do clique).
+        link_assessoria: row.link_assessoria || '',
         responsaveisIds: Array.isArray(row.responsaveis_ids) ? row.responsaveis_ids : [],
       };
     });
@@ -11929,6 +11940,7 @@
     renderSeguradoras();
     renderQuickAccessSeguradoras();
   }
+
 
   // Repopula todo select/checklist de seguradora espalhado pelo sistema (cadastro de
   // corretora, lançamento e importação de produção) com a lista atual de SEGURADORAS.
@@ -11970,6 +11982,7 @@
   }
 
   let editingSeguradoraId = null;
+  let _credenciaisAntesEdicao = null; // snapshot de login/senha/código antes da edição atual, só pra montar o log de alterações
 
   let PENDING_SEGURADORA_LOGO = null;
 
@@ -12140,7 +12153,7 @@
       </div>`).join('');
   }
 
-  function openSeguradoraForm(id){
+  async function openSeguradoraForm(id){
     editingSeguradoraId = id || null;
     const s = id ? SEGURADORAS[id] : null;
     document.getElementById('seguradora-nome').value = s ? s.nome : '';
@@ -12151,11 +12164,33 @@
     document.getElementById('seguradora-telefone').value = s ? s.telefone : '';
     document.getElementById('seguradora-assistencia-24h').value = s ? (s.assistencia_24h||'') : '';
     document.getElementById('seguradora-meses-inatividade').value = s ? (s.meses_inatividade || '') : '';
-    document.getElementById('seguradora-link-corretor').value = s ? (s.link_corretor||'') : '';
-    document.getElementById('seguradora-link-assessoria').value = s ? (s.link_assessoria||'') : '';
-    document.getElementById('seguradora-login-assessoria').value = s ? (s.login_assessoria||'') : '';
-    document.getElementById('seguradora-senha-assessoria').value = s ? (s.senha_assessoria||'') : '';
-    document.getElementById('seguradora-codigo-assessoria').value = s ? (s.codigo_assessoria||'') : '';
+    // Credenciais (link/login/senha/código) moraram numa tabela separada,
+    // protegida por RLS — só quem tem papel de admin consegue ler direto
+    // (a própria tela de Seguradoras já é restrita a admin, isso reforça no banco).
+    document.getElementById('seguradora-link-corretor').value = '';
+    document.getElementById('seguradora-link-assessoria').value = '';
+    document.getElementById('seguradora-login-assessoria').value = '';
+    document.getElementById('seguradora-senha-assessoria').value = '';
+    document.getElementById('seguradora-codigo-assessoria').value = '';
+    if(id){
+      const { data: cred, error: credError } = await supabase
+        .from('seguradora_credenciais')
+        .select('link_corretor, link_assessoria, login_assessoria, senha_assessoria, codigo_assessoria')
+        .eq('seguradora_id', id)
+        .maybeSingle();
+      if(credError){
+        console.error('Erro ao carregar credenciais da seguradora:', credError);
+      } else if(cred){
+        document.getElementById('seguradora-link-corretor').value = cred.link_corretor || '';
+        document.getElementById('seguradora-link-assessoria').value = cred.link_assessoria || '';
+        document.getElementById('seguradora-login-assessoria').value = cred.login_assessoria || '';
+        document.getElementById('seguradora-senha-assessoria').value = cred.senha_assessoria || '';
+        document.getElementById('seguradora-codigo-assessoria').value = cred.codigo_assessoria || '';
+      }
+      _credenciaisAntesEdicao = cred || {};
+    } else {
+      _credenciaisAntesEdicao = {};
+    }
     document.getElementById('seguradora-logo-input').value = '';
     PENDING_SEGURADORA_LOGO = s ? (s.logo || null) : null;
     renderLogoPreview();
@@ -12202,8 +12237,13 @@
     const nome = document.getElementById('seguradora-nome').value.trim();
     if(!nome){ await customAlert('Informe o nome da seguradora.'); return; }
 
-    // Guarda o estado anterior pra montar o histórico de mudanças
-    const dadosAntes = editingSeguradoraId && SEGURADORAS[editingSeguradoraId] ? { ...SEGURADORAS[editingSeguradoraId] } : null;
+    // Guarda o estado anterior pra montar o histórico de mudanças.
+    // Dados públicos vêm do objeto em memória; login/senha/código vêm do
+    // snapshot capturado quando o formulário foi aberto (não ficam mais
+    // guardados em SEGURADORAS depois do carregamento inicial).
+    const dadosAntes = editingSeguradoraId && SEGURADORAS[editingSeguradoraId]
+      ? { ...SEGURADORAS[editingSeguradoraId], ...(_credenciaisAntesEdicao || {}) }
+      : null;
 
     const responsaveisIds = Array.from(document.querySelectorAll('#seguradora-responsaveis-list input:checked')).map(el=>el.value);
 
@@ -12215,7 +12255,9 @@
       codigo_assessoria: document.getElementById('seguradora-codigo-assessoria').value.trim(),
     };
 
-    // Todos os campos que gostaríamos de salvar — serão removidos se a coluna não existir
+    // Campos públicos (não sigilosos) — vão na tabela "seguradoras" de sempre.
+    // link_assessoria também fica salvo aqui (só a URL, sem login/senha) porque
+    // é usado pra decidir quem aparece no acesso rápido da home.
     const fullPayload = {
       nome,
       comercial: document.getElementById('seguradora-comercial').value.trim(),
@@ -12225,9 +12267,9 @@
       telefone: document.getElementById('seguradora-telefone').value.trim(),
       assistencia_24h: document.getElementById('seguradora-assistencia-24h').value.trim(),
       meses_inatividade: document.getElementById('seguradora-meses-inatividade').value ? Number(document.getElementById('seguradora-meses-inatividade').value) : null,
+      link_assessoria: credenciais.link_assessoria,
       logo: PENDING_SEGURADORA_LOGO,
       responsaveis_ids: responsaveisIds,
-      credenciais,
     };
 
     async function trySave(payload){
@@ -12239,7 +12281,7 @@
     }
 
     // Tenta salvar retirando campos inexistentes até funcionar
-    const optionalFields = ['credenciais','responsaveis_ids','logo','assistencia_24h','comercialNascimento','meses_inatividade'];
+    const optionalFields = ['responsaveis_ids','logo','assistencia_24h','comercialNascimento','meses_inatividade','link_assessoria'];
     let payload = { ...fullPayload };
     let result = await trySave(payload);
 
@@ -12255,8 +12297,19 @@
     if(result.error){ await customAlert('Erro ao salvar: ' + result.error.message); return; }
 
     const savedId = editingSeguradoraId || result.data?.id;
+
+    // Credenciais sensíveis vão pra tabela separada (RLS: só admin lê/grava).
     if(savedId){
-      SEGURADORAS[savedId] = { ...fullPayload, ...credenciais, responsaveisIds };
+      const { error: credError } = await supabase
+        .from('seguradora_credenciais')
+        .upsert({ seguradora_id: savedId, ...credenciais }, { onConflict: 'seguradora_id' });
+      if(credError){
+        await customAlert('Dados gerais salvos, mas houve erro ao salvar login/senha: ' + credError.message);
+      }
+    }
+
+    if(savedId){
+      SEGURADORAS[savedId] = { ...fullPayload, ...credenciais, id: savedId, responsaveisIds };
       await salvarEquipeSeguradora(savedId);
     }
 
