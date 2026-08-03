@@ -1414,6 +1414,12 @@
               <h2 style="font-size:14px;margin:0;">Acessos das seguradoras</h2>
               <span class="hint" style="margin:0;font-size:11px;">Login e senha da assessoria de cada seguradora</span>
             </div>
+            <div id="extensao-instalar-banner" class="hidden" style="display:none;align-items:center;justify-content:space-between;gap:12px;background:var(--surface-2);border:1.4px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+              <div style="font-size:12.5px;color:var(--gray-600);">
+                <b style="color:var(--black);">Instale a extensão Auto Login</b> pra abrir e entrar direto nos portais das seguradoras com um clique.
+              </div>
+              <a id="extensao-instalar-link" href="#" target="_blank" rel="noopener" class="btn-dark" style="flex-shrink:0;white-space:nowrap;text-decoration:none;">Instalar extensão</a>
+            </div>
             <div id="quick-access-seguradoras-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;"></div>
           </div>
 
@@ -1609,6 +1615,15 @@
                     </button>
                   </div>
                   <button type="button" onclick="copiarCampo('seguradora-senha-assessoria')" title="Copiar senha" style="flex-shrink:0;width:38px;height:38px;border-radius:9px;border:1.4px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--black)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="f-field">
+                <label>Código da assessoria <span style="font-size:11px;font-weight:500;color:var(--gray-600);">(algumas seguradoras pedem, outras não — deixe em branco se não tiver)</span></label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <input type="text" id="seguradora-codigo-assessoria" placeholder="Ex: código de corretor, filial etc." style="flex:1;">
+                  <button type="button" onclick="copiarCampo('seguradora-codigo-assessoria')" title="Copiar código" style="flex-shrink:0;width:38px;height:38px;border-radius:9px;border:1.4px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--black)'" onmouseout="this.style.borderColor='var(--border)'">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                   </button>
                 </div>
@@ -4098,29 +4113,73 @@
       </a>`).join('');
   }
 
-  // Acessos das seguradoras: puxa direto do cadastro (link/login/senha da
-  // assessoria) — não precisa cadastrar de novo em lugar nenhum, e sempre
+  // ── Integração com a extensão "Auto Login Seguradoras" ─────────────────
+  // Troque pela URL real depois que a extensão for publicada na Chrome Web
+  // Store (formato: https://chromewebstore.google.com/detail/NOME/ID).
+  const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/SEU-ID-AQUI';
+
+  // A extensão (quando instalada) avisa a página com essa mensagem assim
+  // que carrega. Sem a extensão, o botão cai no fallback (só abre o link).
+  let _extensaoAutoLoginPresente = false;
+  window.addEventListener('message', (event) => {
+    if (event.source !== window || !event.data) return;
+    if (event.data.type === 'AUTOLOGIN_EXTENSION_READY') {
+      _extensaoAutoLoginPresente = true;
+      const banner = document.getElementById('extensao-instalar-banner');
+      if (banner) banner.style.display = 'none';
+    }
+  });
+
+  // Se depois de um tempinho a extensão não respondeu, mostra o banner de
+  // instalação (evita "piscar" o banner pra quem já tem ela instalada).
+  setTimeout(() => {
+    if (_extensaoAutoLoginPresente) return;
+    const link = document.getElementById('extensao-instalar-link');
+    const banner = document.getElementById('extensao-instalar-banner');
+    if (link) link.href = CHROME_STORE_URL;
+    if (banner) banner.style.display = 'flex';
+  }, 900);
+
+  function abrirAssessoriaAutoLogin(nome, url, login, senha, codigo){
+    if(!url) return;
+    if(_extensaoAutoLoginPresente){
+      window.postMessage({
+        type: 'AUTOLOGIN_SEGURADORA',
+        payload: { nome, url, login, senha, codigo: codigo || '' }
+      }, '*');
+    } else {
+      // Extensão não instalada: comportamento de sempre, só abre o link.
+      window.open(url, '_blank', 'noopener');
+    }
+  }
+
+  // Acessos das seguradoras: puxa direto do cadastro (link/login/senha/código
+  // da assessoria) — não precisa cadastrar de novo em lugar nenhum, e sempre
   // reflete o que está salvo na tela de Seguradoras.
   function renderQuickAccessSeguradoras(){
     const grid = document.getElementById('quick-access-seguradoras-grid');
     if(!grid) return;
-    const entradas = Object.values(SEGURADORAS).filter(s => s.link_assessoria || s.login_assessoria || s.senha_assessoria);
+    // Regra: toda seguradora que tiver LINK de assessoria cadastrado entra
+    // automaticamente aqui. Login/senha/código são complementos opcionais
+    // (nem toda seguradora pede código, por exemplo).
+    const entradas = Object.values(SEGURADORAS).filter(s => s.link_assessoria);
     if(!entradas.length){
-      grid.innerHTML = `<p class="hint" style="margin:0;grid-column:1/-1;">Nenhuma seguradora com link/login de assessoria cadastrado ainda. Preencha isso no cadastro da seguradora.</p>`;
+      grid.innerHTML = `<p class="hint" style="margin:0;grid-column:1/-1;">Nenhuma seguradora com link de assessoria cadastrado ainda. Preencha isso no cadastro da seguradora.</p>`;
       return;
     }
     entradas.sort((a,b) => (a.nome||'').localeCompare(b.nome||'', 'pt-BR'));
     grid.innerHTML = entradas.map(s => `
       <div style="border:1.4px solid var(--border);border-radius:12px;padding:14px;background:#fff;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-          <div class="av" style="width:28px;height:28px;font-size:10px;flex-shrink:0;${s.cor ? `background:${esc(s.cor)};color:#fff;` : ''}">${esc(initials(s.nome))}</div>
+          <div class="av" style="width:28px;height:28px;font-size:10px;flex-shrink:0;overflow:hidden;${s.cor ? `background:${esc(s.cor)};color:#fff;` : ''}">${s.logo ? `<img src="${esc(s.logo)}" style="width:100%;height:100%;object-fit:contain;">` : esc(initials(s.nome))}</div>
           <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(s.nome)}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;">
-          ${s.link_assessoria ? `<a href="${esc(s.link_assessoria)}" target="_blank" rel="noopener" class="btn-sm" style="text-align:center;text-decoration:none;">Abrir assessoria</a>` : ''}
-          <div style="display:flex;gap:6px;">
+          <button class="btn-sm" style="text-align:center;" onclick="abrirAssessoriaAutoLogin(${JSON.stringify(s.nome)}, ${JSON.stringify(s.link_assessoria)}, ${JSON.stringify(s.login_assessoria||'')}, ${JSON.stringify(s.senha_assessoria||'')}, ${JSON.stringify(s.codigo_assessoria||'')})">Abrir assessoria</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
             ${s.login_assessoria ? `<button class="btn-sm" style="flex:1;" data-copiar="${esc(s.login_assessoria)}" onclick="copiarTexto(this.dataset.copiar,this)">Copiar login</button>` : ''}
             ${s.senha_assessoria ? `<button class="btn-sm" style="flex:1;" data-copiar="${esc(s.senha_assessoria)}" onclick="copiarTexto(this.dataset.copiar,this)">Copiar senha</button>` : ''}
+            ${s.codigo_assessoria ? `<button class="btn-sm" style="flex:1;" data-copiar="${esc(s.codigo_assessoria)}" onclick="copiarTexto(this.dataset.copiar,this)">Copiar código</button>` : ''}
           </div>
         </div>
       </div>`).join('');
@@ -11862,6 +11921,7 @@
         link_assessoria: cred.link_assessoria || row.link_assessoria || '',
         login_assessoria: cred.login_assessoria || row.login_assessoria || '',
         senha_assessoria: cred.senha_assessoria || row.senha_assessoria || '',
+        codigo_assessoria: cred.codigo_assessoria || row.codigo_assessoria || '',
         responsaveisIds: Array.isArray(row.responsaveis_ids) ? row.responsaveis_ids : [],
       };
     });
@@ -12095,6 +12155,7 @@
     document.getElementById('seguradora-link-assessoria').value = s ? (s.link_assessoria||'') : '';
     document.getElementById('seguradora-login-assessoria').value = s ? (s.login_assessoria||'') : '';
     document.getElementById('seguradora-senha-assessoria').value = s ? (s.senha_assessoria||'') : '';
+    document.getElementById('seguradora-codigo-assessoria').value = s ? (s.codigo_assessoria||'') : '';
     document.getElementById('seguradora-logo-input').value = '';
     PENDING_SEGURADORA_LOGO = s ? (s.logo || null) : null;
     renderLogoPreview();
@@ -12151,6 +12212,7 @@
       link_assessoria: document.getElementById('seguradora-link-assessoria').value.trim(),
       login_assessoria: document.getElementById('seguradora-login-assessoria').value.trim(),
       senha_assessoria: document.getElementById('seguradora-senha-assessoria').value.trim(),
+      codigo_assessoria: document.getElementById('seguradora-codigo-assessoria').value.trim(),
     };
 
     // Todos os campos que gostaríamos de salvar — serão removidos se a coluna não existir
@@ -12261,12 +12323,10 @@
           currentUserFirstName = (profile.nome||'').split(' ')[0];
           currentUserFullName = profile.nome || '';
           editingCorretoraGid = null;
-          setSplashMsg('Carregando dados...');
-          await Promise.all([
-            loadCorretorasFromSupabase(),
-            loadSeguradorasFromSupabase(),
-          ]);
 
+          // Mostra a tela JÁ, sem esperar carregar corretoras/seguradoras (isso
+          // pode levar alguns segundos com 1000+ registros) — o carregamento
+          // completa em segundo plano e a interface se atualiza sozinha.
           document.getElementById('view-login').style.display = 'none';
           document.getElementById('app').classList.add('active');
           document.getElementById('bottom-nav').classList.add('show');
@@ -12277,18 +12337,12 @@
             document.getElementById('user-av-img').classList.remove('hidden');
             document.getElementById('user-av').classList.add('hidden');
           }
-          updateHomeGreeting();
           applyRoleVisibility();
           renderSidebar();
           renderBottomNav();
-          refreshCorretoraSelects();
-          renderUsuarios();
-          Object.keys(GROUPS).forEach(refreshGroupUI);
           let viewParaAbrir = 'home';
           try {
             const salva = sessionStorage.getItem('ultimaViewAtiva');
-            // só usa a view salva se ela realmente existir na página e não for uma
-            // tela de "edição" que não faz sentido abrir sozinha (ex: cadastro vazio)
             if(salva && document.getElementById('view-'+salva) && !['corretora-form','seguradora-form'].includes(salva)){
               viewParaAbrir = salva;
             }
@@ -12296,6 +12350,21 @@
           showView(viewParaAbrir);
           hideSplash(200);
           iniciarTimeoutSessao();
+
+          // Carrega corretoras e seguradoras em segundo plano — quando terminar,
+          // atualiza tudo que depende delas (seletores, cards, filtros).
+          Promise.all([
+            loadCorretorasFromSupabase(),
+            loadSeguradorasFromSupabase(),
+          ]).then(() => {
+            updateHomeGreeting();
+            refreshCorretoraSelects();
+            renderUsuarios();
+            Object.keys(GROUPS).forEach(refreshGroupUI);
+            // recarrega a view atual, agora com os dados completos disponíveis
+            showView(currentView);
+          }).catch(e => console.error('Erro ao carregar corretoras/seguradoras:', e));
+
           return;
         }
       }
@@ -12345,12 +12414,6 @@
   /* ===== FIM SESSION TIMEOUT ===== */
 
   /* init */
-  applyRoleVisibility();
-  renderSidebar();
-  renderBottomNav();
-  refreshCorretoraSelects();
-  renderUsuarios();
-  Object.keys(GROUPS).forEach(refreshGroupUI);
   initApp();
 </script>
 </body>
