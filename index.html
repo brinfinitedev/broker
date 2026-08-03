@@ -1878,7 +1878,7 @@
           </div>
           <div class="form-section hidden" id="mkt-whats">
             <h3>Contatos selecionados</h3>
-            <p class="hint">Escolha até <b>20 contatos</b> que vão receber esta mensagem.</p>
+            <p class="hint">Escolha os contatos que vão receber esta mensagem — até <b>30</b> no disparo manual, ou até <b>250</b> no disparo em massa.</p>
             <button class="btn-outline" onclick="abrirSeletorContatos()">Selecionar contatos</button>
             <p class="hint" id="whats-selecionados-resumo" style="margin-top:12px;">Nenhum contato selecionado ainda.</p>
             <!-- campo oculto para manter compatibilidade com JS -->
@@ -1886,13 +1886,13 @@
             <div id="whats-perm-aviso" style="display:none;"></div>
 
             <h3 style="margin-top:24px;">Mensagem do disparo</h3>
-            <p class="hint">Cadastre até 3 variações — o sistema alterna entre elas a cada contato (1, 2, 3, 1, 2, 3...), pra não mandar o texto idêntico pra todo mundo seguido. Isso reduz bastante o risco de bloqueio do WhatsApp. Só a Mensagem 1 é obrigatória.</p>
+            <p class="hint">Cadastre até 3 variações — o sistema alterna entre elas a cada contato (1, 2, 3, 1, 2, 3...), pra não mandar o texto idêntico pra todo mundo seguido. Isso reduz bastante o risco de bloqueio do WhatsApp.</p>
             <div class="form-grid">
               <div class="f-field full"><label>Mensagem 1</label><textarea id="whats-msg" rows="4" placeholder="Escreva a mensagem que será enviada aos contatos selecionados..."></textarea></div>
               <div class="f-field full"><label>Mensagem 2 <span style="font-weight:400;color:var(--gray-600);">(opcional — mesma ideia, com outras palavras)</span></label><textarea id="whats-msg-2" rows="4" placeholder="Deixe em branco pra usar só a Mensagem 1 sempre."></textarea></div>
               <div class="f-field full"><label>Mensagem 3 <span style="font-weight:400;color:var(--gray-600);">(opcional)</span></label><textarea id="whats-msg-3" rows="4" placeholder="Deixe em branco se não quiser uma terceira variação."></textarea></div>
             </div>
-            <p class="hint">Escolha como enviar: <b>Manual</b> abre o WhatsApp Web/App, um chat por contato, pra você revisar e clicar em enviar (mais lento, mas você vê cada mensagem antes de mandar). <b>Em massa</b> envia direto pela API da plataforma de atendimento, automático, sem precisar ficar clicando (mais rápido pra volumes maiores).</p>
+            <p class="hint">Escolha como enviar: <b>Manual</b> abre o WhatsApp Web/App, um chat por contato, pra você revisar e clicar em enviar (até <b>30 contatos</b> por vez). <b>Em massa</b> envia direto pela API da plataforma de atendimento, automático, sem precisar ficar clicando (até <b>250 contatos</b> por vez). Em qualquer um dos dois, <b>só a Mensagem 1 é obrigatória</b> — as variações 2 e 3 são opcionais.</p>
             <div class="form-actions" style="gap:10px;">
               <button class="btn-outline" onclick="dispatchWhatsappManual()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg> Disparo manual (abre o WhatsApp)</button>
               <button class="btn-dark" onclick="dispatchWhatsappEmMassa()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Disparo em massa (automático)</button>
@@ -3241,9 +3241,9 @@
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <div>
         <h3 style="margin:0;">Selecionar contatos</h3>
-        <p style="font-size:12.5px;color:var(--gray-600);margin:3px 0 0;">Marque até 20 contatos para receber esta mensagem</p>
+        <p style="font-size:12.5px;color:var(--gray-600);margin:3px 0 0;">Até 30 contatos no disparo manual, ou até 250 no disparo em massa</p>
       </div>
-      <div style="background:var(--black);color:#fff;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700;" id="seletor-contador">0 / 20</div>
+      <div style="background:var(--black);color:#fff;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700;" id="seletor-contador">0 / 250</div>
     </div>
 
     <!-- Filtros: busca em largura total, selects abaixo -->
@@ -6672,7 +6672,8 @@
   }
 
   let WHATS_SELECIONADOS = [];
-  const LIMITE_CONTATOS_DISPARO = 20;
+  const LIMITE_CONTATOS_DISPARO = 250; // limite do disparo em massa (o seletor usa esse, o maior dos dois)
+  const LIMITE_MANUAL_DISPARO = 30;    // limite do disparo manual (abre o WhatsApp Web um por um)
 
   let _seletorTodosContatos = [];
 
@@ -6904,6 +6905,10 @@
   async function dispatchWhatsappManual(){
     const mensagens = await validarAntesDoDisparo();
     if(!mensagens) return;
+    if(WHATS_SELECIONADOS.length > LIMITE_MANUAL_DISPARO){
+      await customAlert(`O disparo manual permite até ${LIMITE_MANUAL_DISPARO} contatos por vez (você selecionou ${WHATS_SELECIONADOS.length}). Pra volumes maiores, use o "Disparo em massa", que aguenta até ${LIMITE_CONTATOS_DISPARO}.`);
+      return;
+    }
 
     const mensagensEnviadas = WHATS_SELECIONADOS.map((c,i) => mensagens[i % mensagens.length]);
     let acumulado = 0;
