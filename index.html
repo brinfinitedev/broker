@@ -1875,7 +1875,7 @@
               <div class="f-field full"><label>Mensagem 2 <span style="font-weight:400;color:var(--gray-600);">(opcional — mesma ideia, com outras palavras)</span></label><textarea id="whats-msg-2" rows="4" placeholder="Deixe em branco pra usar só a Mensagem 1 sempre."></textarea></div>
               <div class="f-field full"><label>Mensagem 3 <span style="font-weight:400;color:var(--gray-600);">(opcional)</span></label><textarea id="whats-msg-3" rows="4" placeholder="Deixe em branco se não quiser uma terceira variação."></textarea></div>
             </div>
-            <p class="hint">Ao clicar em disparar, uma aba do WhatsApp Web será aberta automaticamente para <b>cada contato selecionado</b>, já com a mensagem preenchida (alternando entre as variações cadastradas). Seu navegador pode pedir permissão para abrir múltiplas abas: clique em "permitir".</p>
+            <p class="hint">Ao clicar em disparar, a mensagem é enviada direto pelo WhatsApp conectado na plataforma de atendimento — alternando entre as variações cadastradas, com um intervalo entre cada envio pra não parecer disparo automatizado. Não precisa manter nenhuma aba aberta.</p>
             <div class="form-actions"><button class="btn-dark" onclick="dispatchWhatsapp()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Disparar para selecionados</button></div>
           </div>
         </section>
@@ -6824,19 +6824,30 @@
       if(!continuar) return;
     }
 
-    // Alterna entre as variações cadastradas (1, 2, 3, 1, 2, 3...) e usa um
-    // intervalo com uma variação aleatória entre cada abertura de aba — os dois
-    // juntos ajudam a não parecer um disparo automatizado idêntico pro WhatsApp.
-    let acumulado = 0;
-    const mensagensEnviadas = [];
-    WHATS_SELECIONADOS.forEach((c, i) => {
-      const mensagemDaVez = mensagens[i % mensagens.length];
-      mensagensEnviadas.push(mensagemDaVez);
-      if(c.whatsapp){
-        acumulado += 300 + Math.floor(Math.random() * 400); // 300–700ms entre cada, variando
-        setTimeout(() => openWhats(c.whatsapp, mensagemDaVez), acumulado);
-      }
+    // Monta a lista final (rodízio de mensagens) e manda tudo pro servidor de
+    // uma vez — o servidor cuida do intervalo entre cada envio e chama a API
+    // da plataforma de atendimento (ClickMassa), sem precisar manter o
+    // navegador aberto nem abrir uma aba por contato.
+    const mensagensEnviadas = WHATS_SELECIONADOS.map((c,i) => mensagens[i % mensagens.length]);
+    const btnDisparar = document.querySelector('#mkt-whats .btn-dark');
+    if(btnDisparar){ btnDisparar.disabled = true; btnDisparar.textContent = 'Disparando...'; }
+
+    const { data: resultado, error: erroFuncao } = await supabase.functions.invoke('send-whatsapp-push', {
+      body: {
+        contatos: WHATS_SELECIONADOS.map((c,i) => ({ numero: c.whatsapp, mensagem: mensagensEnviadas[i] })),
+      },
     });
+
+    if(btnDisparar){ btnDisparar.disabled = false; btnDisparar.textContent = 'Disparar para selecionados'; }
+
+    if(erroFuncao){
+      alert('Erro ao disparar: ' + erroFuncao.message);
+      return;
+    }
+    if(resultado?.error){
+      alert('Erro ao disparar: ' + resultado.error);
+      return;
+    }
 
     const resumoMensagem = mensagens.length > 1
       ? `[Rodízio de ${mensagens.length} mensagens]\n\n` + mensagens.map((m,i) => `Variação ${i+1}: ${m}`).join('\n\n')
@@ -6844,12 +6855,17 @@
 
     await supabase.from('marketing_disparos').insert({
       tipo:'whatsapp', mensagem: resumoMensagem, enviado_por: currentUserId,
-      quantidade_contatos: WHATS_SELECIONADOS.length,
+      quantidade_contatos: resultado?.sucesso ?? WHATS_SELECIONADOS.length,
       contatos: WHATS_SELECIONADOS.map((c,i) => ({ nome: c.nome, whatsapp: c.whatsapp, mensagem: mensagensEnviadas[i] })),
     });
     registrarLog('Disparo de WhatsApp', `${WHATS_SELECIONADOS.length} contato(s)${mensagens.length > 1 ? ` · ${mensagens.length} variações` : ''}`);
 
-    alert(`Disparo enviado para ${WHATS_SELECIONADOS.length} contato(s)${mensagens.length > 1 ? `, alternando entre ${mensagens.length} variações de mensagem` : ''}.`);
+    const falhas = resultado?.falhas || [];
+    let avisoFinal = `Disparo concluído: ${resultado?.sucesso ?? '?'} de ${WHATS_SELECIONADOS.length} enviado(s) com sucesso.`;
+    if(falhas.length){
+      avisoFinal += `\n\n${falhas.length} falharam:\n` + falhas.slice(0,10).map(f => `• ${f.numero}: ${f.detalhe}`).join('\n');
+    }
+    alert(avisoFinal);
     WHATS_SELECIONADOS = [];
     window._numerosBloqueadosDuplicar = null;
     document.getElementById('whats-selecionados-resumo').textContent = 'Nenhum contato selecionado ainda.';
