@@ -337,19 +337,20 @@
   .page-head p{ color:var(--gray-600); font-size:13px; margin-top:4px; }
 
   .btn-dark{
-    display:inline-flex; align-items:center; gap:8px;
+    display:inline-flex; align-items:center; gap:8px; white-space:nowrap;
     background: var(--black); color:#fff; padding:11px 18px; border-radius:999px;
     font-size:13px; font-weight:700; transition: transform .2s var(--ease), box-shadow .2s var(--ease);
   }
   .btn-dark:hover{ transform: translateY(-2px); box-shadow: var(--shadow-md); }
-  .btn-dark svg{ width:15px; height:15px; }
+  .btn-dark svg{ width:15px; height:15px; flex-shrink:0; }
 
   .btn-outline{
-    display:inline-flex; align-items:center; gap:8px;
+    display:inline-flex; align-items:center; gap:8px; white-space:nowrap;
     border:1.4px solid var(--border); padding:10px 16px; border-radius:999px;
     font-size:13px; font-weight:700; transition: border-color .2s, background .2s;
   }
   .btn-outline:hover{ border-color: var(--black); background: var(--surface); }
+  .btn-outline svg{ width:15px; height:15px; flex-shrink:0; }
 
   .search-bar{
     display:flex; align-items:center; gap:10px; border:1.4px solid var(--border);
@@ -1693,15 +1694,15 @@
             <div><h1>Pipeline</h1><p>Acompanhe as renovações de apólices, por seguradora, até o vencimento</p></div>
             <div style="display:flex;gap:10px;">
               <button class="btn-outline" onclick="abrirBancoRenovacoes()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
                 Banco de Renovações
               </button>
               <button class="btn-outline" onclick="abrirNovoCardPipeline()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M12 5v14M5 12h14"/></svg>
                 Novo negócio
               </button>
               <button class="btn-dark" onclick="openModal('modal-importar-renovacoes')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
                 Importar planilha
               </button>
             </div>
