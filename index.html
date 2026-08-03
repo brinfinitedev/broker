@@ -623,6 +623,10 @@
     align-items:center; justify-content:center; padding:20px; animation: fadeIn .2s var(--ease);
   }
   .modal-overlay.open{ display:flex; }
+  #modal-custom-alert{ z-index:300; }
+  #modal-custom-alert .modal-box{ text-align:center; }
+  #modal-custom-alert .custom-alert-icone{ font-size:32px; margin-bottom:10px; }
+  #modal-custom-alert p{ font-size:14px; line-height:1.6; white-space:pre-wrap; color:var(--black); margin:0 0 20px; }
   .modal-box{
     background:#fff; border-radius:20px; width:100%; max-width:460px; padding:26px;
     max-height:88vh; overflow-y:auto; box-shadow: var(--shadow-lg);
@@ -1218,6 +1222,19 @@
 </script>
 </head>
 <body>
+<!-- Modal customizado que substitui alert()/confirm() nativos do navegador —
+     mantém a identidade visual do sistema (sem mostrar o domínio na caixa). -->
+<div class="modal-overlay" id="modal-custom-alert" onmousedown="_ovMouseDownSelf = (event.target===this)" onclick="if(event.target===this && _ovMouseDownSelf) _resolverModalCustom(false)">
+  <div class="modal-box">
+    <div class="custom-alert-icone" id="custom-alert-icone">ℹ️</div>
+    <p id="custom-alert-mensagem"></p>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn-outline hidden" id="custom-alert-btn-cancelar" onclick="_resolverModalCustom(false)">Cancelar</button>
+      <button class="btn-dark" id="custom-alert-btn-ok" onclick="_resolverModalCustom(true)">OK</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- ============================================================
      SPLASH SCREEN
@@ -1875,8 +1892,11 @@
               <div class="f-field full"><label>Mensagem 2 <span style="font-weight:400;color:var(--gray-600);">(opcional — mesma ideia, com outras palavras)</span></label><textarea id="whats-msg-2" rows="4" placeholder="Deixe em branco pra usar só a Mensagem 1 sempre."></textarea></div>
               <div class="f-field full"><label>Mensagem 3 <span style="font-weight:400;color:var(--gray-600);">(opcional)</span></label><textarea id="whats-msg-3" rows="4" placeholder="Deixe em branco se não quiser uma terceira variação."></textarea></div>
             </div>
-            <p class="hint">Ao clicar em disparar, a mensagem é enviada direto pelo WhatsApp conectado na plataforma de atendimento — alternando entre as variações cadastradas, com um intervalo entre cada envio pra não parecer disparo automatizado. Não precisa manter nenhuma aba aberta.</p>
-            <div class="form-actions"><button class="btn-dark" onclick="dispatchWhatsapp()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Disparar para selecionados</button></div>
+            <p class="hint">Escolha como enviar: <b>Manual</b> abre o WhatsApp Web/App, um chat por contato, pra você revisar e clicar em enviar (mais lento, mas você vê cada mensagem antes de mandar). <b>Em massa</b> envia direto pela API da plataforma de atendimento, automático, sem precisar ficar clicando (mais rápido pra volumes maiores).</p>
+            <div class="form-actions" style="gap:10px;">
+              <button class="btn-outline" onclick="dispatchWhatsappManual()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg> Disparo manual (abre o WhatsApp)</button>
+              <button class="btn-dark" onclick="dispatchWhatsappEmMassa()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Disparo em massa (automático)</button>
+            </div>
           </div>
         </section>
 
@@ -3536,6 +3556,40 @@
   // items shown in the mobile bottom bar (first 4) + "more" opens the rest in a sheet
   const BOTTOM_MAIN_COUNT = 4;
 
+  // ==========================================================
+  // Substitui await customAlert()/await customConfirm() nativos do navegador por um modal no
+  // estilo do próprio sistema — evita mostrar o domínio na caixinha
+  // (tipo "portal.infinitebroker.com.br diz"), mantendo a identidade visual.
+  // ==========================================================
+  let _customModalResolve = null;
+
+  function customAlert(mensagem){
+    return new Promise((resolve) => {
+      _customModalResolve = resolve;
+      document.getElementById('custom-alert-icone').textContent = 'ℹ️';
+      document.getElementById('custom-alert-mensagem').textContent = mensagem;
+      document.getElementById('custom-alert-btn-cancelar').classList.add('hidden');
+      document.getElementById('custom-alert-btn-ok').textContent = 'OK';
+      openModal('modal-custom-alert');
+    });
+  }
+
+  function customConfirm(mensagem){
+    return new Promise((resolve) => {
+      _customModalResolve = resolve;
+      document.getElementById('custom-alert-icone').textContent = '⚠️';
+      document.getElementById('custom-alert-mensagem').textContent = mensagem;
+      document.getElementById('custom-alert-btn-cancelar').classList.remove('hidden');
+      document.getElementById('custom-alert-btn-ok').textContent = 'Confirmar';
+      openModal('modal-custom-alert');
+    });
+  }
+
+  function _resolverModalCustom(valor){
+    closeModal('modal-custom-alert');
+    if(_customModalResolve){ const r = _customModalResolve; _customModalResolve = null; r(valor); }
+  }
+
   let currentRole = 'admin';
   let currentUserFilial = null; // filial do usuário logado — se preenchida e não for super admin, restringe a visão de produção só a essa filial
   let currentUserPodeExcluir = false; // Super Admin decide, por usuário, se ele exclui direto ou só solicita
@@ -3808,9 +3862,9 @@
   }
 
   async function deleteComunicado(id){
-    if(!confirm('Apagar este comunicado?')) return;
+    if(!await customConfirm('Apagar este comunicado?')) return;
     const { error } = await supabase.from('comunicados').delete().eq('id', id);
-    if(error){ alert('Erro ao apagar: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao apagar: ' + error.message); return; }
     registrarLog('Excluiu comunicado', id);
     renderComunicados();
     renderHistoricoComunicados();
@@ -3819,9 +3873,9 @@
   async function saveComunicado(){
     const mensagem = document.getElementById('comunicado-msg').value.trim();
     const validade = document.getElementById('comunicado-validade').value || null;
-    if(!mensagem){ alert('Escreva uma mensagem.'); return; }
+    if(!mensagem){ await customAlert('Escreva uma mensagem.'); return; }
     const { error } = await supabase.from('comunicados').insert({ autor_id: currentUserId, mensagem, validade });
-    if(error){ alert('Erro ao publicar: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao publicar: ' + error.message); return; }
     registrarLog('Publicou comunicado', mensagem.slice(0,80));
     document.getElementById('comunicado-msg').value = '';
     document.getElementById('comunicado-validade').value = '';
@@ -4085,11 +4139,11 @@
       </div>`).join('') : `<p class="hint" style="margin:0;">Nenhum acesso rápido cadastrado ainda.</p>`;
   }
 
-  function adicionarQA(){
+  async function adicionarQA(){
     const nome = document.getElementById('qa-new-nome').value.trim();
     const url = document.getElementById('qa-new-url').value.trim();
     const cor = document.getElementById('qa-new-cor').value;
-    if(!nome||!url){ alert('Preencha nome e URL.'); return; }
+    if(!nome||!url){ await customAlert('Preencha nome e URL.'); return; }
     loadQA().push({id:'q'+Date.now(), nome, url, cor});
     saveQA(); _qaData=null;
     document.getElementById('qa-new-nome').value='';
@@ -4420,7 +4474,7 @@
 
     if(currentUserId){
       const { error } = await supabase.from('profiles').update({ foto_url: dataUrl }).eq('id', currentUserId);
-      if(error){ alert('Não foi possível salvar a foto: ' + error.message); return; }
+      if(error){ await customAlert('Não foi possível salvar a foto: ' + error.message); return; }
       registrarLog('Atualizou foto de perfil', '');
     }
   }
@@ -4454,13 +4508,13 @@
   // Guarda a configuração do Brevo só em memória por enquanto (nada é enviado de verdade ainda).
   // Quando integrarmos, a chave de API precisa ficar no backend/Edge Function, nunca aqui no HTML.
   let BREVO_CONFIG = { apiKey:'', remetente:'', nomeRemetente:'' };
-  function saveBrevoConfig(){
+  async function saveBrevoConfig(){
     BREVO_CONFIG = {
       apiKey: document.getElementById('brevo-api-key').value.trim(),
       remetente: document.getElementById('brevo-remetente').value.trim(),
       nomeRemetente: document.getElementById('brevo-nome-remetente').value.trim(),
     };
-    alert('Configuração salva nesta sessão. Quando ativarmos a integração de verdade, a chave de API vai para um lugar seguro (Edge Function), nunca direto no HTML.');
+    await customAlert('Configuração salva nesta sessão. Quando ativarmos a integração de verdade, a chave de API vai para um lugar seguro (Edge Function), nunca direto no HTML.');
   }
 
   let draggedCardId = null;
@@ -4471,7 +4525,7 @@
     if(!draggedCardId) return;
     const novaColuna = col.dataset.col;
     const { error } = await supabase.from('crm_cards').update({ coluna: novaColuna }).eq('id', draggedCardId);
-    if(error){ alert('Erro ao mover card: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao mover card: ' + error.message); return; }
     renderKanban();
   }
 
@@ -4969,7 +5023,7 @@
     renderFunil();
     const { error } = await supabase.from('renovacoes').update(payloadMove).eq('id', r.id);
     if(error){
-      alert('Erro ao mover o card: ' + error.message);
+      await customAlert('Erro ao mover o card: ' + error.message);
       r.estagio = estagioAnterior; r.estagio_manual = eraManual;
       renderFunil();
     }
@@ -4985,9 +5039,9 @@
 
   async function guardarNoBancoRenovacoes(){
     if(!editingRenovacaoId) return;
-    if(!confirm('Guardar este negócio no banco de renovações?\n\nEle sai do quadro do Pipeline, mas fica salvo pra você reconsiderar na próxima renovação (ex: no próximo ano).')) return;
+    if(!await customConfirm('Guardar este negócio no banco de renovações?\n\nEle sai do quadro do Pipeline, mas fica salvo pra você reconsiderar na próxima renovação (ex: no próximo ano).')) return;
     const { error } = await supabase.from('renovacoes').update({ no_banco_renovacao: true }).eq('id', editingRenovacaoId);
-    if(error){ alert('Erro ao guardar: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao guardar: ' + error.message); return; }
     const r = RENOVACOES_CACHE.find(x => x.id === editingRenovacaoId);
     if(r) r.no_banco_renovacao = true;
     registrarLog('Guardou negócio no banco de renovações', r ? r.cliente : '');
@@ -5018,11 +5072,11 @@
   }
 
   async function reativarDoBancoRenovacoes(id){
-    if(!confirm('Reativar este negócio no Pipeline? Ele volta pra coluna "A vencer".')) return;
+    if(!await customConfirm('Reativar este negócio no Pipeline? Ele volta pra coluna "A vencer".')) return;
     const { error } = await supabase.from('renovacoes').update({
       no_banco_renovacao: false, estagio: 'a_vencer', estagio_manual: false,
     }).eq('id', id);
-    if(error){ alert('Erro ao reativar: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao reativar: ' + error.message); return; }
     registrarLog('Reativou negócio do banco de renovações', id);
     abrirBancoRenovacoes();
     renderFunil();
@@ -5068,7 +5122,7 @@
 
   async function salvarEstagioFunilCard(){
     const cliente = document.getElementById('funil-card-cliente').value.trim();
-    if(!cliente){ alert('Informe o nome do cliente.'); return; }
+    if(!cliente){ await customAlert('Informe o nome do cliente.'); return; }
     const corretoraTexto = document.getElementById('funil-card-corretora').value.trim();
     const produto = document.getElementById('funil-card-produto').value.trim();
     const seguradora = document.getElementById('funil-card-seguradora').value.trim();
@@ -5103,7 +5157,7 @@
       payload.historico = pendingFunilHistorico;
       const { error } = await supabase.from('renovacoes').update(payload).eq('id', editingRenovacaoId);
       btn.disabled = false; btn.textContent = 'Salvar alterações';
-      if(error){ alert('Erro ao salvar: ' + error.message); return; }
+      if(error){ await customAlert('Erro ao salvar: ' + error.message); return; }
       Object.assign(r, payload);
     } else {
       pendingFunilHistorico.unshift({when: nowLabel(), text:'Negócio criado.'});
@@ -5114,7 +5168,7 @@
       if(novoEstagio === 'negociacao') payload.entrou_negociacao_em = new Date().toISOString();
       const { data, error } = await supabase.from('renovacoes').insert(payload).select().single();
       btn.disabled = false; btn.textContent = 'Criar negócio';
-      if(error){ alert('Erro ao criar: ' + error.message); return; }
+      if(error){ await customAlert('Erro ao criar: ' + error.message); return; }
       RENOVACOES_CACHE.push(data);
       registrarLog('Criou negócio no pipeline', cliente);
     }
@@ -5127,19 +5181,19 @@
     if(!editingRenovacaoId) return;
     const r = RENOVACOES_CACHE.find(x => x.id === editingRenovacaoId);
     if(r && r.criado_por && r.criado_por !== currentUserId && !isSuperAdmin()){
-      alert('Só quem criou este negócio (ou o Super Administrador) pode excluí-lo.');
+      await customAlert('Só quem criou este negócio (ou o Super Administrador) pode excluí-lo.');
       return;
     }
-    if(!confirm('Excluir este negócio do pipeline? Essa ação não pode ser desfeita.')) return;
+    if(!await customConfirm('Excluir este negócio do pipeline? Essa ação não pode ser desfeita.')) return;
     const { error } = await supabase.from('renovacoes').delete().eq('id', editingRenovacaoId);
-    if(error){ alert('Erro ao excluir: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao excluir: ' + error.message); return; }
     RENOVACOES_CACHE = RENOVACOES_CACHE.filter(x => x.id !== editingRenovacaoId);
     closeModal('modal-funil-card');
     renderFunil();
   }
 
-  function baixarModeloPlanilhaRenovacoes(){
-    if(typeof XLSX === 'undefined'){ alert('Biblioteca de planilha indisponível.'); return; }
+  async function baixarModeloPlanilhaRenovacoes(){
+    if(typeof XLSX === 'undefined'){ await customAlert('Biblioteca de planilha indisponível.'); return; }
     const modelo = [{
       Cliente: 'João da Silva',
       Corretora: 'Prisma Corretora de Seguros Ltda.',
@@ -5180,7 +5234,7 @@
   }
 
   async function processarPlanilhaRenovacoes(){
-    if(typeof XLSX === 'undefined'){ alert('Leitor de planilhas indisponível.'); return; }
+    if(typeof XLSX === 'undefined'){ await customAlert('Leitor de planilhas indisponível.'); return; }
     const input = document.getElementById('renovacoes-arquivo-input');
     const file = input.files[0];
     const resultBox = document.getElementById('renovacoes-import-resultado');
@@ -5424,12 +5478,12 @@
         </div>`).join('')
       : `<p class="tag-empty-hint">Nenhuma meta por seguradora adicionada.</p>`;
   }
-  function addMetaSeguradoraCampanha(){
+  async function addMetaSeguradoraCampanha(){
     const nome = document.getElementById('campanha-nova-meta-seg-nome').value;
     const valor = Number(document.getElementById('campanha-nova-meta-seg-valor').value);
-    if(!nome){ alert('Selecione a seguradora.'); return; }
-    if(!valor || valor <= 0){ alert('Informe uma meta válida.'); return; }
-    if(PENDING_METAS_SEG_CAMPANHA.some(m=>m.seguradora===nome)){ alert('Essa seguradora já tem meta nesta campanha.'); return; }
+    if(!nome){ await customAlert('Selecione a seguradora.'); return; }
+    if(!valor || valor <= 0){ await customAlert('Informe uma meta válida.'); return; }
+    if(PENDING_METAS_SEG_CAMPANHA.some(m=>m.seguradora===nome)){ await customAlert('Essa seguradora já tem meta nesta campanha.'); return; }
     PENDING_METAS_SEG_CAMPANHA.push({ seguradora: nome, meta: valor });
     document.getElementById('campanha-nova-meta-seg-nome').value = '';
     document.getElementById('campanha-nova-meta-seg-valor').value = '';
@@ -5449,15 +5503,15 @@
         </div>`).join('')
       : `<p class="tag-empty-hint">Nenhuma meta por corretora adicionada.</p>`;
   }
-  function addMetaCorretoraCampanha(){
+  async function addMetaCorretoraCampanha(){
     const nomeDigitado = document.getElementById('campanha-nova-meta-cor-nome').value.trim();
     const valor = Number(document.getElementById('campanha-nova-meta-cor-valor').value);
-    if(!nomeDigitado){ alert('Digite o nome da corretora.'); return; }
+    if(!nomeDigitado){ await customAlert('Digite o nome da corretora.'); return; }
     const encontrada = Object.entries(GROUPS).find(([, g]) => g.name.toLowerCase() === nomeDigitado.toLowerCase());
-    if(!encontrada){ alert('Corretora não encontrada. Selecione uma opção da lista sugerida ao digitar.'); return; }
+    if(!encontrada){ await customAlert('Corretora não encontrada. Selecione uma opção da lista sugerida ao digitar.'); return; }
     const gid = encontrada[0];
-    if(!valor || valor <= 0){ alert('Informe uma meta válida.'); return; }
-    if(PENDING_METAS_COR_CAMPANHA.some(m=>m.corretora_id===gid)){ alert('Essa corretora já tem meta nesta campanha.'); return; }
+    if(!valor || valor <= 0){ await customAlert('Informe uma meta válida.'); return; }
+    if(PENDING_METAS_COR_CAMPANHA.some(m=>m.corretora_id===gid)){ await customAlert('Essa corretora já tem meta nesta campanha.'); return; }
     PENDING_METAS_COR_CAMPANHA.push({ corretora_id: gid, meta: valor });
     document.getElementById('campanha-nova-meta-cor-nome').value = '';
     document.getElementById('campanha-nova-meta-cor-valor').value = '';
@@ -5507,9 +5561,9 @@
     const data_inicio = document.getElementById('campanha-data-inicio').value;
     const data_fim = document.getElementById('campanha-data-fim').value;
 
-    if(!nome){ alert('Informe o nome da campanha.'); return; }
-    if(!data_inicio || !data_fim){ alert('Informe o início e o fim da vigência.'); return; }
-    if(data_fim < data_inicio){ alert('A data de fim não pode ser antes do início.'); return; }
+    if(!nome){ await customAlert('Informe o nome da campanha.'); return; }
+    if(!data_inicio || !data_fim){ await customAlert('Informe o início e o fim da vigência.'); return; }
+    if(data_fim < data_inicio){ await customAlert('A data de fim não pode ser antes do início.'); return; }
 
     const payload = {
       nome, tipo_meta,
@@ -5525,7 +5579,7 @@
     if(editingCampanhaId){
       const { error } = await supabase.from('campanhas').update(payload).eq('id', editingCampanhaId);
       btn.disabled = false; btn.textContent = 'Salvar campanha';
-      if(error){ alert('Erro ao salvar: ' + error.message); return; }
+      if(error){ await customAlert('Erro ao salvar: ' + error.message); return; }
       const idx = CAMPANHAS_CACHE.findIndex(c=>c.id===editingCampanhaId);
       if(idx > -1) CAMPANHAS_CACHE[idx] = { ...CAMPANHAS_CACHE[idx], ...payload };
       closeModal('modal-campanha');
@@ -5534,7 +5588,7 @@
     } else {
       const { data, error } = await supabase.from('campanhas').insert(payload).select().single();
       btn.disabled = false; btn.textContent = 'Salvar campanha';
-      if(error){ alert('Erro ao criar campanha: ' + error.message); return; }
+      if(error){ await customAlert('Erro ao criar campanha: ' + error.message); return; }
       CAMPANHAS_CACHE.unshift(data);
       closeModal('modal-campanha');
       renderCampanhas();
@@ -5557,9 +5611,9 @@
 
   async function excluirCampanhaAtual(){
     if(!viewingCampanhaId) return;
-    if(!confirm('Excluir esta campanha e todos os lançamentos dela? Essa ação não pode ser desfeita.')) return;
+    if(!await customConfirm('Excluir esta campanha e todos os lançamentos dela? Essa ação não pode ser desfeita.')) return;
     const { error } = await supabase.from('campanhas').delete().eq('id', viewingCampanhaId);
-    if(error){ alert('Erro ao excluir: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao excluir: ' + error.message); return; }
     CAMPANHAS_CACHE = CAMPANHAS_CACHE.filter(c=>c.id!==viewingCampanhaId);
     LANCAMENTOS_CAMPANHA_CACHE = LANCAMENTOS_CAMPANHA_CACHE.filter(l=>l.campanha_id!==viewingCampanhaId);
     voltarListaCampanhas();
@@ -5733,8 +5787,8 @@
     const seguradora = document.getElementById('lancamento-seguradora').value || null;
     const observacao = document.getElementById('lancamento-observacao').value.trim() || null;
 
-    if(!data){ alert('Informe a data do lançamento.'); return; }
-    if(!valorRaw || valorRaw <= 0){ alert('Informe um valor válido.'); return; }
+    if(!data){ await customAlert('Informe a data do lançamento.'); return; }
+    if(!valorRaw || valorRaw <= 0){ await customAlert('Informe um valor válido.'); return; }
 
     const payload = {
       campanha_id: c.id, data, corretora_id, seguradora, observacao,
@@ -5746,7 +5800,7 @@
     btn.disabled = true; btn.textContent = 'Salvando...';
     const { data: inserido, error } = await supabase.from('campanha_lancamentos').insert(payload).select().single();
     btn.disabled = false; btn.textContent = 'Adicionar lançamento';
-    if(error){ alert('Erro ao salvar lançamento: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao salvar lançamento: ' + error.message); return; }
 
     LANCAMENTOS_CAMPANHA_CACHE.push(inserido);
     closeModal('modal-lancamento-campanha');
@@ -5754,9 +5808,9 @@
   }
 
   async function excluirLancamentoCampanha(id){
-    if(!confirm('Excluir este lançamento?')) return;
+    if(!await customConfirm('Excluir este lançamento?')) return;
     const { error } = await supabase.from('campanha_lancamentos').delete().eq('id', id);
-    if(error){ alert('Erro ao excluir: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao excluir: ' + error.message); return; }
     LANCAMENTOS_CAMPANHA_CACHE = LANCAMENTOS_CAMPANHA_CACHE.filter(l=>l.id!==id);
     renderDetalheCampanha();
   }
@@ -5805,14 +5859,14 @@
   }
 
   async function ativarNotificacoesPush(){
-    if(!('Notification' in window)){ alert('Seu navegador não suporta notificações.'); return; }
+    if(!('Notification' in window)){ await customAlert('Seu navegador não suporta notificações.'); return; }
     const permissao = await Notification.requestPermission();
     document.getElementById('home-notif-banner').classList.add('hidden');
     if(permissao === 'granted'){
       new Notification('Infinite Broker', { body: 'Notificações ativadas! Vamos te avisar sobre tarefas, aniversários e comunicados internos.' });
       verificarTodasNotificacoes();
     } else {
-      alert('Permissão não concedida. Você pode ativar depois nas configurações do navegador, se mudar de ideia.');
+      await customAlert('Permissão não concedida. Você pode ativar depois nas configurações do navegador, se mudar de ideia.');
     }
   }
 
@@ -6154,14 +6208,14 @@
       }
       payload.historico = pendingHistorico;
       const { error } = await supabase.from('crm_cards').update(payload).eq('id', editingCardId);
-      if(error){ alert('Erro ao salvar card: ' + error.message); return; }
+      if(error){ await customAlert('Erro ao salvar card: ' + error.message); return; }
     } else {
       pendingHistorico.unshift({when: nowLabel(), text:'Card criado.'});
       payload.historico = pendingHistorico;
       payload.criado_por = currentUserId;
       payload.criado_por_nome = currentUserFullName;
       const { error } = await supabase.from('crm_cards').insert(payload);
-      if(error){ alert('Erro ao criar card: ' + error.message); return; }
+      if(error){ await customAlert('Erro ao criar card: ' + error.message); return; }
     }
 
     renderKanban();
@@ -6173,12 +6227,12 @@
     const c = CARDS_CACHE.find(x => x.id === editingCardId);
     const souCriador = c && c.criado_por === currentUserId;
     if(!souCriador && !isSuperAdmin()){
-      alert('Só quem criou este card (ou o Super Administrador) pode excluí-lo.');
+      await customAlert('Só quem criou este card (ou o Super Administrador) pode excluí-lo.');
       return;
     }
-    if(confirm('Excluir este card?')){
+    if(await customConfirm('Excluir este card?')){
       const { error } = await supabase.from('crm_cards').delete().eq('id', editingCardId);
-      if(error){ alert('Erro ao excluir: ' + error.message); return; }
+      if(error){ await customAlert('Erro ao excluir: ' + error.message); return; }
       renderKanban();
       closeModal('modal-card');
     }
@@ -6227,9 +6281,9 @@
   }
 
   async function deleteMaterial(id){
-    if(!confirm('Excluir este material?')) return;
+    if(!await customConfirm('Excluir este material?')) return;
     const { error } = await supabase.from('materiais').delete().eq('id', id);
-    if(error){ alert('Erro ao excluir: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao excluir: ' + error.message); return; }
     renderMateriais();
   }
 
@@ -6247,7 +6301,7 @@
       tipo: tipo, produto: produto || null,
       enviado_por: currentUserId,
     });
-    if(error){ alert('Erro ao incluir material: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao incluir material: ' + error.message); return; }
 
     document.getElementById('mat-nome').value = '';
     document.getElementById('mat-tipo').value = 'institucional';
@@ -6422,10 +6476,10 @@
     }
   }
 
-  function abrirEditarContato(id, origem){
+  async function abrirEditarContato(id, origem){
     // find the contact in the cache
     const c = (_todosContatosCache||[]).find(x=>x.id===id);
-    if(!c){ alert('Contato não encontrado.'); return; }
+    if(!c){ await customAlert('Contato não encontrado.'); return; }
 
     // Contato de equipe (ou manual) vinculado a uma corretora — edita direto lá,
     // na seção Equipe do cadastro dela, em vez de um modal separado.
@@ -6467,7 +6521,7 @@
     let table = 'marketing_contatos';
     let realId = id;
     if(id.startsWith('user-')){ table='profiles'; realId=id.replace('user-',''); }
-    else if(id.startsWith('seg-')){ alert('Contato de seguradora — edite diretamente no cadastro da seguradora.'); return; }
+    else if(id.startsWith('seg-')){ await customAlert('Contato de seguradora — edite diretamente no cadastro da seguradora.'); return; }
 
     const payload = table==='profiles'
       ? {nome, telefone: whatsapp, email}
@@ -6481,13 +6535,13 @@
     renderContatosTabBody(_todosContatosCache||[]);
   }
 
-  function copiarTexto(texto, btn){
+  async function copiarTexto(texto, btn){
     navigator.clipboard.writeText(texto).then(()=>{
       const orig = btn.innerHTML;
       btn.textContent = 'Copiado!';
       btn.style.background = 'var(--black)'; btn.style.color = '#fff';
       setTimeout(()=>{ btn.innerHTML = orig; btn.style.background=''; btn.style.color=''; }, 1500);
-    }).catch(()=>{ alert('Não foi possível copiar: ' + texto); });
+    }).catch(async ()=>{ await customAlert('Não foi possível copiar: ' + texto); });
   }
 
   function limparFiltrosContatos(){
@@ -6500,8 +6554,8 @@
     renderContatosTab();
   }
 
-  function baixarModeloPlanilha(){
-    if(typeof XLSX === 'undefined'){ alert('Biblioteca de planilha indisponível.'); return; }
+  async function baixarModeloPlanilha(){
+    if(typeof XLSX === 'undefined'){ await customAlert('Biblioteca de planilha indisponível.'); return; }
     const modelo = [
       { Nome: 'João Silva', WhatsApp: '5511999990000', 'E-mail': 'joao@exemplo.com', Corretora: 'Prisma Corretora' },
       { Nome: 'Maria Costa', WhatsApp: '5521988880000', 'E-mail': 'maria@exemplo.com', Corretora: '' },
@@ -6525,8 +6579,8 @@
       if(fCorretora) todos = todos.filter(c=>(c.corretoraNome||'').toLowerCase()===fCorretora);
       if(fSeguradora) todos = todos.filter(c=>(c.seguradoraNome||'').toLowerCase()===fSeguradora);
     }
-    if(!todos.length){ alert('Nenhum contato para exportar com o filtro atual.'); return; }
-    if(typeof XLSX === 'undefined'){ alert('Leitor de planilhas indisponível.'); return; }
+    if(!todos.length){ await customAlert('Nenhum contato para exportar com o filtro atual.'); return; }
+    if(typeof XLSX === 'undefined'){ await customAlert('Leitor de planilhas indisponível.'); return; }
 
     const linhas = todos.map(c => ({
       Nome: c.nome, WhatsApp: c.whatsapp, 'E-mail': c.email,
@@ -6589,16 +6643,16 @@
   }
 
   // Abre o WhatsApp Web já com a conversa do contato pronta pra digitar
-  function abrirWhatsappContato(numero){
+  async function abrirWhatsappContato(numero){
     const limpo = String(numero).replace(/\D/g,'');
-    if(!limpo){ alert('Este contato não tem um número de WhatsApp válido.'); return; }
+    if(!limpo){ await customAlert('Este contato não tem um número de WhatsApp válido.'); return; }
     window.open(`https://wa.me/${limpo}`, '_blank');
   }
 
   async function deleteContato(id){
-    if(!confirm('Excluir este contato?')) return;
+    if(!await customConfirm('Excluir este contato?')) return;
     const { error } = await supabase.from('marketing_contatos').delete().eq('id', id);
-    if(error){ alert('Erro ao excluir: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao excluir: ' + error.message); return; }
     renderContatosTab();
   }
 
@@ -6610,7 +6664,7 @@
     const gid = Object.keys(GROUPS).find(k => GROUPS[k].name.toLowerCase() === corretoraTexto.toLowerCase()) || null;
 
     const { error } = await supabase.from('marketing_contatos').insert({ nome, whatsapp: whats, email, corretora_id: gid, origem:'manual' });
-    if(error){ alert('Erro ao adicionar contato: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao adicionar contato: ' + error.message); return; }
 
     ['contato-nome','contato-whats','contato-email','contato-corretora'].forEach(id=>document.getElementById(id).value='');
     closeModal('modal-contato');
@@ -6707,13 +6761,13 @@
   // Marca de uma vez todos os contatos que estão aparecendo com o filtro atual
   // (ex: filtrou por uma corretora ou seguradora — marca todo mundo dela).
   // Respeita o limite de contatos por disparo.
-  function marcarTodosFiltradosSeletor(){
+  async function marcarTodosFiltradosSeletor(){
     const checkboxes = Array.from(document.querySelectorAll('#seletor-contatos-list input[type="checkbox"]:not(:disabled)'));
     const naoMarcados = checkboxes.filter(el => !el.checked);
     const jaMarcados = checkboxes.length - naoMarcados.length;
     let vagas = LIMITE_CONTATOS_DISPARO - jaMarcados;
     if(vagas <= 0){
-      alert(`Você já atingiu o limite de ${LIMITE_CONTATOS_DISPARO} contatos por disparo.`);
+      await customAlert(`Você já atingiu o limite de ${LIMITE_CONTATOS_DISPARO} contatos por disparo.`);
       return;
     }
     let marcados = 0;
@@ -6723,7 +6777,7 @@
       marcados++;
     }
     if(marcados < naoMarcados.length){
-      alert(`Marquei ${marcados} contato(s) — parei aí porque o limite é de ${LIMITE_CONTATOS_DISPARO} por disparo. Ainda ficaram ${naoMarcados.length - marcados} de fora deste filtro.`);
+      await customAlert(`Marquei ${marcados} contato(s) — parei aí porque o limite é de ${LIMITE_CONTATOS_DISPARO} por disparo. Ainda ficaram ${naoMarcados.length - marcados} de fora deste filtro.`);
     }
     atualizarContadorSeletor();
   }
@@ -6733,11 +6787,11 @@
     atualizarContadorSeletor();
   }
 
-  function onSeletorContatoChange(el){
+  async function onSeletorContatoChange(el){
     const marcados = document.querySelectorAll('#seletor-contatos-list input:checked');
     if(marcados.length > LIMITE_CONTATOS_DISPARO){
       el.checked = false;
-      alert(`Você só pode selecionar até ${LIMITE_CONTATOS_DISPARO} contatos por disparo.`);
+      await customAlert(`Você só pode selecionar até ${LIMITE_CONTATOS_DISPARO} contatos por disparo.`);
     }
     atualizarContadorSeletor();
   }
@@ -6798,19 +6852,22 @@
       .filter(Boolean);
   }
 
-  async function dispatchWhatsapp(){
+  // Validações comuns aos dois tipos de disparo (mensagens preenchidas,
+  // contatos selecionados, permissão por seguradora, aviso de repetidos).
+  // Retorna as mensagens (rodízio) ou null se algo impedir o disparo.
+  async function validarAntesDoDisparo(){
     const msg1 = document.getElementById('whats-msg').value.trim();
     const msg2 = document.getElementById('whats-msg-2').value.trim();
     const msg3 = document.getElementById('whats-msg-3').value.trim();
     const mensagens = [msg1, msg2, msg3].filter(Boolean);
-    if(!mensagens.length){ alert('Escreva ao menos a Mensagem 1 antes de disparar.'); return; }
-    if(WHATS_SELECIONADOS.length === 0){ alert('Selecione ao menos um contato.'); return; }
-    // Verificar permissão por seguradora
+    if(!mensagens.length){ await customAlert('Escreva ao menos a Mensagem 1 antes de disparar.'); return null; }
+    if(WHATS_SELECIONADOS.length === 0){ await customAlert('Selecione ao menos um contato.'); return null; }
+
     const selSeg = document.getElementById('whats-seguradora-sel');
     const segId = selSeg ? selSeg.value : '';
     if(segId && !canActOnSeguradora(segId)){
-      alert('Você não tem permissão para disparar WhatsApp por esta seguradora. Fale com o super administrador.');
-      return;
+      await customAlert('Você não tem permissão para disparar WhatsApp por esta seguradora. Fale com o super administrador.');
+      return null;
     }
 
     const repetidos = await verificarContatosJaEnviados(WHATS_SELECIONADOS);
@@ -6818,16 +6875,63 @@
       const lista = repetidos
         .map(c => `• ${c.nome} — último envio em ${new Date(c.ultimoEnvio).toLocaleDateString('pt-BR')}`)
         .join('\n');
-      const continuar = confirm(
+      const continuar = await customConfirm(
         `Atenção: ${repetidos.length} de ${WHATS_SELECIONADOS.length} contato(s) selecionado(s) já receberam uma mensagem antes:\n\n${lista}\n\nQuer disparar mesmo assim?`
       );
-      if(!continuar) return;
+      if(!continuar) return null;
     }
+    return mensagens;
+  }
 
-    // Monta a lista final (rodízio de mensagens) e manda tudo pro servidor de
-    // uma vez — o servidor cuida do intervalo entre cada envio e chama a API
-    // da plataforma de atendimento (ClickMassa), sem precisar manter o
-    // navegador aberto nem abrir uma aba por contato.
+  function limparTelaAposDisparo(){
+    WHATS_SELECIONADOS = [];
+    window._numerosBloqueadosDuplicar = null;
+    document.getElementById('whats-selecionados-resumo').textContent = 'Nenhum contato selecionado ainda.';
+    document.getElementById('whats-msg').value = '';
+    document.getElementById('whats-msg-2').value = '';
+    document.getElementById('whats-msg-3').value = '';
+    renderHistoricoDisparos();
+  }
+
+  function montarResumoMensagem(mensagens){
+    return mensagens.length > 1
+      ? `[Rodízio de ${mensagens.length} mensagens]\n\n` + mensagens.map((m,i) => `Variação ${i+1}: ${m}`).join('\n\n')
+      : mensagens[0];
+  }
+
+  // ---- DISPARO MANUAL: abre o WhatsApp Web/App, um chat por contato, com a
+  // mensagem já preenchida — você revisa e clica em enviar você mesmo. ----
+  async function dispatchWhatsappManual(){
+    const mensagens = await validarAntesDoDisparo();
+    if(!mensagens) return;
+
+    const mensagensEnviadas = WHATS_SELECIONADOS.map((c,i) => mensagens[i % mensagens.length]);
+    let acumulado = 0;
+    WHATS_SELECIONADOS.forEach((c, i) => {
+      if(c.whatsapp){
+        acumulado += 300 + Math.floor(Math.random() * 400); // 300–700ms entre cada, variando
+        setTimeout(() => openWhats(c.whatsapp, mensagensEnviadas[i]), acumulado);
+      }
+    });
+
+    await supabase.from('marketing_disparos').insert({
+      tipo:'whatsapp', mensagem: montarResumoMensagem(mensagens), enviado_por: currentUserId,
+      quantidade_contatos: WHATS_SELECIONADOS.length,
+      contatos: WHATS_SELECIONADOS.map((c,i) => ({ nome: c.nome, whatsapp: c.whatsapp, mensagem: mensagensEnviadas[i] })),
+    });
+    registrarLog('Disparo manual de WhatsApp', `${WHATS_SELECIONADOS.length} contato(s)${mensagens.length > 1 ? ` · ${mensagens.length} variações` : ''}`);
+
+    await customAlert(`Abrindo o WhatsApp pra ${WHATS_SELECIONADOS.length} contato(s)${mensagens.length > 1 ? `, alternando entre ${mensagens.length} variações` : ''}. Revisa e clica em enviar em cada chat que abrir.`);
+    limparTelaAposDisparo();
+  }
+
+  // ---- DISPARO EM MASSA: manda tudo de uma vez pro servidor, que chama a
+  // API da plataforma de atendimento (ClickMassa) — automático, sem precisar
+  // manter nenhuma aba aberta. ----
+  async function dispatchWhatsappEmMassa(){
+    const mensagens = await validarAntesDoDisparo();
+    if(!mensagens) return;
+
     const mensagensEnviadas = WHATS_SELECIONADOS.map((c,i) => mensagens[i % mensagens.length]);
     const btnDisparar = document.querySelector('#mkt-whats .btn-dark');
     if(btnDisparar){ btnDisparar.disabled = true; btnDisparar.textContent = 'Disparando...'; }
@@ -6838,41 +6942,25 @@
       },
     });
 
-    if(btnDisparar){ btnDisparar.disabled = false; btnDisparar.textContent = 'Disparar para selecionados'; }
+    if(btnDisparar){ btnDisparar.disabled = false; btnDisparar.textContent = 'Disparo em massa (automático)'; }
 
-    if(erroFuncao){
-      alert('Erro ao disparar: ' + erroFuncao.message);
-      return;
-    }
-    if(resultado?.error){
-      alert('Erro ao disparar: ' + resultado.error);
-      return;
-    }
-
-    const resumoMensagem = mensagens.length > 1
-      ? `[Rodízio de ${mensagens.length} mensagens]\n\n` + mensagens.map((m,i) => `Variação ${i+1}: ${m}`).join('\n\n')
-      : mensagens[0];
+    if(erroFuncao){ await customAlert('Erro ao disparar: ' + erroFuncao.message); return; }
+    if(resultado?.error){ await customAlert('Erro ao disparar: ' + resultado.error); return; }
 
     await supabase.from('marketing_disparos').insert({
-      tipo:'whatsapp', mensagem: resumoMensagem, enviado_por: currentUserId,
+      tipo:'whatsapp', mensagem: montarResumoMensagem(mensagens), enviado_por: currentUserId,
       quantidade_contatos: resultado?.sucesso ?? WHATS_SELECIONADOS.length,
       contatos: WHATS_SELECIONADOS.map((c,i) => ({ nome: c.nome, whatsapp: c.whatsapp, mensagem: mensagensEnviadas[i] })),
     });
-    registrarLog('Disparo de WhatsApp', `${WHATS_SELECIONADOS.length} contato(s)${mensagens.length > 1 ? ` · ${mensagens.length} variações` : ''}`);
+    registrarLog('Disparo em massa de WhatsApp', `${WHATS_SELECIONADOS.length} contato(s)${mensagens.length > 1 ? ` · ${mensagens.length} variações` : ''}`);
 
     const falhas = resultado?.falhas || [];
     let avisoFinal = `Disparo concluído: ${resultado?.sucesso ?? '?'} de ${WHATS_SELECIONADOS.length} enviado(s) com sucesso.`;
     if(falhas.length){
       avisoFinal += `\n\n${falhas.length} falharam:\n` + falhas.slice(0,10).map(f => `• ${f.numero}: ${f.detalhe}`).join('\n');
     }
-    alert(avisoFinal);
-    WHATS_SELECIONADOS = [];
-    window._numerosBloqueadosDuplicar = null;
-    document.getElementById('whats-selecionados-resumo').textContent = 'Nenhum contato selecionado ainda.';
-    document.getElementById('whats-msg').value = '';
-    document.getElementById('whats-msg-2').value = '';
-    document.getElementById('whats-msg-3').value = '';
-    renderHistoricoDisparos();
+    await customAlert(avisoFinal);
+    limparTelaAposDisparo();
   }
 
   let _hdCache = [];
@@ -6928,7 +7016,7 @@
 
   // Reaproveita um disparo anterior (mensagens já preenchidas) mas BLOQUEIA quem
   // já recebeu ESSE disparo específico, pra nunca mandar duplicado sem querer.
-  function duplicarDisparo(id){
+  async function duplicarDisparo(id){
     const d = _hdCache.find(x => x.id === id);
     if(!d || d.tipo !== 'whatsapp') return;
 
@@ -6953,7 +7041,7 @@
     showView('marketing');
     const btnWhats = Array.from(document.querySelectorAll('.tab-strip button, .form-tabs button, button')).find(b => b.getAttribute('onclick') === "switchMktTab(this,'mkt-whats')");
     if(btnWhats) switchMktTab(btnWhats, 'mkt-whats');
-    alert(`Mensagens preenchidas de novo${mensagens.length>1?` (${mensagens.length} variações)`:''}. Os ${numeros.length} contato(s) que já receberam esse disparo vão aparecer bloqueados quando você for selecionar os destinatários — escolha outras pessoas dessa vez.`);
+    await customAlert(`Mensagens preenchidas de novo${mensagens.length>1?` (${mensagens.length} variações)`:''}. Os ${numeros.length} contato(s) que já receberam esse disparo vão aparecer bloqueados quando você for selecionar os destinatários — escolha outras pessoas dessa vez.`);
   }
 
   function abrirDetalheDisparo(id){
@@ -7124,7 +7212,7 @@
     if(!g) return;
     const novoStatus = (g.status || 'ativa') === 'ativa' ? 'inativa' : 'ativa';
     const { error } = await supabase.from('corretoras').update({ status: novoStatus }).eq('id', gid);
-    if(error){ alert('Erro ao atualizar status: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao atualizar status: ' + error.message); return; }
     g.status = novoStatus;
     renderCorretorasList();
   }
@@ -7256,11 +7344,11 @@
     if(!anexo.path){
       // compatibilidade com anexos antigos que só tinham url pública salva
       if(anexo.url){ window.open(anexo.url, '_blank', 'noopener'); return; }
-      alert('Não foi possível localizar este anexo.');
+      await customAlert('Não foi possível localizar este anexo.');
       return;
     }
     const { data, error } = await supabase.storage.from(BUCKET_ANEXOS_CORRETORAS).createSignedUrl(anexo.path, 60 * 5);
-    if(error){ alert('Erro ao gerar o link de acesso: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao gerar o link de acesso: ' + error.message); return; }
     window.open(data.signedUrl, '_blank', 'noopener');
   }
 
@@ -7279,7 +7367,7 @@
 
       const { error: upErr } = await supabase.storage.from(BUCKET_ANEXOS_CORRETORAS).upload(path, file, { upsert: false });
       if(upErr){
-        alert(`Erro ao enviar o anexo "${file.name}": ${upErr.message}`);
+        await customAlert(`Erro ao enviar o anexo "${file.name}": ${upErr.message}`);
         continue;
       }
       PENDING_ANEXOS_CORRETORA.push({
@@ -7296,11 +7384,11 @@
   async function removeAnexoCorretora(i){
     const anexo = PENDING_ANEXOS_CORRETORA[i];
     if(!anexo) return;
-    if(!confirm(`Remover o anexo "${anexo.nome}"?`)) return;
+    if(!await customConfirm(`Remover o anexo "${anexo.nome}"?`)) return;
 
     if(anexo.path){
       const { error } = await supabase.storage.from(BUCKET_ANEXOS_CORRETORAS).remove([anexo.path]);
-      if(error){ alert('Erro ao remover o arquivo do storage: ' + error.message); return; }
+      if(error){ await customAlert('Erro ao remover o arquivo do storage: ' + error.message); return; }
     }
     PENDING_ANEXOS_CORRETORA.splice(i, 1);
     renderAnexosCorretoraList();
@@ -7438,10 +7526,10 @@
     if(!isSuperAdmin()) return;
     const s = (window._solicitacoesCache || []).find(x => x.id === id);
     if(!s) return;
-    if(!confirm(`Aprovar e EXCLUIR DEFINITIVAMENTE "${s.registro_nome}" (${labelTipoSolicitacao(s.tipo)})?\n\nEssa ação não pode ser desfeita.`)) return;
+    if(!await customConfirm(`Aprovar e EXCLUIR DEFINITIVAMENTE "${s.registro_nome}" (${labelTipoSolicitacao(s.tipo)})?\n\nEssa ação não pode ser desfeita.`)) return;
 
     const { error } = await executarExclusaoReal(s.tipo, s.registro_id);
-    if(error){ alert('Erro ao excluir: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao excluir: ' + error.message); return; }
 
     await supabase.from('solicitacoes_exclusao').update({
       status: 'aprovado', revisado_por: currentUserId, revisado_em: new Date().toISOString(),
@@ -7454,7 +7542,7 @@
     if(!isSuperAdmin()) return;
     const s = (window._solicitacoesCache || []).find(x => x.id === id);
     if(!s) return;
-    if(!confirm(`Rejeitar a solicitação de exclusão de "${s.registro_nome}"?`)) return;
+    if(!await customConfirm(`Rejeitar a solicitação de exclusão de "${s.registro_nome}"?`)) return;
 
     await supabase.from('solicitacoes_exclusao').update({
       status: 'rejeitado', revisado_por: currentUserId, revisado_em: new Date().toISOString(),
@@ -7472,7 +7560,7 @@
       solicitado_por: currentUserId, solicitado_por_nome: currentUserFullName,
       motivo: motivo || null, status: 'pendente',
     });
-    if(error){ alert('Erro ao enviar solicitação de exclusão: ' + error.message); return false; }
+    if(error){ await customAlert('Erro ao enviar solicitação de exclusão: ' + error.message); return false; }
     registrarLog(`Solicitou exclusão (${tipo})`, registroNome);
     return true;
   }
@@ -7483,16 +7571,16 @@
     if(!g) return;
 
     if(!podeExcluirDiretamente()){
-      if(!confirm(`Solicitar exclusão da corretora "${g.name}"?\n\nEla continua ativa normalmente até o Super Administrador revisar e aprovar o pedido.`)) return;
+      if(!await customConfirm(`Solicitar exclusão da corretora "${g.name}"?\n\nEla continua ativa normalmente até o Super Administrador revisar e aprovar o pedido.`)) return;
       const ok = await criarSolicitacaoExclusao('corretora', editingCorretoraGid, g.name);
-      if(ok){ alert('Solicitação enviada! Acompanhe em "Solicitações de Exclusão".'); closeModal('modal-corretora'); }
+      if(ok){ await customAlert('Solicitação enviada! Acompanhe em "Solicitações de Exclusão".'); closeModal('modal-corretora'); }
       return;
     }
 
-    if(!confirm(`Excluir a corretora "${g.name}"?\n\nEssa ação não pode ser desfeita. Os lançamentos de produção já registrados para ela permanecem no histórico, mas ela deixará de aparecer nas listas e filtros do sistema.`)) return;
+    if(!await customConfirm(`Excluir a corretora "${g.name}"?\n\nEssa ação não pode ser desfeita. Os lançamentos de produção já registrados para ela permanecem no histórico, mas ela deixará de aparecer nas listas e filtros do sistema.`)) return;
 
     const { error } = await supabase.from('corretoras').delete().eq('id', editingCorretoraGid);
-    if(error){ alert('Erro ao excluir corretora: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao excluir corretora: ' + error.message); return; }
 
     const paths = (g.anexos || []).map(a => a.path).filter(Boolean);
     if(paths.length) await supabase.storage.from(BUCKET_ANEXOS_CORRETORAS).remove(paths);
@@ -7577,8 +7665,8 @@
 
   async function exportarCorretoraAtual(){
     const gid = editingCorretoraGid;
-    if(!gid || !GROUPS[gid]){ alert('Abra uma corretora salva antes de exportar.'); return; }
-    if(typeof XLSX === 'undefined'){ alert('Leitor de planilhas indisponível.'); return; }
+    if(!gid || !GROUPS[gid]){ await customAlert('Abra uma corretora salva antes de exportar.'); return; }
+    if(typeof XLSX === 'undefined'){ await customAlert('Leitor de planilhas indisponível.'); return; }
 
     const g = GROUPS[gid];
     const wb = XLSX.utils.book_new();
@@ -7631,7 +7719,7 @@
 
   async function saveCorretoraForm(){
     const nomeCompleto = document.getElementById('corretora-razao-social').value.trim().toUpperCase();
-    if(!nomeCompleto){ alert('Informe a razão social da corretora.'); return; }
+    if(!nomeCompleto){ await customAlert('Informe a razão social da corretora.'); return; }
 
     // Guarda uma cópia de como a corretora estava ANTES de salvar, pra montar o
     // histórico de mudanças campo a campo (só existe quando já é uma edição).
@@ -7680,7 +7768,7 @@
 
     if(gid){
       const { error } = await supabase.from('corretoras').update(payload).eq('id', gid);
-      if(error){ btn.disabled = false; btn.textContent = 'Salvar cadastro'; alert('Erro ao salvar: ' + error.message); return; }
+      if(error){ btn.disabled = false; btn.textContent = 'Salvar cadastro'; await customAlert('Erro ao salvar: ' + error.message); return; }
       Object.assign(GROUPS[gid], {
         name: nomeCompleto, filial: payload.filial, ie: payload.ie,
         cnpj: payload.cnpj, susep: payload.susep, email: payload.email,
@@ -7695,7 +7783,7 @@
     } else {
       // criação de uma nova corretora — precisa existir antes de qualquer usuário ser vinculado a ela
       const { data, error } = await supabase.from('corretoras').insert(payload).select().single();
-      if(error){ btn.disabled = false; btn.textContent = 'Salvar cadastro'; alert('Erro ao cadastrar corretora: ' + error.message); return; }
+      if(error){ btn.disabled = false; btn.textContent = 'Salvar cadastro'; await customAlert('Erro ao cadastrar corretora: ' + error.message); return; }
       gid = data.id;
       GROUPS[gid] = { name: nomeCompleto, ...payload, seguradoras: payload.seguradoras_permitidas };
     }
@@ -7729,7 +7817,7 @@
       return;
     }
 
-    alert('Cadastro salvo. A equipe informada já foi levada para a aba Contatos.');
+    await customAlert('Cadastro salvo. A equipe informada já foi levada para a aba Contatos.');
     closeModal('modal-corretora');
     renderCorretorasList();
   }
@@ -8096,8 +8184,8 @@
     }).join('');
   }
 
-  function verDetalheHistorico(id){
-    supabase.from('producao_historico').select('*').eq('id', id).single().then(({data: h}) => {
+  async function verDetalheHistorico(id){
+    supabase.from('producao_historico').select('*').eq('id', id).single().then(async ({data: h}) => {
       if(!h || !h.snapshot_dados) return;
       try {
         const snap = typeof h.snapshot_dados === 'string' ? JSON.parse(h.snapshot_dados) : h.snapshot_dados;
@@ -8118,13 +8206,13 @@
         document.getElementById('conf-import-btn-confirmar').textContent = 'Fechar';
         document.getElementById('conf-import-btn-confirmar').onclick = () => closeModal('modal-confirmar-importacao');
         openModal('modal-confirmar-importacao');
-      } catch(e){ alert('Erro ao exibir detalhes: ' + e.message); }
+      } catch(e){ await customAlert('Erro ao exibir detalhes: ' + e.message); }
     });
   }
 
   async function excluirHistorico(id, seguradora, competencia, tipo){
-    if(!podeExcluirDiretamente()){ alert('Você não tem permissão para excluir importações de produção. Peça ao Super Administrador pra liberar essa permissão.'); return; }
-    if(!confirm(`Apagar a importação de ${seguradora} (${labelCompetencia(competencia)})?\n\nOs dados de produção deste período serão removidos. Se houver uma importação anterior, ela voltará a valer.`)) return;
+    if(!podeExcluirDiretamente()){ await customAlert('Você não tem permissão para excluir importações de produção. Peça ao Super Administrador pra liberar essa permissão.'); return; }
+    if(!await customConfirm(`Apagar a importação de ${seguradora} (${labelCompetencia(competencia)})?\n\nOs dados de produção deste período serão removidos. Se houver uma importação anterior, ela voltará a valer.`)) return;
 
     // Buscar registro anterior para o mesmo seguradora+competencia
     let historicos;
@@ -8454,8 +8542,8 @@
     reader.readAsArrayBuffer(file);
   }
 
-  function openProducaoModal(){
-    if(!Object.keys(SEGURADORAS).length){ alert('Cadastre ao menos uma seguradora antes de lançar produção.'); return; }
+  async function openProducaoModal(){
+    if(!Object.keys(SEGURADORAS).length){ await customAlert('Cadastre ao menos uma seguradora antes de lançar produção.'); return; }
     document.getElementById('prod-corretora').innerHTML = Object.keys(GROUPS).map(gid => `<option value="${gid}">${GROUPS[gid].name}</option>`).join('');
     document.getElementById('prod-competencia').value = competenciaAtual();
     ligarCompetenciaPicker('prod-competencia');
@@ -8490,9 +8578,9 @@
   }
 
   async function deleteProducaoLancamento(id){
-    if(!confirm('Excluir este lançamento de produção?')) return;
+    if(!await customConfirm('Excluir este lançamento de produção?')) return;
     const { error } = await supabase.from('producao_mensal').delete().eq('id', id);
-    if(error){ alert('Erro ao excluir: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao excluir: ' + error.message); return; }
     renderProducao();
   }
 
@@ -8732,9 +8820,9 @@
   async function inativarCorretoraDaAuditoria(gid){
     const g = GROUPS[gid];
     if(!g) return;
-    if(!confirm(`Marcar "${g.name}" como inativa?`)) return;
+    if(!await customConfirm(`Marcar "${g.name}" como inativa?`)) return;
     const { error } = await supabase.from('corretoras').update({ status: 'inativa' }).eq('id', gid);
-    if(error){ alert('Erro ao inativar: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao inativar: ' + error.message); return; }
     g.status = 'inativa';
     registrarLog('Inativou corretora (auditoria de seguradora)', g.name);
     renderCorretorasList();
@@ -8949,15 +9037,15 @@
   }
 
   async function mesclarDuplicatasNesta(gidMantido, grupoIndex){
-    if(!isSuperAdmin()){ alert('Apenas o Super Administrador pode mesclar corretoras.'); return; }
+    if(!isSuperAdmin()){ await customAlert('Apenas o Super Administrador pode mesclar corretoras.'); return; }
     const grupo = (window._duplicatasGrupos || [])[grupoIndex];
     if(!grupo) return;
     const gidsParaMesclar = grupo.filter(gid => gid !== gidMantido && GROUPS[gid]);
-    if(!gidsParaMesclar.length){ alert('Não há outras corretoras nesse grupo pra mesclar.'); return; }
+    if(!gidsParaMesclar.length){ await customAlert('Não há outras corretoras nesse grupo pra mesclar.'); return; }
 
     const mantida = GROUPS[gidMantido];
     const nomesQueViramApelido = gidsParaMesclar.map(gid => GROUPS[gid].name);
-    if(!confirm(`Mesclar em "${mantida.name}"?\n\nAs corretoras abaixo serão excluídas, viram apelido dela, e toda produção/renovação/equipe/campanha delas passa a pertencer a "${mantida.name}":\n\n- ${nomesQueViramApelido.join('\n- ')}\n\nEssa ação não pode ser desfeita.`)) return;
+    if(!await customConfirm(`Mesclar em "${mantida.name}"?\n\nAs corretoras abaixo serão excluídas, viram apelido dela, e toda produção/renovação/equipe/campanha delas passa a pertencer a "${mantida.name}":\n\n- ${nomesQueViramApelido.join('\n- ')}\n\nEssa ação não pode ser desfeita.`)) return;
 
     mostrarSplashOp('Mesclando...');
     try {
@@ -9022,9 +9110,9 @@
         .filter(g => g.length > 1);
       renderResultadoDuplicatas(gruposAtualizados);
 
-      alert(`Mesclagem concluída. "${mantida.name}" agora tem ${gidsParaMesclar.length} apelido(s) a mais, e a produção/renovação/equipe/campanhas das excluídas foi transferida pra ela.`);
+      await customAlert(`Mesclagem concluída. "${mantida.name}" agora tem ${gidsParaMesclar.length} apelido(s) a mais, e a produção/renovação/equipe/campanhas das excluídas foi transferida pra ela.`);
     } catch(err){
-      alert('Erro ao mesclar: ' + err.message);
+      await customAlert('Erro ao mesclar: ' + err.message);
     } finally {
       esconderSplashOp();
     }
@@ -9039,11 +9127,11 @@
   }
 
   async function excluirDuplicatasSelecionadas(){
-    if(!podeExcluirDiretamente()){ alert('Você não tem permissão para excluir corretoras diretamente. Peça ao Super Administrador pra liberar essa permissão, ou solicite a exclusão pelo cadastro da corretora.'); return; }
+    if(!podeExcluirDiretamente()){ await customAlert('Você não tem permissão para excluir corretoras diretamente. Peça ao Super Administrador pra liberar essa permissão, ou solicite a exclusão pelo cadastro da corretora.'); return; }
     const gids = [...DUPLICATAS_SELECIONADAS];
     if(!gids.length) return;
     const nomes = gids.map(gid => GROUPS[gid]?.name || '(corretora removida)').join('\n- ');
-    if(!confirm(`Excluir ${gids.length} corretora(s)?\n\n- ${nomes}\n\nEssa ação não pode ser desfeita. Os lançamentos de produção já registrados permanecem no histórico, mas elas deixam de aparecer nas listas e filtros do sistema.`)) return;
+    if(!await customConfirm(`Excluir ${gids.length} corretora(s)?\n\n- ${nomes}\n\nEssa ação não pode ser desfeita. Os lançamentos de produção já registrados permanecem no histórico, mas elas deixam de aparecer nas listas e filtros do sistema.`)) return;
 
     mostrarSplashOp('Excluindo...');
     let excluidas = 0, erros = 0;
@@ -9069,7 +9157,7 @@
       .filter(grupo => grupo.length > 1);
     renderResultadoDuplicatas(gruposAtualizados);
 
-    if(erros) alert(`${excluidas} corretora(s) excluída(s). ${erros} deram erro — veja o console (F12) para detalhes.`);
+    if(erros) await customAlert(`${excluidas} corretora(s) excluída(s). ${erros} deram erro — veja o console (F12) para detalhes.`);
   }
 
   function relatorioVinculoLinhas(){
@@ -9118,11 +9206,11 @@
       : `<tr><td colspan="4" style="text-align:center;color:var(--gray-600);padding:40px 20px;">Nenhuma corretora encontrada com esse critério.</td></tr>`;
   }
 
-  function exportarRelatorioVinculoExcel(){
-    if(typeof XLSX === 'undefined'){ alert('Biblioteca de planilha indisponível.'); return; }
+  async function exportarRelatorioVinculoExcel(){
+    if(typeof XLSX === 'undefined'){ await customAlert('Biblioteca de planilha indisponível.'); return; }
     const linhas = relatorioVinculoLinhas();
-    if(linhas === null){ alert('Selecione as duas seguradoras antes de exportar.'); return; }
-    if(!linhas.length){ alert('Não há corretoras para exportar com esse critério.'); return; }
+    if(linhas === null){ await customAlert('Selecione as duas seguradoras antes de exportar.'); return; }
+    if(!linhas.length){ await customAlert('Não há corretoras para exportar com esse critério.'); return; }
 
     const segCom = document.getElementById('vinculo-seguradora-com').value;
     const segSem = document.getElementById('vinculo-seguradora-sem').value;
@@ -9376,8 +9464,8 @@
 
   async function exportarRelatorioExcel(){
     const { linhas, resumoFiltros } = await coletarRelatorioFiltrado();
-    if(!linhas.length){ alert('Nenhum dado para exportar com esse filtro.'); return; }
-    if(typeof XLSX === 'undefined'){ alert('Leitor de planilhas indisponível.'); return; }
+    if(!linhas.length){ await customAlert('Nenhum dado para exportar com esse filtro.'); return; }
+    if(typeof XLSX === 'undefined'){ await customAlert('Leitor de planilhas indisponível.'); return; }
 
     const dados = linhas.map(l => ({
       Corretora: l.corretora_id === null ? '—' : (GROUPS[l.corretora_id] ? GROUPS[l.corretora_id].name : 'Corretora removida'),
@@ -9398,8 +9486,8 @@
 
   async function exportarRelatorioPDF(){
     const { linhas, resumoFiltros } = await coletarRelatorioFiltrado();
-    if(!linhas.length){ alert('Nenhum dado para exportar com esse filtro.'); return; }
-    if(typeof window.jspdf === 'undefined'){ alert('Gerador de PDF indisponível.'); return; }
+    if(!linhas.length){ await customAlert('Nenhum dado para exportar com esse filtro.'); return; }
+    if(typeof window.jspdf === 'undefined'){ await customAlert('Gerador de PDF indisponível.'); return; }
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
@@ -9511,8 +9599,8 @@
 
   // Por enquanto só recebe o arquivo e avisa — a leitura automática de cada layout de
   // seguradora será implementada assim que os modelos de planilha forem enviados.
-  function openImportarModal(){
-    if(!Object.keys(SEGURADORAS).length){ alert('Cadastre ao menos uma seguradora antes de importar uma planilha.'); return; }
+  async function openImportarModal(){
+    if(!Object.keys(SEGURADORAS).length){ await customAlert('Cadastre ao menos uma seguradora antes de importar uma planilha.'); return; }
     // Fecha e limpa qualquer confirmação de importação anterior que tenha ficado aberta,
     // evitando que duas janelas fiquem empilhadas uma sobre a outra.
     closeModal('modal-confirmar-importacao');
@@ -9620,8 +9708,8 @@
     openModal('modal-importar-corretoras');
   }
 
-  function baixarModeloPlanilhaCorretoras(){
-    if(typeof XLSX === 'undefined'){ alert('Biblioteca de planilha indisponível.'); return; }
+  async function baixarModeloPlanilhaCorretoras(){
+    if(typeof XLSX === 'undefined'){ await customAlert('Biblioteca de planilha indisponível.'); return; }
     const modelo = [
       {
         'Razão Social':'Exemplo Corretora Ltda','CNPJ':'00.000.000/0001-00','SUSEP':'12345',
@@ -9757,11 +9845,11 @@
     renderModalConfirmacaoVinculoSeguradora();
   }
 
-  function vincularVinculoSegImportLinhaPorNome(linha, nomeDigitado){
+  async function vincularVinculoSegImportLinhaPorNome(linha, nomeDigitado){
     const nome = String(nomeDigitado||'').trim();
     if(!nome) return;
     const gid = Object.keys(GROUPS).find(k => (GROUPS[k].name||'').toLowerCase() === nome.toLowerCase());
-    if(!gid){ alert('Corretora não encontrada. Escolha uma sugestão da lista ao digitar.'); return; }
+    if(!gid){ await customAlert('Corretora não encontrada. Escolha uma sugestão da lista ao digitar.'); return; }
     const r = (window._importVinculoSegRows || []).find(x => x.linha === linha);
     if(r) r.gid = gid;
     renderModalConfirmacaoVinculoSeguradora();
@@ -10024,11 +10112,11 @@
     renderModalConfirmacaoEquipe();
   }
 
-  function vincularEquipeImportLinhaPorNome(linha, nomeDigitado){
+  async function vincularEquipeImportLinhaPorNome(linha, nomeDigitado){
     const nome = String(nomeDigitado||'').trim();
     if(!nome) return;
     const gid = Object.keys(GROUPS).find(k => (GROUPS[k].name||'').toLowerCase() === nome.toLowerCase());
-    if(!gid){ alert('Corretora não encontrada. Escolha uma sugestão da lista ao digitar.'); return; }
+    if(!gid){ await customAlert('Corretora não encontrada. Escolha uma sugestão da lista ao digitar.'); return; }
     const r = (window._importEquipeRows || []).find(x => x.linha === linha);
     if(r) r.gid = gid;
     renderModalConfirmacaoEquipe();
@@ -10286,11 +10374,11 @@
     renderModalConfirmacaoCorretoras();
   }
 
-  function vincularCorretoraImportLinhaPorNome(linha, nomeDigitado){
+  async function vincularCorretoraImportLinhaPorNome(linha, nomeDigitado){
     const nome = String(nomeDigitado||'').trim();
     if(!nome) return;
     const gid = Object.keys(GROUPS).find(k => (GROUPS[k].name||'').toLowerCase() === nome.toLowerCase());
-    if(!gid){ alert('Corretora não encontrada. Escolha uma sugestão da lista ao digitar.'); return; }
+    if(!gid){ await customAlert('Corretora não encontrada. Escolha uma sugestão da lista ao digitar.'); return; }
     const r = (window._importCorretorasRows || []).find(x => x.linha === linha);
     if(r) r.gid = gid;
     renderModalConfirmacaoCorretoras();
@@ -10299,7 +10387,7 @@
   // Cadastra a corretora dessa linha imediatamente (sem esperar o "Confirmar e importar"
   // geral) — útil pra resolver uma linha específica na hora, igual já funciona na
   // confirmação de importação de produção.
-  function cadastrarCorretoraImportLinha(linha){
+  async function cadastrarCorretoraImportLinha(linha){
     const r = (window._importCorretorasRows || []).find(x => x.linha === linha);
     if(!r) return;
 
@@ -10339,7 +10427,7 @@
       renderApelidosList();
     }
     if(p.observacao){
-      setTimeout(() => alert(`Também veio esta observação na planilha (não tem campo próprio no formulário — copie pra onde achar melhor):\n\n${p.observacao}`), 300);
+      setTimeout(async () => { await customAlert(`Também veio esta observação na planilha (não tem campo próprio no formulário — copie pra onde achar melhor):\n\n${p.observacao}`); }, 300);
     }
   }
 
@@ -10793,18 +10881,18 @@
       if(error){
         console.error('Erro ao salvar apelido:', error.message);
         // Não desfaz o vínculo desta importação — só avisa que o apelido não pôde ser salvo
-        alert(`Vinculado com sucesso, mas não consegui salvar "${nomeBruto}" como apelido de ${GROUPS[gid].name} (erro: ${error.message}). Você vai precisar vincular de novo na próxima importação.`);
+        await customAlert(`Vinculado com sucesso, mas não consegui salvar "${nomeBruto}" como apelido de ${GROUPS[gid].name} (erro: ${error.message}). Você vai precisar vincular de novo na próxima importação.`);
         return;
       }
       GROUPS[gid].apelidos = novosApelidos;
     }
   }
 
-  function vincularCorretoraDaLinhaPorNome(linha, nomeDigitado){
+  async function vincularCorretoraDaLinhaPorNome(linha, nomeDigitado){
     const nome = String(nomeDigitado||'').trim();
     if(!nome) return;
     const gid = Object.keys(GROUPS).find(k => (GROUPS[k].name||'').toLowerCase() === nome.toLowerCase());
-    if(!gid){ alert('Corretora não encontrada. Escolha uma sugestão da lista ao digitar.'); return; }
+    if(!gid){ await customAlert('Corretora não encontrada. Escolha uma sugestão da lista ao digitar.'); return; }
     vincularCorretoraDaLinha(linha, gid);
   }
 
@@ -10855,8 +10943,8 @@
 
   let editingFilialId = null;
 
-  function openFilialModal(id){
-    if(!isSuperAdmin()){ alert('Somente o Super Administrador pode cadastrar ou editar filiais.'); return; }
+  async function openFilialModal(id){
+    if(!isSuperAdmin()){ await customAlert('Somente o Super Administrador pode cadastrar ou editar filiais.'); return; }
     editingFilialId = id || null;
     const f = id ? (_filiaisCache || []).find(x => x.id === id) : null;
     document.getElementById('filial-modal-title').textContent = id ? 'Editar filial' : 'Cadastrar filial';
@@ -10902,8 +10990,8 @@
   }
 
   async function excluirFilial(id){
-    if(!isSuperAdmin()){ alert('Somente o Super Administrador pode excluir filiais.'); return; }
-    if(!confirm('Excluir esta filial?')) return;
+    if(!isSuperAdmin()){ await customAlert('Somente o Super Administrador pode excluir filiais.'); return; }
+    if(!await customConfirm('Excluir esta filial?')) return;
     const f = (_filiaisCache || []).find(x => x.id === id);
     await supabase.from('filiais').delete().eq('id', id);
     registrarLog('Excluiu filial', f ? f.nome : id);
@@ -10995,7 +11083,7 @@
     const abasBloqueadas = [];
     checkboxes.forEach(cb => { if(!cb.checked) abasBloqueadas.push(cb.dataset.aba); });
     const { error } = await supabase.from('profiles').update({ abas_bloqueadas: abasBloqueadas }).eq('id', userId);
-    if(error){ alert('Erro ao salvar: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao salvar: ' + error.message); return; }
     const u = USERS_CACHE.find(x => x.id === userId);
     if(u) u.abas_bloqueadas = abasBloqueadas;
     registrarLog('Atualizou permissões', u ? u.nome : userId);
@@ -11003,12 +11091,12 @@
   }
 
   async function toggleUserStatus(id){
-    if(!isSuperAdmin()){ alert('Somente o Super Administrador pode alterar usuários.'); return; }
+    if(!isSuperAdmin()){ await customAlert('Somente o Super Administrador pode alterar usuários.'); return; }
     const u = USERS_CACHE.find(x=>x.id===id);
     if(!u) return;
     const novoStatus = u.status === 'ativo' ? 'suspenso' : 'ativo';
     const { error } = await supabase.from('profiles').update({ status: novoStatus }).eq('id', id);
-    if(error){ alert('Erro ao atualizar status: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao atualizar status: ' + error.message); return; }
     renderUsuarios();
   }
 
@@ -11197,7 +11285,7 @@
     bloq = permitido ? bloq.filter(a => a !== abaId) : [...new Set([...bloq, abaId])];
     u.abas_bloqueadas = bloq;
     const { error } = await supabase.from('profiles').update({ abas_bloqueadas: bloq }).eq('id', userId);
-    if(error) alert('Erro ao salvar permissão: ' + error.message);
+    if(error) await customAlert('Erro ao salvar permissão: ' + error.message);
   }
 
   let editingUserId = null;
@@ -11207,7 +11295,7 @@
     const isSelf = id && id === currentUserId;
     const podeGerenciarUsuarios = isSuperAdmin() || ['gestor','consultor'].includes((currentRole||'').toLowerCase());
     if(!podeGerenciarUsuarios && !isSelf){
-      alert('Você não tem permissão para criar ou editar usuários.');
+      await customAlert('Você não tem permissão para criar ou editar usuários.');
       return;
     }
     editingUserId = id || null;
@@ -11228,7 +11316,7 @@
     // Administrador/Consultor só pode editar contas de Consultor (e a própria) —
     // não pode mexer em outro Administrador nem no Super Administrador.
     if(!isSuperAdmin() && id && !isSelf && u && u.role !== 'consultor'){
-      alert('Você só pode gerenciar contas de Consultor.');
+      await customAlert('Você só pode gerenciar contas de Consultor.');
       return;
     }
 
@@ -11286,7 +11374,7 @@
   async function saveUser(){
     const isSelf = editingUserId && editingUserId === currentUserId;
     const podeGerenciarUsuarios = isSuperAdmin() || ['gestor','consultor'].includes((currentRole||'').toLowerCase());
-    if(!podeGerenciarUsuarios && !isSelf){ alert('Você não tem permissão para salvar usuários.'); return; }
+    if(!podeGerenciarUsuarios && !isSelf){ await customAlert('Você não tem permissão para salvar usuários.'); return; }
     const nome = document.getElementById('user-nome').value.trim();
     const email = document.getElementById('user-email').value.trim().toLowerCase();
     const senha = document.getElementById('user-senha').value;
@@ -11407,18 +11495,18 @@
     const alvo = USERS_CACHE.find(u => u.id === id);
     if(!alvo) return;
 
-    if(!isSuperAdmin() && alvo.role !== 'consultor'){ alert('Você só pode gerenciar contas de Consultor.'); return; }
+    if(!isSuperAdmin() && alvo.role !== 'consultor'){ await customAlert('Você só pode gerenciar contas de Consultor.'); return; }
 
     if(!podeExcluirDiretamente()){
-      if(!confirm(`Solicitar exclusão do usuário "${alvo.nome}"?\n\nEle continua com acesso normal até o Super Administrador revisar e aprovar o pedido.`)) return;
+      if(!await customConfirm(`Solicitar exclusão do usuário "${alvo.nome}"?\n\nEle continua com acesso normal até o Super Administrador revisar e aprovar o pedido.`)) return;
       const ok = await criarSolicitacaoExclusao('usuario', id, alvo.nome);
-      if(ok) alert('Solicitação enviada! Acompanhe em "Solicitações de Exclusão".');
+      if(ok) await customAlert('Solicitação enviada! Acompanhe em "Solicitações de Exclusão".');
       return;
     }
 
-    if(!confirm('Remover o acesso deste usuário? Ele não conseguirá mais entrar no sistema.')) return;
+    if(!await customConfirm('Remover o acesso deste usuário? Ele não conseguirá mais entrar no sistema.')) return;
     const { error } = await supabase.from('profiles').delete().eq('id', id);
-    if(error){ alert('Erro ao remover usuário: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao remover usuário: ' + error.message); return; }
     registrarLog('Excluiu usuário', alvo.nome);
     renderUsuarios();
   }
@@ -11836,12 +11924,12 @@
     }
   }
 
-  function handleSeguradoraLogo(event){
+  async function handleSeguradoraLogo(event){
     const file = event.target.files[0];
     if(!file) return;
     // Limit to 2MB
     if(file.size > 2 * 1024 * 1024){
-      alert('A imagem é muito grande. Use uma imagem menor que 2 MB.');
+      await customAlert('A imagem é muito grande. Use uma imagem menor que 2 MB.');
       event.target.value = '';
       return;
     }
@@ -11866,7 +11954,7 @@
   }
 
   // --- UTILITÁRIOS SEGURADORA ---
-  function copiarCampo(id){
+  async function copiarCampo(id){
     const el = document.getElementById(id);
     if(!el || !el.value.trim()) return;
     navigator.clipboard.writeText(el.value.trim()).then(()=>{
@@ -11876,7 +11964,7 @@
         btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" style="width:15px;height:15px;"><path d="M20 6L9 17l-5-5"/></svg>';
         setTimeout(()=>{ btn.innerHTML = orig; }, 1500);
       }
-    }).catch(()=> alert('Copie manualmente o campo.'));
+    }).catch(async ()=> await customAlert('Copie manualmente o campo.'));
   }
 
   function toggleSenhaVisivel(inputId, btn){
@@ -12046,7 +12134,7 @@
 
   async function saveSeguradoraForm(){
     const nome = document.getElementById('seguradora-nome').value.trim();
-    if(!nome){ alert('Informe o nome da seguradora.'); return; }
+    if(!nome){ await customAlert('Informe o nome da seguradora.'); return; }
 
     // Guarda o estado anterior pra montar o histórico de mudanças
     const dadosAntes = editingSeguradoraId && SEGURADORAS[editingSeguradoraId] ? { ...SEGURADORAS[editingSeguradoraId] } : null;
@@ -12097,7 +12185,7 @@
       result = await trySave(payload);
     }
 
-    if(result.error){ alert('Erro ao salvar: ' + result.error.message); return; }
+    if(result.error){ await customAlert('Erro ao salvar: ' + result.error.message); return; }
 
     const savedId = editingSeguradoraId || result.data?.id;
     if(savedId){
@@ -12117,10 +12205,10 @@
   }
 
   async function deleteSeguradora(id){
-    if(!confirm(`Excluir a seguradora "${SEGURADORAS[id].nome}"? Isso não afeta produção já lançada.`)) return;
+    if(!await customConfirm(`Excluir a seguradora "${SEGURADORAS[id].nome}"? Isso não afeta produção já lançada.`)) return;
     const nomeExcluido = SEGURADORAS[id].nome;
     const { error } = await supabase.from('seguradoras').delete().eq('id', id);
-    if(error){ alert('Erro ao excluir: ' + error.message); return; }
+    if(error){ await customAlert('Erro ao excluir: ' + error.message); return; }
     delete SEGURADORAS[id];
     registrarLog('Excluiu seguradora', nomeExcluido);
     refreshSeguradoraSelects();
