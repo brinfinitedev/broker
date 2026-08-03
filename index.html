@@ -6971,6 +6971,18 @@
       : mensagens[0];
   }
 
+  // Monta o link wa.me a partir do telefone cadastrado no perfil de quem
+  // está logado — usado só no disparo EM MASSA (no manual, quem recebe já
+  // fala direto com o WhatsApp do computador de quem está enviando).
+  function montarLinkWhatsappConsultor(){
+    const limpo = (currentUserTelefone || '').replace(/\D/g, '');
+    if(!limpo) return null;
+    // Garante o código do país (55). Se já vier com 55 na frente (12-13
+    // dígitos), usa como está; senão, adiciona.
+    const comDDI = (limpo.length >= 12) ? limpo : '55' + limpo;
+    return `https://wa.me/${comDDI}`;
+  }
+
   // ---- DISPARO MANUAL: abre o WhatsApp Web/App, um chat por contato, com a
   // mensagem já preenchida — você revisa e clica em enviar você mesmo. ----
   async function dispatchWhatsappManual(){
@@ -7008,7 +7020,20 @@
     const mensagens = await validarAntesDoDisparo();
     if(!mensagens) return;
 
-    const mensagensEnviadas = WHATS_SELECIONADOS.map((c,i) => mensagens[i % mensagens.length]);
+    // Acrescenta automaticamente o link de contato do consultor logado
+    // (puxado do cadastro dele) em cada variação, só nesse tipo de disparo.
+    const linkConsultor = montarLinkWhatsappConsultor();
+    if(!linkConsultor){
+      const continuarSemLink = await customConfirm(
+        'Você não tem um WhatsApp cadastrado no seu perfil, então o disparo vai sair sem o link de contato. Quer continuar mesmo assim? (Pra corrigir, edite seu perfil e preencha o campo "Telefone / WhatsApp".)'
+      );
+      if(!continuarSemLink) return;
+    }
+    const mensagensComLink = mensagens.map(m =>
+      linkConsultor ? `${m}\n\nFicou com alguma dúvida? Me chama aqui: ${linkConsultor}` : m
+    );
+
+    const mensagensEnviadas = WHATS_SELECIONADOS.map((c,i) => mensagensComLink[i % mensagensComLink.length]);
     const btnDisparar = document.querySelector('#mkt-whats .btn-dark');
     if(btnDisparar){ btnDisparar.disabled = true; btnDisparar.textContent = 'Disparando...'; }
 
@@ -7024,7 +7049,7 @@
     if(resultado?.error){ await customAlert('Erro ao disparar: ' + resultado.error); return; }
 
     await supabase.from('marketing_disparos').insert({
-      tipo:'whatsapp', mensagem: montarResumoMensagem(mensagens), enviado_por: currentUserId,
+      tipo:'whatsapp', mensagem: montarResumoMensagem(mensagensComLink), enviado_por: currentUserId,
       quantidade_contatos: resultado?.sucesso ?? WHATS_SELECIONADOS.length,
       contatos: WHATS_SELECIONADOS.map((c,i) => ({ nome: c.nome, whatsapp: c.whatsapp, mensagem: mensagensEnviadas[i] })),
     });
@@ -10973,6 +10998,7 @@
   }
 
   let currentUserId = null;
+  let currentUserTelefone = null; // WhatsApp do usuário logado, pra incluir automaticamente o link de contato nos disparos
   let currentUserFirstName = '';
   let currentUserFullName = '';
 
@@ -11699,7 +11725,7 @@
     // busca o perfil
     const { data: profile, error: profErr } = await supabase
       .from('profiles')
-      .select('id, nome, email, role, status, foto_url, abas_bloqueadas')
+      .select('id, nome, email, role, status, foto_url, abas_bloqueadas, telefone')
       .eq('id', data.user.id)
       .single();
 
@@ -11724,6 +11750,7 @@
     LOGGED_USER_ABAS_BLOQUEADAS = Array.isArray(profile.abas_bloqueadas) ? profile.abas_bloqueadas : [];
     currentUserFirstName = profile.nome.split(' ')[0];
     currentUserFullName = profile.nome;
+    currentUserTelefone = profile.telefone || null;
     editingCorretoraGid = null;
 
     await loadCorretorasFromSupabase();
@@ -12343,6 +12370,7 @@
     document.getElementById('view-login').style.display = 'flex';
     document.getElementById('login-password').value = '';
     currentUserId = null;
+    currentUserTelefone = null;
     editingCorretoraGid = null;
   }
 
@@ -12375,6 +12403,7 @@
     currentUserPodeExcluir = profile.pode_excluir === true;
           currentUserFirstName = (profile.nome||'').split(' ')[0];
           currentUserFullName = profile.nome || '';
+          currentUserTelefone = profile.telefone || null;
           editingCorretoraGid = null;
 
           // Mostra a tela JÁ, sem esperar carregar corretoras/seguradoras (isso
