@@ -10612,8 +10612,23 @@
     const reader = new FileReader();
     reader.onload = async (e) => {
       if(window._importSessionId !== meuSessionId){ esconderSplashOp(); return; }
+      // Proteção geral: se qualquer coisa der errado no processamento (mesmo um
+      // bug que a gente não previu), garante que a tela de "Importando..."
+      // nunca fica travada pra sempre — sempre mostra um erro e libera a tela.
+      try {
+        await processarPlanilhaConteudo();
+      } catch(errGeral){
+        console.error('Erro inesperado ao processar planilha:', errGeral);
+        resultBox.innerHTML = `<p class="hint" style="color:#dc2626;">Ocorreu um erro inesperado ao processar essa planilha: <b>${errGeral.message}</b><br>Tente novamente ou avise o suporte com essa mensagem.</p>`;
+      } finally {
+        esconderSplashOp();
+      }
+    };
+
+    async function processarPlanilhaConteudo(){
       const template = encontrarTemplate(seguradora);
       let linhas;
+      let abaLida; // guarda a referência da aba fora do try, pra poder reusar depois (linhaInicioForcada)
       try {
         const wb = XLSX.read(e.target.result, { type:'array' });
         // Algumas seguradoras (ex: Allianz) mandam o arquivo com várias abas — a aba
@@ -10622,8 +10637,8 @@
         const nomeAba = (template?.abaAlvo && wb.SheetNames.includes(template.abaAlvo))
           ? template.abaAlvo
           : wb.SheetNames[0];
-        const primeiraAba = wb.Sheets[nomeAba];
-        linhas = XLSX.utils.sheet_to_json(primeiraAba, { header:1, defval:'' });
+        abaLida = wb.Sheets[nomeAba];
+        linhas = XLSX.utils.sheet_to_json(abaLida, { header:1, defval:'' });
       } catch(err){
         resultBox.innerHTML = `<p class="hint">Não foi possível ler este arquivo (${err.message}). Verifique se é um .xlsx, .xls ou .csv válido.</p>`;
         return;
@@ -10641,10 +10656,7 @@
       // Se o template disser exatamente em qual linha da planilha original o
       // cabeçalho de verdade está, a gente pula direto pra lá.
       if(template?.linhaInicioForcada){
-        const linhasOriginaisComNumero = XLSX.utils.sheet_to_json(
-          wb.Sheets[template?.abaAlvo && wb.SheetNames.includes(template.abaAlvo) ? template.abaAlvo : wb.SheetNames[0]],
-          { header:1, defval:'' }
-        );
+        const linhasOriginaisComNumero = XLSX.utils.sheet_to_json(abaLida, { header:1, defval:'' });
         linhas = linhasOriginaisComNumero.slice(template.linhaInicioForcada - 1)
           .filter(l => l.some(c => String(c).trim() !== ''));
       }
@@ -10785,7 +10797,7 @@
       esconderSplashOp();
       renderModalConfirmacaoImportacao();
       openModal('modal-confirmar-importacao');
-    };
+    }
     reader.readAsArrayBuffer(file);
   }
 
