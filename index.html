@@ -10616,7 +10616,7 @@
       // bug que a gente não previu), garante que a tela de "Importando..."
       // nunca fica travada pra sempre — sempre mostra um erro e libera a tela.
       try {
-        await processarPlanilhaConteudo();
+        await processarPlanilhaConteudo(e);
       } catch(errGeral){
         console.error('Erro inesperado ao processar planilha:', errGeral);
         resultBox.innerHTML = `<p class="hint" style="color:#dc2626;">Ocorreu um erro inesperado ao processar essa planilha: <b>${errGeral.message}</b><br>Tente novamente ou avise o suporte com essa mensagem.</p>`;
@@ -10625,7 +10625,7 @@
       }
     };
 
-    async function processarPlanilhaConteudo(){
+    async function processarPlanilhaConteudo(e){
       const template = encontrarTemplate(seguradora);
       let linhas;
       let abaLida; // guarda a referência da aba fora do try, pra poder reusar depois (linhaInicioForcada)
