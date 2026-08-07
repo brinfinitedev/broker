@@ -10663,10 +10663,25 @@
       // da tabela de verdade) têm conteúdo nas primeiras linhas que não é 100% vazio,
       // então o filtro acima não consegue "pular" até o cabeçalho real sozinho.
       // Se o template disser exatamente em qual linha da planilha original o
-      // cabeçalho de verdade está, a gente pula direto pra lá.
+      // cabeçalho de verdade está, a gente pula direto pra lá — lendo célula por
+      // célula, por endereço absoluto (linha, coluna), pra garantir que a posição
+      // de cada coluna bate exatamente com a planilha original, sem depender de
+      // nenhum comportamento "esperto" do leitor de planilha com linhas vazias.
       if(template?.linhaInicioForcada){
-        linhas = XLSX.utils.sheet_to_json(abaLida, { header:1, defval:'', range: template.linhaInicioForcada - 1 })
-          .filter(l => l.some(c => String(c).trim() !== ''));
+        const range = XLSX.utils.decode_range(abaLida['!ref']);
+        const linhasForcadas = [];
+        for(let r = template.linhaInicioForcada - 1; r <= range.e.r; r++){
+          const linhaArr = [];
+          // IMPORTANTE: sempre começa da coluna A (índice 0) de verdade, mesmo que
+          // a planilha só tenha dado a partir da coluna B ou C — senão os índices
+          // fixos do template (idxCorretorFixo, idxValorFixo) ficam deslocados.
+          for(let c = 0; c <= range.e.c; c++){
+            const cell = abaLida[XLSX.utils.encode_cell({ r, c })];
+            linhaArr.push(cell ? (cell.v ?? '') : '');
+          }
+          linhasForcadas.push(linhaArr);
+        }
+        linhas = linhasForcadas.filter(l => l.some(c => String(c).trim() !== ''));
       }
 
       const headerRow = linhas[0];
