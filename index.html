@@ -2303,7 +2303,7 @@
                   </div>
                 </div>
                 <div class="f-field" style="margin:0;" id="relatorio-campo-filial">
-                  <label>Filial</label>
+                  <label>Filial <span style="font-weight:400;color:var(--gray-600);">(obrigatório pra exportar)</span></label>
                   <select id="relatorio-filtro-filial" onchange="renderRelatorioBody()" style="width:100%;"><option value="">Todas</option></select>
                 </div>
                 <div class="f-field" style="margin:0;" id="relatorio-campo-seguradora">
@@ -4017,15 +4017,18 @@
   }
 
   async function renderRankings(){
-    // Always use current month — no date selector
+    // Segue o mesmo filtro de competência da tela principal de Produção —
+    // antes ficava sempre travado no mês atual, ignorando o filtro escolhido.
+    const inputPrincipal = document.getElementById('producao-competencia');
     const hoje = new Date();
-    const mesFiltro = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+    const mesAtualReal = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+    const mesFiltro = (inputPrincipal && inputPrincipal.value) || mesAtualReal;
     const mesEl = document.getElementById('rank-corretora-mes');
     if(mesEl) mesEl.value = mesFiltro;
 
     // Update label
     const labelEl = document.getElementById('rank-corretora-mes-label');
-    if(labelEl) labelEl.textContent = 'Produção do mês atual';
+    if(labelEl) labelEl.textContent = `Produção de ${labelCompetencia(mesFiltro)}`;
 
     const { data } = await supabase.from('producao_mensal').select('*');
     const todas = (data || []).filter(l => l.competencia === mesFiltro);
@@ -4041,7 +4044,7 @@
       const el = document.getElementById(elId);
       if(!el) return;
       if(!rank.length){
-        el.innerHTML = '<p style="color:var(--gray-600);font-size:12.5px;">Sem dados para o mês atual.</p>';
+        el.innerHTML = `<p style="color:var(--gray-600);font-size:12.5px;">Sem dados para ${labelCompetencia(mesFiltro)}.</p>`;
         return;
       }
       const max = rank[0]?.[1] || 1;
@@ -8062,6 +8065,24 @@
       idxValorFixo: 2,
       descartarColunaA: false,
     },
+    'darwin': {
+      tipo: 'corretora',
+      aliases: ['darwin seguros', 'darwin'],
+      // Relatório gerencial da Darwin tem vários blocos de KPI (Novas Cotações,
+      // Transmissões etc) ANTES da tabela de corretoras de verdade — as linhas 1
+      // a 14 têm conteúdo espalhado (não são 100% vazias), então o cabeçalho de
+      // verdade não seria identificado sozinho. Forçamos pular direto pra linha
+      // 15 da planilha, onde está o cabeçalho real ("Corretor", "jun/26",
+      // "jul/26", "ago/26"...).
+      // Col B (idx 1): nome da corretora
+      // Col AR (idx 43): valor de "jul/26" — atenção: o mês da coluna muda a
+      // cada nova planilha que a Darwin manda (sempre tem jun/jul/ago lado a
+      // lado); se um mês novo vier deslocado, ajustar idxValorFixo aqui.
+      linhaInicioForcada: 15,
+      idxCorretorFixo: 1,
+      idxValorFixo: 43,
+      descartarColunaA: false,
+    },
   };
 
   // Templates que suportam importação "por produto"
@@ -8592,6 +8613,8 @@
           await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: sucesso, snapshot_dados: snapProduto });
           registrarLog('Importou planilha por produto', `${seguradora} · ${labelCompetencia(competencia)} · ${sucesso} produto(s)`);
         }
+        const inputCompetenciaPrincipalProd = document.getElementById('producao-competencia');
+        if(inputCompetenciaPrincipalProd) inputCompetenciaPrincipalProd.value = competencia;
         renderProducao();
       };
       openModal('modal-confirmar-importacao');
@@ -8631,6 +8654,8 @@
     registrarLog('Lançou produção manual', `${GROUPS[corretora_id]?.name||''} · ${seguradora}${produto?' · '+produto:''} · ${labelCompetencia(competencia)} · R$ ${valor}`);
 
     closeModal('modal-producao');
+    const inputCompetenciaPrincipalManual = document.getElementById('producao-competencia');
+    if(inputCompetenciaPrincipalManual) inputCompetenciaPrincipalManual.value = competencia;
     renderProducao();
   }
 
@@ -9520,6 +9545,11 @@
   }
 
   async function exportarRelatorioExcel(){
+    const filialSelecionada = document.getElementById('relatorio-filtro-filial')?.value || '';
+    if(!filialSelecionada){
+      await customAlert('Selecione uma filial no filtro antes de exportar.');
+      return;
+    }
     const { linhas, resumoFiltros } = await coletarRelatorioFiltrado();
     if(!linhas.length){ await customAlert('Nenhum dado para exportar com esse filtro.'); return; }
     if(typeof XLSX === 'undefined'){ await customAlert('Leitor de planilhas indisponível.'); return; }
@@ -9542,6 +9572,11 @@
   }
 
   async function exportarRelatorioPDF(){
+    const filialSelecionada = document.getElementById('relatorio-filtro-filial')?.value || '';
+    if(!filialSelecionada){
+      await customAlert('Selecione uma filial no filtro antes de exportar.');
+      return;
+    }
     const { linhas, resumoFiltros } = await coletarRelatorioFiltrado();
     if(!linhas.length){ await customAlert('Nenhum dado para exportar com esse filtro.'); return; }
     if(typeof window.jspdf === 'undefined'){ await customAlert('Gerador de PDF indisponível.'); return; }
@@ -10600,9 +10635,26 @@
         return;
       }
 
+      // Algumas planilhas (ex: relatórios gerenciais com vários blocos de KPI antes
+      // da tabela de verdade) têm conteúdo nas primeiras linhas que não é 100% vazio,
+      // então o filtro acima não consegue "pular" até o cabeçalho real sozinho.
+      // Se o template disser exatamente em qual linha da planilha original o
+      // cabeçalho de verdade está, a gente pula direto pra lá.
+      if(template?.linhaInicioForcada){
+        const linhasOriginaisComNumero = XLSX.utils.sheet_to_json(
+          wb.Sheets[template?.abaAlvo && wb.SheetNames.includes(template.abaAlvo) ? template.abaAlvo : wb.SheetNames[0]],
+          { header:1, defval:'' }
+        );
+        linhas = linhasOriginaisComNumero.slice(template.linhaInicioForcada - 1)
+          .filter(l => l.some(c => String(c).trim() !== ''));
+      }
+
       const headerRow = linhas[0];
       // guarda o número real da linha na planilha (linha 1 = cabeçalho) junto de cada linha de dado
-      let dataRows = linhas.slice(1).map((celulas, i) => ({ celulas, numeroLinha: i + 2 }));
+      // — se pulamos até uma linha específica (linhaInicioForcada), soma esse deslocamento
+      // pra continuar mostrando o número de linha certo da planilha original em erros.
+      const deslocamentoLinha = template?.linhaInicioForcada ? (template.linhaInicioForcada - 1) : 0;
+      let dataRows = linhas.slice(1).map((celulas, i) => ({ celulas, numeroLinha: i + 2 + deslocamentoLinha }));
       const DIAG = [`Linhas brutas (sem cabeçalho): ${dataRows.length}`];
 
       // ── Palavras-chave que identificam linhas de rodapé/metadados a descartar ──
@@ -10892,6 +10944,10 @@
         await registrarHistoricoProducao({ seguradora, competencia, tipo:'importacao', quantidade: sucesso, snapshot_dados: snapCorretora });
         registrarLog('Importou planilha de produção', `${seguradora} · ${labelCompetencia(competencia)} · ${sucesso} linha(s)`);
       }
+      // Mostra na tela o MESMO mês que acabou de ser importado — sem isso, a tela
+      // principal caía no mês atual de verdade (hoje), não no mês importado.
+      const inputCompetenciaPrincipal = document.getElementById('producao-competencia');
+      if(inputCompetenciaPrincipal) inputCompetenciaPrincipal.value = competencia;
       renderProducao();
       window._importRowsAtual = null;
       window._importContexto = null;
