@@ -9711,7 +9711,14 @@
     document.getElementById('importar-arquivo-section').classList.add('hidden');
     document.getElementById('importar-competencia').value = competenciaAtual();
     ligarCompetenciaPicker('importar-competencia');
-    const filiaisUnicasImportar = [...new Set(Object.values(GROUPS).map(g => g.filial).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    // Junta as filiais cadastradas de verdade (tabela filiais) com quaisquer
+    // filiais que já estejam preenchidas em alguma corretora — busca direto do
+    // banco, sem depender de um cache que só carrega ao visitar Usuários.
+    const filiaisImportarSet = new Set();
+    Object.values(GROUPS).forEach(g => { if(g.filial) filiaisImportarSet.add(g.filial); });
+    const { data: filiaisDoBanco } = await supabase.from('filiais').select('nome').order('nome');
+    (filiaisDoBanco || []).forEach(f => { if(f.nome) filiaisImportarSet.add(f.nome); });
+    const filiaisUnicasImportar = [...filiaisImportarSet].sort((a,b)=>a.localeCompare(b,'pt-BR'));
     document.getElementById('importar-filial').innerHTML = '<option value="">Todas as filiais</option>' +
       filiaisUnicasImportar.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
     document.getElementById('producao-arquivo-input').value = '';
