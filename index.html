@@ -3490,6 +3490,10 @@
       <div class="f-field"><label>Competência</label>
         <input type="month" id="importar-competencia">
       </div>
+      <div class="f-field">
+        <label>Filial <span style="font-weight:400;color:var(--gray-600);">(opcional — ajuda a identificar corretoras com nomes parecidos em filiais diferentes)</span></label>
+        <select id="importar-filial"><option value="">Todas as filiais</option></select>
+      </div>
       <div class="f-field"><label>Arquivo (.xlsx, .xls ou .csv)</label>
         <input type="file" id="producao-arquivo-input" accept=".xlsx,.xls,.csv">
       </div>
@@ -7971,13 +7975,14 @@
 
   // procura, entre os apelidos + razão social de cada corretora, qual bate com o texto informado
   // (usado tanto no lançamento manual quanto, mais à frente, na leitura automática da planilha)
-  function identificarCorretoraPorNome(texto){
+  function identificarCorretoraPorNome(texto, filialFiltro){
     if(!texto) return null;
     const alvo = String(texto).trim().toLowerCase();
     if(!alvo) return null;
     for(const gid of Object.keys(GROUPS)){
       const g = GROUPS[gid];
       if(!g) continue;
+      if(filialFiltro && (g.filial || '') !== filialFiltro) continue;
       const nome = String(g.name || '').toLowerCase();
       if(nome && nome === alvo) return gid;
       const apelidos = Array.isArray(g.apelidos) ? g.apelidos : [];
@@ -9706,6 +9711,9 @@
     document.getElementById('importar-arquivo-section').classList.add('hidden');
     document.getElementById('importar-competencia').value = competenciaAtual();
     ligarCompetenciaPicker('importar-competencia');
+    const filiaisUnicasImportar = [...new Set(Object.values(GROUPS).map(g => g.filial).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    document.getElementById('importar-filial').innerHTML = '<option value="">Todas as filiais</option>' +
+      filiaisUnicasImportar.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
     document.getElementById('producao-arquivo-input').value = '';
     document.getElementById('importar-resultado').innerHTML = '';
     renderSeguradoraPicker();
@@ -9767,10 +9775,10 @@
 
   // Procura, em qualquer célula da linha, um texto que bata com o apelido ou a razão
   // social de alguma corretora cadastrada. Retorna o gid encontrado ou null.
-  function identificarCorretoraNaLinha(celulas){
+  function identificarCorretoraNaLinha(celulas, filialFiltro){
     for(const valorBruto of celulas){
       if(valorBruto === null || valorBruto === undefined) continue;
-      const gid = identificarCorretoraPorNome(String(valorBruto));
+      const gid = identificarCorretoraPorNome(String(valorBruto), filialFiltro);
       if(gid) return gid;
     }
     return null;
@@ -10588,6 +10596,7 @@
   function processarPlanilha(){
     const seguradora = document.getElementById('importar-seguradora').value.trim();
     const competencia = document.getElementById('importar-competencia').value || competenciaAtual();
+    const filialFiltro = document.getElementById('importar-filial')?.value || '';
     const file = document.getElementById('producao-arquivo-input').files[0];
     const resultBox = document.getElementById('importar-resultado');
     // tipo de importação: 'corretora' (padrão) ou 'produto'
@@ -10656,8 +10665,7 @@
       // Se o template disser exatamente em qual linha da planilha original o
       // cabeçalho de verdade está, a gente pula direto pra lá.
       if(template?.linhaInicioForcada){
-        const linhasOriginaisComNumero = XLSX.utils.sheet_to_json(abaLida, { header:1, defval:'' });
-        linhas = linhasOriginaisComNumero.slice(template.linhaInicioForcada - 1)
+        linhas = XLSX.utils.sheet_to_json(abaLida, { header:1, defval:'', range: template.linhaInicioForcada - 1 })
           .filter(l => l.some(c => String(c).trim() !== ''));
       }
 
@@ -10751,7 +10759,7 @@
           const nomeBruto = template ? celulas[idxCorretor] : (celulas.find(c => String(c).trim() !== '') || '');
           let gid = null;
           try {
-            gid = template ? identificarCorretoraPorNome(String(nomeBruto||'')) : identificarCorretoraNaLinha(celulas);
+            gid = template ? identificarCorretoraPorNome(String(nomeBruto||''), filialFiltro) : identificarCorretoraNaLinha(celulas, filialFiltro);
           } catch(errMatch){
             console.error('Erro ao identificar corretora na linha', numeroLinha, ':', errMatch.message);
             gid = null;
