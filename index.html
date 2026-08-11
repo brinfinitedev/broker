@@ -10894,9 +10894,24 @@
   // compartilhar o mesmo gid de uma linha já existente.
   function consolidarLinhasDuplicadas(rows){
     const porGid = new Map();
-    const semGid = [];
+    const porNomeSemGid = new Map();
     for(const r of rows){
-      if(!r.gid){ semGid.push(r); continue; }
+      if(!r.gid){
+        // Ainda não identificada — agrupa pelo NOME (normalizado: sem acento,
+        // maiúscula/minúscula) pra não aparecer a mesma corretora repetida
+        // dezenas de vezes na tela de confirmação (ex: planilhas com uma
+        // linha por cliente, tipo a da Suhai). Assim que essa linha for
+        // vinculada a uma corretora, ela já entra somada de uma vez.
+        const chave = normalizarBusca(r.nomeBruto || '');
+        if(porNomeSemGid.has(chave)){
+          const existente = porNomeSemGid.get(chave);
+          existente.valor += r.valor;
+          existente.linhasOriginais.push(r.linha);
+        } else {
+          porNomeSemGid.set(chave, { ...r, linhasOriginais: [r.linha] });
+        }
+        continue;
+      }
       if(porGid.has(r.gid)){
         const existente = porGid.get(r.gid);
         existente.valor += r.valor;
@@ -10905,7 +10920,7 @@
         porGid.set(r.gid, { ...r, linhasOriginais: [r.linha] });
       }
     }
-    return [...porGid.values(), ...semGid];
+    return [...porGid.values(), ...porNomeSemGid.values()];
   }
 
   function renderModalConfirmacaoImportacao(){
