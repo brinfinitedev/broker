@@ -4021,8 +4021,9 @@
   }
 
   async function renderRankings(){
-    // Segue o mesmo filtro de competência da tela principal de Produção —
-    // antes ficava sempre travado no mês atual, ignorando o filtro escolhido.
+    // Segue os MESMOS filtros da tela principal de Produção (competência,
+    // corretora, seguradora, filial, produto) — antes só respeitava a
+    // competência, ignorando qualquer outro filtro escolhido.
     const inputPrincipal = document.getElementById('producao-competencia');
     const hoje = new Date();
     const mesAtualReal = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
@@ -4030,12 +4031,38 @@
     const mesEl = document.getElementById('rank-corretora-mes');
     if(mesEl) mesEl.value = mesFiltro;
 
-    // Update label
-    const labelEl = document.getElementById('rank-corretora-mes-label');
-    if(labelEl) labelEl.textContent = `Produção de ${labelCompetencia(mesFiltro)}`;
+    let gidsFiltro = [];
+    try { gidsFiltro = JSON.parse(document.getElementById('producao-filtro-corretora')?.value || '[]'); } catch(e){ gidsFiltro = []; }
+    let seguradorasFiltro = [];
+    try { seguradorasFiltro = JSON.parse(document.getElementById('producao-filtro-seguradora')?.value || '[]'); } catch(e){ seguradorasFiltro = []; }
+    seguradorasFiltro = seguradorasFiltro.map(normalizarBusca);
+    const produtoFiltro = normalizarBusca(document.getElementById('producao-filtro-produto')?.value || '');
+    let filialFiltro = (document.getElementById('producao-filtro-filial')?.value||'').trim();
+    if(!isSuperAdmin() && currentUserFilial){
+      filialFiltro = currentUserFilial;
+    }
 
-    const { data } = await supabase.from('producao_mensal').select('*');
-    const todas = (data || []).filter(l => l.competencia === mesFiltro);
+    // Update label — mostra também quais filtros extras estão ativos, além do mês
+    const labelEl = document.getElementById('rank-corretora-mes-label');
+    if(labelEl){
+      const extras = [];
+      if(seguradorasFiltro.length) extras.push(seguradorasFiltro.length === 1 ? '1 seguradora' : `${seguradorasFiltro.length} seguradoras`);
+      if(gidsFiltro.length) extras.push(gidsFiltro.length === 1 ? '1 corretora' : `${gidsFiltro.length} corretoras`);
+      if(filialFiltro) extras.push(`filial ${filialFiltro}`);
+      if(produtoFiltro) extras.push(`produto "${document.getElementById('producao-filtro-produto')?.value}"`);
+      labelEl.textContent = `Produção de ${labelCompetencia(mesFiltro)}` + (extras.length ? ` · filtrado por ${extras.join(', ')}` : '');
+    }
+
+    let query = supabase.from('producao_mensal').select('*').eq('competencia', mesFiltro);
+    if(gidsFiltro.length) query = query.in('corretora_id', gidsFiltro);
+    const { data, error } = await query;
+    if(error){ console.error('renderRankings:', error.message); return; }
+
+    let todas = data || [];
+    if(filialFiltro) todas = todas.filter(l => l.corretora_id === null || (GROUPS[l.corretora_id]?.filial||'') === filialFiltro);
+    if(seguradorasFiltro.length) todas = todas.filter(l => seguradorasFiltro.some(s => normalizarBusca(l.seguradora).includes(s)));
+    if(produtoFiltro) todas = todas.filter(l => normalizarBusca(l.produto).includes(produtoFiltro));
+
     // Ranking de Corretoras e Seguradoras usa só linhas COM corretora vinculada.
     // Linhas "por produto" (corretora_id nulo) são um cálculo à parte — só alimentam
     // o Ranking de Produtos, não entram em mais nada aqui.
@@ -8088,6 +8115,22 @@
       idxValorFixo: 43,
       descartarColunaA: false,
     },
+    'suhai': {
+      tipo: 'corretora',
+      aliases: ['suhai seguros', 'suhai seguradora', 'suhai'],
+      // Planilha da Suhai vem separada por CLIENTE, não por corretora — a mesma
+      // corretora aparece várias vezes (uma linha por apólice/cliente). O sistema
+      // já soma automaticamente linhas repetidas da mesma corretora
+      // (consolidarLinhasDuplicadas), então não precisa de nada especial pra isso.
+      // Col Q (idx 16): nome da corretora ("Nome Corretor")
+      // Valor de cada linha = soma de 3 colunas:
+      //   Col J (idx 9): Vlr Tarifário
+      //   Col K (idx 10): Vlr Adicional
+      //   Col L (idx 11): Vlr IOF
+      idxCorretorFixo: 16,
+      idxValoresSomar: [9, 10, 11],
+      descartarColunaA: false,
+    },
   };
 
   // Templates que suportam importação "por produto"
@@ -10654,7 +10697,11 @@
           ? template.abaAlvo
           : wb.SheetNames[0];
         abaLida = wb.Sheets[nomeAba];
-        linhas = XLSX.utils.sheet_to_json(abaLida, { header:1, defval:'' });
+        // raw:false é importante aqui: em CSVs com vírgula decimal (formato BR, ex:
+        // "2118,67"), o SheetJS às vezes interpreta errado o número puro (vira
+        // 211867, sem casa decimal) — com raw:false, pegamos o texto formatado
+        // certo ("2118,67"), que o parseValorMonetario sabe converter direito.
+        linhas = XLSX.utils.sheet_to_json(abaLida, { header:1, defval:'', raw:false });
       } catch(err){
         resultBox.innerHTML = `<p class="hint">Não foi possível ler este arquivo (${err.message}). Verifique se é um .xlsx, .xls ou .csv válido.</p>`;
         return;
@@ -10684,7 +10731,9 @@
           // fixos do template (idxCorretorFixo, idxValorFixo) ficam deslocados.
           for(let c = 0; c <= range.e.c; c++){
             const cell = abaLida[XLSX.utils.encode_cell({ r, c })];
-            linhaArr.push(cell ? (cell.v ?? '') : '');
+            // Prefere o texto formatado (w) ao número bruto (v) — mesmo motivo do
+            // raw:false acima: evita interpretar errado número com vírgula decimal.
+            linhaArr.push(cell ? (cell.w ?? cell.v ?? '') : '');
           }
           linhasForcadas.push(linhaArr);
         }
@@ -10725,9 +10774,9 @@
       }
 
       if(template){
-        if(template.idxCorretorFixo !== undefined && template.idxValorFixo !== undefined){
+        if(template.idxCorretorFixo !== undefined && (template.idxValorFixo !== undefined || template.idxValoresSomar !== undefined)){
           idxCorretor = template.idxCorretorFixo;
-          idxValor = template.idxValorFixo;
+          idxValor = template.idxValorFixo; // fica undefined se o template usa idxValoresSomar (soma várias colunas) — tratado à parte
         } else {
           idxCorretor = indiceColuna(headerRowFinal, template.colunaCorretor);
           idxValor = indiceColuna(headerRowFinal, template.colunaValor);
@@ -10787,7 +10836,11 @@
             gid = null;
           }
           const bruto = template ? celulas[idxValor] : extrairValorDaLinha(headerParaExtracao, celulas);
-          const num = parseValorMonetario(bruto);
+          // Algumas seguradoras (ex: Suhai) não têm uma única coluna de "valor" — o
+          // valor de cada linha é a SOMA de várias colunas (ex: Tarifa + Adicional + IOF).
+          const num = template?.idxValoresSomar
+            ? template.idxValoresSomar.reduce((soma, idx) => soma + parseValorMonetario(celulas[idx]), 0)
+            : parseValorMonetario(bruto);
           return {
             linha: numeroLinha,
             nomeBruto: String(nomeBruto || '').trim(),
