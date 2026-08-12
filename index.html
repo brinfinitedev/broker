@@ -1903,11 +1903,12 @@
             <p class="hint">Escolha como enviar: <b>Manual</b> abre o WhatsApp Web/App, um chat por contato, pra você revisar e clicar em enviar (até <b>30 contatos</b> por vez). <b>Em massa</b> envia direto pela API da plataforma de atendimento, automático, sem precisar ficar clicando (até <b>250 contatos</b> por vez). <b>Exportar pra extensão</b> gera uma planilha pronta pra importar na extensão Wa Sender. Em qualquer um dos três, <b>só a Mensagem 1 é obrigatória</b> — as variações 2 e 3 são opcionais.</p>
             <div id="whats-sender-extensao-aviso" style="display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1.4px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:14px;">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;color:var(--gray-600);"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-              <span style="font-size:12.5px;">Pra usar o disparo por extensão, é preciso ter a <b>Wa Sender Extensão</b> instalada no Chrome. <a href="https://chromewebstore.google.com/detail/wa-bulk-message-sender-ex/nabliihgjghfkmjhmfikneofdleooicf" target="_blank" rel="noopener" style="color:var(--black);font-weight:700;">Instalar a extensão</a></span>
+              <span style="font-size:12.5px;"><b>Obrigatório</b> ter a <b>Wa Sender Extensão</b> instalada no Chrome pra usar o disparo por extensão (95 disparos grátis por dia). <a href="https://chromewebstore.google.com/detail/wa-bulk-message-sender-ex/nabliihgjghfkmjhmfikneofdleooicf" target="_blank" rel="noopener" style="color:var(--black);font-weight:700;">Instalar a extensão</a></span>
             </div>
             <div class="form-actions" style="gap:10px;flex-wrap:wrap;">
               <button class="btn-outline" onclick="dispatchWhatsappManual()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg> Disparo manual (abre o WhatsApp)</button>
-              <button class="btn-outline" onclick="exportarParaWaSenderExtensao()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg> Exportar pra extensão (Wa Sender)</button>
+              <button class="btn-outline" onclick="copiarNumerosParaWaSenderExtensao()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copiar números (extensão)</button>
+              <button class="btn-outline" onclick="exportarParaWaSenderExtensao()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg> Exportar Excel (extensão)</button>
               <button class="btn-dark" onclick="dispatchWhatsappEmMassa()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M5 12h14M13 5l7 7-7 7"/></svg> Disparo em massa (automático)</button>
             </div>
           </div>
@@ -6977,9 +6978,76 @@
     limparTelaAposDisparo();
   }
 
-  // ---- DISPARO EM MASSA: manda tudo de uma vez pro servidor, que chama a
-  // API da plataforma de atendimento (ClickMassa) — automático, sem precisar
-  // manter nenhuma aba aberta. ----
+  // ---- COPIAR NÚMEROS: gera a lista de números no formato que a aba
+  // "Números" da Wa Sender Extensão pede (com "+" e separados por vírgula),
+  // e já copia pra área de transferência — só colar lá. ----
+  async function copiarNumerosParaWaSenderExtensao(){
+    if(WHATS_SELECIONADOS.length === 0){ await customAlert('Selecione ao menos um contato.'); return; }
+
+    // Mesma regra dos outros tipos de disparo: avisa (e deixa cancelar) se
+    // algum desses contatos já recebeu mensagem antes.
+    const repetidos = await verificarContatosJaEnviados(WHATS_SELECIONADOS);
+    if(repetidos.length){
+      const lista = repetidos
+        .map(c => `• ${c.nome} — último envio em ${new Date(c.ultimoEnvio).toLocaleDateString('pt-BR')}`)
+        .join('\n');
+      const continuar = await customConfirm(
+        `Atenção: ${repetidos.length} de ${WHATS_SELECIONADOS.length} contato(s) selecionado(s) já receberam uma mensagem antes:\n\n${lista}\n\nQuer copiar mesmo assim?`
+      );
+      if(!continuar) return;
+    }
+
+    const numeros = WHATS_SELECIONADOS
+      .map(c => normalizarNumeroBrasilExport(c.whatsapp))
+      .filter(Boolean)
+      .map(n => '+' + n);
+    const texto = numeros.join(', ');
+
+    let copiado = false;
+    try {
+      await navigator.clipboard.writeText(texto);
+      copiado = true;
+    } catch(e){
+      console.error('Falha ao copiar automaticamente:', e.message);
+    }
+
+    await supabase.from('marketing_disparos').insert({
+      tipo:'whatsapp', mensagem: '[Números copiados para a Wa Sender Extensão — mensagem enviada de dentro da extensão]',
+      enviado_por: currentUserId,
+      quantidade_contatos: WHATS_SELECIONADOS.length,
+      contatos: WHATS_SELECIONADOS.map(c => ({ nome: c.nome, whatsapp: c.whatsapp })),
+    });
+    registrarLog('Copiou números para extensão (Wa Sender)', `${WHATS_SELECIONADOS.length} contato(s)`);
+
+    if(copiado){
+      await customAlert(`${numeros.length} número(s) copiado(s) pra área de transferência!\n\nAgora é só abrir a Wa Sender Extensão, ir na aba "Números" e colar (Ctrl+V ou Cmd+V) — os números já vêm no formato certo, separados por vírgula.`);
+    } else {
+      // Se o navegador bloquear a cópia automática, mostra os números numa
+      // caixa de texto pra copiar manualmente.
+      mostrarTextoParaCopiarManual('Números para colar na Wa Sender Extensão', texto);
+    }
+    limparTelaAposDisparo();
+  }
+
+  // Mostra um texto grande numa caixa selecionável, pra quando a cópia
+  // automática não for permitida pelo navegador — usuário seleciona e copia
+  // manualmente (Ctrl+C / Cmd+C).
+  function mostrarTextoParaCopiarManual(titulo, texto){
+    const wrap = document.createElement('div');
+    wrap.className = 'modal-overlay open';
+    wrap.style.zIndex = '400';
+    wrap.id = 'modal-copiar-manual-wrap';
+    wrap.innerHTML = `
+      <div class="modal-box">
+        <h3>${esc(titulo)}</h3>
+        <p class="hint">Não consegui copiar automaticamente — seleciona o texto abaixo e copia manualmente (Ctrl+C ou Cmd+C).</p>
+        <textarea readonly rows="8" style="width:100%;border:1.4px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;font-family:inherit;" onclick="this.select()">${esc(texto)}</textarea>
+        <div class="modal-actions"><button class="btn-dark" onclick="document.getElementById('modal-copiar-manual-wrap').remove()">Fechar</button></div>
+      </div>`;
+    document.body.appendChild(wrap);
+    wrap.querySelector('textarea').select();
+  }
+
   // ---- EXPORTAR PRA EXTENSÃO: gera uma planilha (Excel) já com o número e a
   // mensagem final de cada contato (rodízio já resolvido), pronta pra importar
   // na Wa Sender Extensão do Chrome. ----
@@ -7020,6 +7088,9 @@
     return digitos;
   }
 
+  // ---- DISPARO EM MASSA: manda tudo de uma vez pro servidor, que chama a
+  // API da plataforma de atendimento (ClickMassa) — automático, sem precisar
+  // manter nenhuma aba aberta. ----
   async function dispatchWhatsappEmMassa(){
     const mensagens = await validarAntesDoDisparo();
     if(!mensagens) return;
@@ -8130,6 +8201,10 @@
       idxCorretorFixo: 16,
       idxValoresSomar: [9, 10, 11],
       descartarColunaA: false,
+      // Autoriza SÓ pra Suhai o agrupamento por nome de linhas ainda não
+      // identificadas (várias linhas de cliente da mesma corretora, antes
+      // de vincular) — nenhuma outra seguradora usa isso.
+      agruparPorNomeTambem: true,
     },
   };
 
@@ -10697,11 +10772,17 @@
           ? template.abaAlvo
           : wb.SheetNames[0];
         abaLida = wb.Sheets[nomeAba];
-        // raw:false é importante aqui: em CSVs com vírgula decimal (formato BR, ex:
-        // "2118,67"), o SheetJS às vezes interpreta errado o número puro (vira
-        // 211867, sem casa decimal) — com raw:false, pegamos o texto formatado
-        // certo ("2118,67"), que o parseValorMonetario sabe converter direito.
-        linhas = XLSX.utils.sheet_to_json(abaLida, { header:1, defval:'', raw:false });
+        // raw:false só faz sentido em CSV: nesse formato, o SheetJS às vezes
+        // interpreta errado número com vírgula decimal (formato BR, ex: "2118,67"
+        // vira 211867, sem casa decimal) — com raw:false, pegamos o texto
+        // formatado certo, que o parseValorMonetario sabe converter direito.
+        // Em Excel (.xlsx/.xls) o número puro (v) já vem certo — e usar o texto
+        // formatado (w) pode vir ERRADO se a célula tiver formatação de %
+        // aplicada por engano numa planilha que não devia ser percentual
+        // (aconteceu numa planilha real da Tokio Marine: "w" mostrava
+        // "79620005.0%" pra um valor que na real era 796200,05).
+        const ehArquivoCSV = /\.csv$/i.test(file?.name || '');
+        linhas = XLSX.utils.sheet_to_json(abaLida, { header:1, defval:'', raw: !ehArquivoCSV });
       } catch(err){
         resultBox.innerHTML = `<p class="hint">Não foi possível ler este arquivo (${err.message}). Verifique se é um .xlsx, .xls ou .csv válido.</p>`;
         return;
@@ -10731,9 +10812,11 @@
           // fixos do template (idxCorretorFixo, idxValorFixo) ficam deslocados.
           for(let c = 0; c <= range.e.c; c++){
             const cell = abaLida[XLSX.utils.encode_cell({ r, c })];
-            // Prefere o texto formatado (w) ao número bruto (v) — mesmo motivo do
-            // raw:false acima: evita interpretar errado número com vírgula decimal.
-            linhaArr.push(cell ? (cell.w ?? cell.v ?? '') : '');
+            // Mesma lógica do raw:false acima: CSV prefere o texto formatado (w),
+            // Excel prefere o número bruto (v) — evita o problema de formatação
+            // de % aplicada por engano numa célula que não é percentual.
+            const valorCelula = cell ? (ehArquivoCSV ? (cell.w ?? cell.v ?? '') : (cell.v ?? cell.w ?? '')) : '';
+            linhaArr.push(valorCelula);
           }
           linhasForcadas.push(linhaArr);
         }
@@ -10863,7 +10946,7 @@
       // zerar um valor real por engano. Por isso somamos aqui todas as linhas que já
       // apontam para a MESMA corretora antes de sequer mostrar a tela de confirmação.
       const totalLinhasBrutas = window._importRowsAtual.length;
-      window._importRowsAtual = consolidarLinhasDuplicadas(window._importRowsAtual);
+      window._importRowsAtual = consolidarLinhasDuplicadas(window._importRowsAtual, template?.agruparPorNomeTambem === true);
 
       if(!window._importRowsAtual.length){
         esconderSplashOp();
@@ -10892,16 +10975,20 @@
   // Linhas ainda não identificadas (gid nulo) continuam separadas — só são
   // consolidadas quando, mais tarde, forem vinculadas/cadastradas e passarem a
   // compartilhar o mesmo gid de uma linha já existente.
-  function consolidarLinhasDuplicadas(rows){
+  function consolidarLinhasDuplicadas(rows, agruparPorNomeTambem){
     const porGid = new Map();
     const porNomeSemGid = new Map();
+    const semGidSemAgrupar = [];
     for(const r of rows){
       if(!r.gid){
-        // Ainda não identificada — agrupa pelo NOME (normalizado: sem acento,
-        // maiúscula/minúscula) pra não aparecer a mesma corretora repetida
-        // dezenas de vezes na tela de confirmação (ex: planilhas com uma
-        // linha por cliente, tipo a da Suhai). Assim que essa linha for
-        // vinculada a uma corretora, ela já entra somada de uma vez.
+        // Ainda não identificada. SÓ agrupa pelo NOME quando o template
+        // autorizar isso explicitamente (agruparPorNomeTambem=true) — hoje só
+        // a Suhai usa isso, porque a planilha dela tem uma linha por CLIENTE,
+        // repetindo a mesma corretora várias vezes de propósito. Pra qualquer
+        // outra seguradora, cada linha não identificada fica separada mesmo,
+        // do jeito que sempre foi — nunca soma corretoras diferentes que só
+        // coincidem de ter o mesmo nome digitado.
+        if(!agruparPorNomeTambem){ semGidSemAgrupar.push({ ...r, linhasOriginais: [r.linha] }); continue; }
         const chave = normalizarBusca(r.nomeBruto || '');
         if(porNomeSemGid.has(chave)){
           const existente = porNomeSemGid.get(chave);
@@ -10920,7 +11007,7 @@
         porGid.set(r.gid, { ...r, linhasOriginais: [r.linha] });
       }
     }
-    return [...porGid.values(), ...porNomeSemGid.values()];
+    return [...porGid.values(), ...porNomeSemGid.values(), ...semGidSemAgrupar];
   }
 
   function renderModalConfirmacaoImportacao(){
@@ -11082,7 +11169,7 @@
       const r = (window._importRowsAtual || []).find(x => x.linha === linha);
       if(r) r.gid = novoGid;
       // Junta com qualquer outra linha que já apontasse pra essa mesma corretora
-      window._importRowsAtual = consolidarLinhasDuplicadas(window._importRowsAtual || []);
+      window._importRowsAtual = consolidarLinhasDuplicadas(window._importRowsAtual || [], encontrarTemplate(window._importContexto?.seguradora)?.agruparPorNomeTambem === true);
       renderModalConfirmacaoImportacao();
     };
 
@@ -11107,7 +11194,7 @@
 
     // Vincula a linha e junta com qualquer outra linha que já apontasse pra essa mesma corretora
     row.gid = gid;
-    window._importRowsAtual = consolidarLinhasDuplicadas(window._importRowsAtual || []);
+    window._importRowsAtual = consolidarLinhasDuplicadas(window._importRowsAtual || [], encontrarTemplate(window._importContexto?.seguradora)?.agruparPorNomeTambem === true);
     renderModalConfirmacaoImportacao();
 
     if(!jaTemApelido && nomeBruto){
