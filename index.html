@@ -8073,18 +8073,32 @@
 
   // procura, entre os apelidos + razão social de cada corretora, qual bate com o texto informado
   // (usado tanto no lançamento manual quanto, mais à frente, na leitura automática da planilha)
+  // Normalização MAIS forte que a normalizarBusca padrão — pensada
+  // especificamente pra comparar nome de corretora vindo de planilha (que
+  // costuma ter espaço duplo, espaço sobrando no fim, diferença de acento
+  // entre programas de planilha diferentes, etc.). Precisa ser 100% confiável
+  // pra não gerar retrabalho da equipe tendo que vincular manualmente
+  // corretora que já está cadastrada.
+  function normalizarNomeCorretora(texto){
+    return String(texto || '')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   function identificarCorretoraPorNome(texto, filialFiltro){
     if(!texto) return null;
-    const alvo = String(texto).trim().toLowerCase();
+    const alvo = normalizarNomeCorretora(texto);
     if(!alvo) return null;
     for(const gid of Object.keys(GROUPS)){
       const g = GROUPS[gid];
       if(!g) continue;
       if(filialFiltro && (g.filial || '') !== filialFiltro) continue;
-      const nome = String(g.name || '').toLowerCase();
+      const nome = normalizarNomeCorretora(g.name);
       if(nome && nome === alvo) return gid;
       const apelidos = Array.isArray(g.apelidos) ? g.apelidos : [];
-      if(apelidos.some(ap => String(ap || '').toLowerCase() === alvo)) return gid;
+      if(apelidos.some(ap => normalizarNomeCorretora(ap) === alvo)) return gid;
     }
     return null;
   }
@@ -9272,16 +9286,20 @@
         });
       }
 
-      // 2) transfere os registros dependentes (FK direto) pra corretora mantida
-      for(const gid of gidsParaMesclar){
-        await supabase.from('producao_mensal').update({ corretora_id: gidMantido }).eq('corretora_id', gid);
-        await supabase.from('renovacoes').update({ corretora_id: gidMantido }).eq('corretora_id', gid);
-        await supabase.from('marketing_contatos').update({ corretora_id: gidMantido }).eq('corretora_id', gid);
-        await supabase.from('campanha_lancamentos').update({ corretora_id: gidMantido }).eq('corretora_id', gid);
-      }
+      // 2) transfere os registros dependentes (FK direto) pra corretora mantida —
+      // usa .in() pra mexer em TODAS as corretoras duplicadas de uma vez só, em
+      // cada tabela (4 consultas no total, não 4 × quantidade de duplicatas) —
+      // e roda as 4 tabelas em paralelo, já que são independentes entre si.
+      await Promise.all([
+        supabase.from('producao_mensal').update({ corretora_id: gidMantido }).in('corretora_id', gidsParaMesclar),
+        supabase.from('renovacoes').update({ corretora_id: gidMantido }).in('corretora_id', gidsParaMesclar),
+        supabase.from('marketing_contatos').update({ corretora_id: gidMantido }).in('corretora_id', gidsParaMesclar),
+        supabase.from('campanha_lancamentos').update({ corretora_id: gidMantido }).in('corretora_id', gidsParaMesclar),
+      ]);
 
       // 2.1) campanhas guardam metas por corretora dentro de uma coluna jsonb — corrige manualmente
       const { data: campanhasComMeta } = await fetchAllRows((from,to) => supabase.from('campanhas').select('id, metas_corretoras').range(from,to));
+      const atualizacoesCampanhas = [];
       for(const camp of (campanhasComMeta || [])){
         const metas = Array.isArray(camp.metas_corretoras) ? camp.metas_corretoras : [];
         let mudou = false;
@@ -9289,20 +9307,21 @@
           if(gidsParaMesclar.includes(m.corretora_id)){ mudou = true; return { ...m, corretora_id: gidMantido }; }
           return m;
         });
-        if(mudou) await supabase.from('campanhas').update({ metas_corretoras: novasMetas }).eq('id', camp.id);
+        if(mudou) atualizacoesCampanhas.push(supabase.from('campanhas').update({ metas_corretoras: novasMetas }).eq('id', camp.id));
       }
+      if(atualizacoesCampanhas.length) await Promise.all(atualizacoesCampanhas);
 
       // 3) atualiza a corretora mantida com apelidos + seguradoras + anexos + campos que faltavam
       const payloadUpdate = { apelidos, seguradoras_permitidas: seguradoras, anexos, ...preenchimentos };
       const { error: errUpdate } = await supabase.from('corretoras').update(payloadUpdate).eq('id', gidMantido);
       if(errUpdate) throw new Error('Erro ao atualizar a corretora mantida: ' + errUpdate.message);
 
-      // 4) exclui as duplicatas
-      for(const gid of gidsParaMesclar){
-        await supabase.from('corretoras').delete().eq('id', gid);
+      // 4) exclui as duplicatas — todas de uma vez só, com .in()
+      await supabase.from('corretoras').delete().in('id', gidsParaMesclar);
+      gidsParaMesclar.forEach(gid => {
         delete GROUPS[gid];
         DUPLICATAS_SELECIONADAS.delete(gid);
-      }
+      });
 
       GROUPS[gidMantido] = { ...GROUPS[gidMantido], apelidos, seguradoras, anexos, ...preenchimentos };
 
@@ -9339,16 +9358,20 @@
     if(!await customConfirm(`Excluir ${gids.length} corretora(s)?\n\n- ${nomes}\n\nEssa ação não pode ser desfeita. Os lançamentos de produção já registrados permanecem no histórico, mas elas deixam de aparecer nas listas e filtros do sistema.`)) return;
 
     mostrarSplashOp('Excluindo...');
-    let excluidas = 0, erros = 0;
-    for(const gid of gids){
+    const resultados = await Promise.allSettled(gids.map(async (gid) => {
       const g = GROUPS[gid];
       const { error } = await supabase.from('corretoras').delete().eq('id', gid);
-      if(error){ erros++; console.error('Erro ao excluir corretora', gid, error.message); continue; }
+      if(error) throw new Error(error.message);
       const paths = (g?.anexos || []).map(a => a.path).filter(Boolean);
       if(paths.length){ try { await supabase.storage.from(BUCKET_ANEXOS_CORRETORAS).remove(paths); } catch(e){ /* não bloqueia a exclusão */ } }
       delete GROUPS[gid];
-      excluidas++;
-    }
+      return gid;
+    }));
+    let excluidas = 0, erros = 0;
+    resultados.forEach(r => {
+      if(r.status === 'fulfilled') excluidas++;
+      else { erros++; console.error('Erro ao excluir corretora:', r.reason?.message); }
+    });
     esconderSplashOp();
 
     registrarLog('Excluiu corretoras duplicadas em lote', `${excluidas} excluída(s), ${erros} erro(s)`);
