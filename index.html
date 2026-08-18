@@ -2141,9 +2141,15 @@
             </div>
 
             <div class="card" style="padding:20px;margin-bottom:16px;">
-              <div class="f-field" style="margin:0;max-width:340px;">
-                <label>Seguradora</label>
-                <select id="auditoria-seg-select" onchange="analisarAuditoriaSeguradora()"><option value="">Selecione...</option></select>
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+                <div class="f-field" style="margin:0;max-width:340px;flex:1;">
+                  <label>Seguradora</label>
+                  <select id="auditoria-seg-select" onchange="analisarAuditoriaSeguradora()"><option value="">Selecione...</option></select>
+                </div>
+                <div style="display:flex;gap:10px;">
+                  <button class="btn-outline" onclick="exportarAuditoriaSegExcel()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg> Exportar Excel</button>
+                  <button class="btn-outline" onclick="exportarAuditoriaSegPDF()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 20h16"/></svg> Exportar PDF</button>
+                </div>
               </div>
             </div>
 
@@ -8940,10 +8946,77 @@
     ` : `<p class="hint">Nenhuma renovação pendente encontrada nesse período/seguradora.</p>`;
   }
 
+  async function exportarAuditoriaSegExcel(){
+    const dados = window._auditoriaSegDados;
+    if(!dados || !dados.nomeSeg){ await customAlert('Selecione uma seguradora e espere o relatório carregar antes de exportar.'); return; }
+    if(typeof XLSX === 'undefined'){ await customAlert('Leitor de planilhas indisponível.'); return; }
+
+    const wb = XLSX.utils.book_new();
+
+    const abaNaoVinc = dados.naoVinculadas.map(([,g]) => ({ Corretora: g.name, Cidade: g.cidade || '', Estado: g.estado || '' }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(abaNaoVinc.length ? abaNaoVinc : [{ Corretora: 'Nenhuma' }]), 'Não vinculadas');
+
+    const abaParadas = dados.paradas.map(p => ({
+      Corretora: p.nome,
+      'Última produção': p.ultima ? labelCompetencia(p.ultima) : 'Nunca produziu',
+      'Meses parada': p.mesesSemProducao ?? '—',
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(abaParadas.length ? abaParadas : [{ Corretora: 'Nenhuma' }]), `Paradas (${dados.mesesLimite}+ meses)`);
+
+    XLSX.writeFile(wb, `auditoria_${dados.nomeSeg.replace(/[^\w]+/g,'_')}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    registrarLog('Exportou Auditoria por Seguradora (Excel)', dados.nomeSeg);
+  }
+
+  async function exportarAuditoriaSegPDF(){
+    const dados = window._auditoriaSegDados;
+    if(!dados || !dados.nomeSeg){ await customAlert('Selecione uma seguradora e espere o relatório carregar antes de exportar.'); return; }
+    if(typeof window.jspdf === 'undefined'){ await customAlert('Gerador de PDF indisponível.'); return; }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
+    const logoImg = document.getElementById('sidebar-logo-img');
+    try { if(logoImg && logoImg.src) doc.addImage(logoImg.src, 'PNG', 12, 10, 42, 12); } catch(e){ /* segue sem logo se falhar */ }
+
+    doc.setFontSize(15);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Auditoria por Seguradora — ${dados.nomeSeg}`, 60, 18);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 60, 24);
+
+    doc.setFont(undefined, 'bold');
+    doc.text(`Não vinculadas (${dados.naoVinculadas.length})`, 12, 36);
+    doc.autoTable({
+      startY: 40,
+      head: [['Corretora', 'Cidade', 'Estado']],
+      body: dados.naoVinculadas.length
+        ? dados.naoVinculadas.map(([,g]) => [g.name, g.cidade||'—', g.estado||'—'])
+        : [['Nenhuma corretora nessa situação', '', '']],
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [19, 39, 40] },
+    });
+
+    const proximaY = doc.lastAutoTable.finalY + 10;
+    doc.setFont(undefined, 'bold');
+    doc.text(`Vinculadas, paradas há ${dados.mesesLimite}+ meses (${dados.paradas.length})`, 12, proximaY);
+    doc.autoTable({
+      startY: proximaY + 4,
+      head: [['Corretora', 'Última produção', 'Meses parada']],
+      body: dados.paradas.length
+        ? dados.paradas.map(p => [p.nome, p.ultima ? labelCompetencia(p.ultima) : 'Nunca produziu', p.mesesSemProducao ?? '—'])
+        : [['Nenhuma corretora nessa situação', '', '']],
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [19, 39, 40] },
+    });
+
+    doc.save(`auditoria_${dados.nomeSeg.replace(/[^\w]+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+    registrarLog('Exportou Auditoria por Seguradora (PDF)', dados.nomeSeg);
+  }
+
   async function analisarAuditoriaSeguradora(){
     const nomeSeg = document.getElementById('auditoria-seg-select').value;
     const box = document.getElementById('auditoria-seg-resultado');
-    if(!nomeSeg){ box.innerHTML = `<p class="hint">Selecione uma seguradora acima pra começar.</p>`; return; }
+    if(!nomeSeg){ box.innerHTML = `<p class="hint">Selecione uma seguradora acima pra começar.</p>`; window._auditoriaSegDados = null; return; }
     box.innerHTML = `<p class="hint">Analisando...</p>`;
 
     const segObj = Object.values(SEGURADORAS).find(s => s.nome === nomeSeg);
@@ -9006,6 +9079,10 @@
       }
     });
     paradas.sort((a,b) => (b.mesesSemProducao ?? 9999) - (a.mesesSemProducao ?? 9999));
+
+    // Guarda o que foi calculado — as funções de exportar reaproveitam isso,
+    // sem precisar buscar tudo de novo no banco.
+    window._auditoriaSegDados = { nomeSeg, mesesLimite, naoVinculadas, paradas };
 
     box.innerHTML = `
       <div class="card" style="padding:20px;margin-bottom:16px;">
