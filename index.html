@@ -8987,11 +8987,12 @@
 
     const wb = XLSX.utils.book_new();
 
-    const abaNaoVinc = dados.naoVinculadas.map(([,g]) => ({ Corretora: g.name, Cidade: g.cidade || '', Estado: g.estado || '' }));
+    const abaNaoVinc = dados.naoVinculadas.map(([,g]) => ({ Corretora: g.name, Telefone: g.telefone || '', Cidade: g.cidade || '', Estado: g.estado || '' }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(abaNaoVinc.length ? abaNaoVinc : [{ Corretora: 'Nenhuma' }]), 'Não vinculadas');
 
     const abaParadas = dados.paradas.map(p => ({
       Corretora: p.nome,
+      Telefone: p.telefone || '',
       'Última produção': p.ultima ? labelCompetencia(p.ultima) : 'Nunca produziu',
       'Meses parada': p.mesesSemProducao ?? '—',
     }));
@@ -9022,10 +9023,10 @@
     doc.text(`Não vinculadas (${dados.naoVinculadas.length})`, 12, 36);
     doc.autoTable({
       startY: 40,
-      head: [['Corretora', 'Cidade', 'Estado']],
+      head: [['Corretora', 'Telefone', 'Cidade', 'Estado']],
       body: dados.naoVinculadas.length
-        ? dados.naoVinculadas.map(([,g]) => [g.name, g.cidade||'—', g.estado||'—'])
-        : [['Nenhuma corretora nessa situação', '', '']],
+        ? dados.naoVinculadas.map(([,g]) => [g.name, g.telefone||'—', g.cidade||'—', g.estado||'—'])
+        : [['Nenhuma corretora nessa situação', '', '', '']],
       styles: { fontSize: 9 },
       headStyles: { fillColor: [19, 39, 40] },
     });
@@ -9035,10 +9036,10 @@
     doc.text(`Vinculadas, paradas há ${dados.mesesLimite}+ meses (${dados.paradas.length})`, 12, proximaY);
     doc.autoTable({
       startY: proximaY + 4,
-      head: [['Corretora', 'Última produção', 'Meses parada']],
+      head: [['Corretora', 'Telefone', 'Última produção', 'Meses parada']],
       body: dados.paradas.length
-        ? dados.paradas.map(p => [p.nome, p.ultima ? labelCompetencia(p.ultima) : 'Nunca produziu', p.mesesSemProducao ?? '—'])
-        : [['Nenhuma corretora nessa situação', '', '']],
+        ? dados.paradas.map(p => [p.nome, p.telefone||'—', p.ultima ? labelCompetencia(p.ultima) : 'Nunca produziu', p.mesesSemProducao ?? '—'])
+        : [['Nenhuma corretora nessa situação', '', '', '']],
       styles: { fontSize: 9 },
       headStyles: { fillColor: [19, 39, 40] },
     });
@@ -9109,7 +9110,7 @@
         mesesSemProducao = (hoje.getFullYear() - ano) * 12 + (hoje.getMonth()+1 - mes);
       }
       if(mesesSemProducao === null || mesesSemProducao >= mesesLimite){
-        paradas.push({ gid, nome: g.name, ultima, mesesSemProducao });
+        paradas.push({ gid, nome: g.name, ultima, mesesSemProducao, telefone: g.telefone || '' });
       }
     });
     paradas.sort((a,b) => (b.mesesSemProducao ?? 9999) - (a.mesesSemProducao ?? 9999));
@@ -9124,7 +9125,10 @@
         <p class="hint" style="margin-bottom:10px;">Considera só corretoras com produção real (mais de R$ 10) neste mês em qualquer seguradora — não mostra a base toda cadastrada.</p>
         ${naoVinculadas.length ? naoVinculadas.map(([gid,g]) => `
           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);">
-            <div style="font-size:13px;font-weight:600;">${esc(g.name)}</div>
+            <div>
+              <div style="font-size:13px;font-weight:600;">${esc(g.name)}</div>
+              <div style="font-size:11px;color:var(--gray-600);">${g.telefone ? esc(g.telefone) : 'Sem telefone cadastrado'}</div>
+            </div>
             <button class="access-btn" onclick="openCorretoraForm('${gid}')">Abrir</button>
           </div>`).join('') : `<p class="tag-empty-hint">Todas as corretoras ativas já estão vinculadas a esta seguradora.</p>`}
       </div>
@@ -9136,7 +9140,7 @@
           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);">
             <div>
               <div style="font-size:13px;font-weight:600;">${esc(p.nome)}</div>
-              <div style="font-size:11px;color:var(--gray-600);">${p.ultima ? `Última produção: ${labelCompetencia(p.ultima)} (${p.mesesSemProducao} meses parada)` : 'Nunca teve produção registrada nesta seguradora'}</div>
+              <div style="font-size:11px;color:var(--gray-600);">${p.ultima ? `Última produção: ${labelCompetencia(p.ultima)} (${p.mesesSemProducao} meses parada)` : 'Nunca teve produção registrada nesta seguradora'} · ${p.telefone ? esc(p.telefone) : 'Sem telefone cadastrado'}</div>
             </div>
             <div style="display:flex;gap:6px;">
               <button class="access-btn" onclick="openCorretoraForm('${p.gid}')">Abrir</button>
