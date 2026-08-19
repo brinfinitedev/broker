@@ -8093,19 +8093,53 @@
       .trim();
   }
 
+  // Algumas seguradoras (Mapfre, Darwin) mandam o nome da corretora TRUNCADO,
+  // com um código numérico colado no final (ex: "PARCER CORRETORES DE
+  // SEGUROS P - 121954"). Isso nunca bate no nome completo cadastrado — essa
+  // função tira esse código pra sobrar só o texto de verdade.
+  function removerSufixoCodigo(texto){
+    return String(texto || '').replace(/\s*-\s*\d+\s*$/, '').trim();
+  }
+
   function identificarCorretoraPorNome(texto, filialFiltro){
     if(!texto) return null;
     const alvo = normalizarNomeCorretora(texto);
+    const alvoSemCodigo = normalizarNomeCorretora(removerSufixoCodigo(texto));
     if(!alvo) return null;
-    for(const gid of Object.keys(GROUPS)){
+
+    const candidatos = Object.keys(GROUPS).filter(gid => {
       const g = GROUPS[gid];
-      if(!g) continue;
-      if(filialFiltro && (g.filial || '') !== filialFiltro) continue;
+      if(!g) return false;
+      if(filialFiltro && (g.filial || '') !== filialFiltro) return false;
+      return true;
+    });
+
+    // Camada 1: nome ou apelido batendo EXATO (com o texto original, e sem o
+    // código no final — cobre o caso mais comum e mais confiável).
+    for(const gid of candidatos){
+      const g = GROUPS[gid];
       const nome = normalizarNomeCorretora(g.name);
-      if(nome && nome === alvo) return gid;
-      const apelidos = Array.isArray(g.apelidos) ? g.apelidos : [];
-      if(apelidos.some(ap => normalizarNomeCorretora(ap) === alvo)) return gid;
+      const apelidos = (Array.isArray(g.apelidos) ? g.apelidos : []).map(normalizarNomeCorretora);
+      if(nome && (nome === alvo || nome === alvoSemCodigo)) return gid;
+      if(apelidos.includes(alvo) || apelidos.includes(alvoSemCodigo)) return gid;
     }
+
+    // Camada 2: um nome é PREFIXO do outro — cobre razão social truncada
+    // (a planilha corta o nome num certo número de caracteres). Só entra
+    // aqui se o texto tiver um tamanho mínimo, pra não dar falso positivo
+    // com nome curto demais.
+    if(alvoSemCodigo.length >= 8){
+      for(const gid of candidatos){
+        const g = GROUPS[gid];
+        const nome = normalizarNomeCorretora(g.name);
+        if(nome.length >= 8 && (nome.startsWith(alvoSemCodigo) || alvoSemCodigo.startsWith(nome))) return gid;
+        const apelidos = (Array.isArray(g.apelidos) ? g.apelidos : []).map(normalizarNomeCorretora);
+        for(const ap of apelidos){
+          if(ap.length >= 8 && (ap.startsWith(alvoSemCodigo) || alvoSemCodigo.startsWith(ap))) return gid;
+        }
+      }
+    }
+
     return null;
   }
 
