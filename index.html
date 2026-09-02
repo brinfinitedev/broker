@@ -8140,6 +8140,30 @@
       }
     }
 
+    // Camada 3: similaridade de texto (mesma matemática do relatório de
+    // Corretoras Duplicadas) — pega diferenças pequenas de digitação,
+    // abreviação (ex: "CIA" vs "COMPANHIA"), ou pontuação (ex: "LTDA." vs
+    // "LTDA"). Só aceita se a confiança for MUITO alta (95%+), pra não
+    // arriscar vincular a corretora errada.
+    if(alvoSemCodigo.length >= 8 && typeof similaridade === 'function'){
+      const LIMITE_SIMILARIDADE_IMPORT = 0.95;
+      let melhorGid = null, melhorScore = 0;
+      for(const gid of candidatos){
+        const g = GROUPS[gid];
+        const nome = normalizarNomeCorretora(g.name);
+        if(nome){
+          const score = similaridade(nome, alvoSemCodigo);
+          if(score > melhorScore){ melhorScore = score; melhorGid = gid; }
+        }
+        const apelidos = (Array.isArray(g.apelidos) ? g.apelidos : []).map(normalizarNomeCorretora);
+        for(const ap of apelidos){
+          const score = similaridade(ap, alvoSemCodigo);
+          if(score > melhorScore){ melhorScore = score; melhorGid = gid; }
+        }
+      }
+      if(melhorGid && melhorScore >= LIMITE_SIMILARIDADE_IMPORT) return melhorGid;
+    }
+
     return null;
   }
 
